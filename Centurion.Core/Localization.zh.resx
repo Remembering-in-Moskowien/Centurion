@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
+    </resheader>
+    <data name="AssContentLoaded" xml:space="preserve">
+    <value>ASS内容已从文件加载。</value>
+  </data>
+    <data name="SrtOutput" xml:space="preserve">
+    <value>SRT输出：</value>
+  </data>
+    <data name="WhisperFactoryInitialized" xml:space="preserve">
+    <value>Whisper工厂已初始化。</value>
+  </data>
+    <data name="TranscriptionStarted" xml:space="preserve">
+    <value>转录开始</value>
+  </data>
+    <data name="TranscriptionCompleted" xml:space="preserve">
+    <value>转录完成。段数：{0}</value>
+  </data>
+    <data name="FFmpegFailed" xml:space="preserve">
+    <value>FFmpeg失败：{0}</value>
+  </data>
+    <data name="FFmpegSuccessPath" xml:space="preserve">
+    <value>FFmpeg成功：{0}</value>
+  </data>
+    <data name="FFmpegSuccessSize" xml:space="preserve">
+    <value>FFmpeg成功：转码完成，输出流大小 {0} 字节</value>
+  </data>
+    <data name="FileNotFoundFFmpeg" xml:space="preserve">
+    <value>找不到ffmpeg</value>
+  </data>
+    <data name="FileNotFoundInput" xml:space="preserve">
+    <value>找不到输入文件</value>
+  </data>
+    <data name="FFmpegConversionFailed" xml:space="preserve">
+    <value>FFmpeg转码失败 ExitCode:{0}
+日志:{1}</value>
+  </data>
+    <data name="WhisperFactoryNotInitialized" xml:space="preserve">
+    <value>Whisper工厂未初始化。</value>
+  </data>
+    <data name="ErrorClosingFileStream" xml:space="preserve">
+    <value>关闭文件流时出错：{0}</value>
+  </data>
+    <data name="UnsupportedOption" xml:space="preserve">
+    <value>不支持的选项</value>
+  </data>
+    <data name="UnsupportedSubcommand" xml:space="preserve">
+    <value>不支持的子命令：{0}</value>
+  </data>
+    <data name="NoSubcommandSpecified" xml:space="preserve">
+    <value>未指定子命令。</value>
+  </data>
+    <data name="OptionInputFileRequiresFilename" xml:space="preserve">
+    <value>选项 --inputfile 需要一个文件名参数。</value>
+  </data>
+    <data name="OptionOutputFileRequiresFilename" xml:space="preserve">
+    <value>选项 --outputfile 需要一个文件名参数。</value>
+  </data>
+    <data name="UnsupportedArgument" xml:space="preserve">
+    <value>不支持的参数：{0}</value>
+  </data>
+    <data name="MustSpecifyInputFile" xml:space="preserve">
+    <value>必须指定 --inputfile 或 -i。</value>
+  </data>
+    <data name="MustSpecifyOutputFile" xml:space="preserve">
+    <value>必须指定 --outputfile 或 -o。</value>
+  </data>
+    <data name="TempFileOptionNotSpecified" xml:space="preserve">
+    <value>未指定临时文件选项</value>
+  </data>
+    <data name="InvalidTimeFormat" xml:space="preserve">
+    <value>无效的时间格式。预期格式：HH:MM:SS.CC</value>
+  </data>
+    <data name="InvalidAssSubtitleLineFormat" xml:space="preserve">
+    <value>无效的ASS字幕行格式。</value>
+  </data>
+    <data name="InvalidAssStyleFormat" xml:space="preserve">
+    <value>无效的ASS样式格式。</value>
+  </data>
+    <data name="LanguageCannotBeNullOrEmpty" xml:space="preserve">
+    <value>语言不能为空。</value>
+  </data>
+    <data name="UnsupportedLanguage" xml:space="preserve">
+    <value>不支持的语言：{0}</value>
+  </data>
+    <data name="WhisperModelFound" xml:space="preserve">
+    <value>找到Whisper模型：{0}</value>
+  </data>
+    <data name="WhisperModelNotFound" xml:space="preserve">
+    <value>未找到Whisper模型。正在下载到 {0}...</value>
+  </data>
+    <data name="UsingAria2Executable" xml:space="preserve">
+    <value>使用 aria2 可执行文件：{0}</value>
+  </data>
+    <data name="FailedToStartAria2Process" xml:space="preserve">
+    <value>无法启动 aria2 进程。</value>
+  </data>
+    <data name="Aria2FailedWithExitCode" xml:space="preserve">
+    <value>aria2 在下载文件时失败，退出代码为 {0}。</value>
+  </data>
+    <data name="DownloadMissingFile" xml:space="preserve">
+    <value>文件下载已完成，但未找到该文件。</value>
+  </data>
+    <data name="WhisperModelDownloadedSuccessfully" xml:space="preserve">
+    <value>Whisper 模型下载成功：{0}</value>
+  </data>
+    <data name="Downloading" xml:space="preserve">
+    <value>正在下载</value>
+  </data>
+    <data name="DownloadingFile" xml:space="preserve">
+    <value>正在下载 {0}</value>
+  </data>
+    <data name="DownloadCompleteVerifyingFileHash" xml:space="preserve">
+    <value>下载完成，正在验证文件哈希...</value>
+  </data>
+    <data name="FileHashNotMatch" xml:space="preserve">
+    <value>文件 {0} 哈希不匹配。期望 {1}，实际 {2}。</value>
+  </data>
+    <data name="SuccessGenerated" xml:space="preserve">
+    <value>生成成功：</value>
+  </data>
+    <data name="ErrorLabel" xml:space="preserve">
+    <value>错误：</value>
+  </data>
+    <data name="UsageLabel" xml:space="preserve">
+    <value>用法：</value>
+  </data>
+    <data name="SpawnCommandDescription" xml:space="preserve">
+    <value>  Centurion spawn --inputfile &lt;filename&gt; --outputfile &lt;filename&gt; [--tempfile]</value>
+  </data>
+    <data name="OptionsLabel" xml:space="preserve">
+    <value>选项：</value>
+  </data>
+    <data name="InputFileOption" xml:space="preserve">
+    <value>  --inputfile, -i   输入文件路径 (必需)</value>
+  </data>
+    <data name="OutputFileOption" xml:space="preserve">
+    <value>  --outputfile, -o  输出 ASS 文件路径 (必需)</value>
+  </data>
+    <data name="TempFileOption" xml:space="preserve">
+    <value>  --tempfile, -t    使用临时文件处理音频 (可选)</value>
+  </data>
+    <data name="UnsupportedInputFileType" xml:space="preserve">
+    <value>不支持的输入文件类型：{0}</value>
+  </data>
+    <data name="ConfirmContinueInstallation" xml:space="preserve">
+    <value>继续安装吗？</value>
+  </data>
+    <data name="CannotContinueWithoutWhisperModel" xml:space="preserve">
+    <value>无法在没有Whisper模型的情况下继续。</value>
+  </data>
+    <data name="Aria2ExecutableNotFound" xml:space="preserve">
+    <value>未找到 aria2c.exe。请将 aria2c.exe 放在应用程序旁边。</value>
+  </data>
+    <data name="AriaPayloadError" xml:space="preserve">
+    <value>载荷必须为AriaDownloadPayload</value>
+  </data>
+    <data name="FFmpegPayloadError" xml:space="preserve">
+    <value>载荷必须为FFmpegConvertPayload</value>
+  </data>
+    <data name="WhisperPayloadError" xml:space="preserve">
+    <value>载荷必须为WhisperTranscribePayload</value>
+  </data>
+    <data name="ConfigurationIsNotSupported" xml:space="preserve">
+    <value>当前传入的生成配置不受支持</value>
+  </data>
+    <data name="ModeMustBeSpecified" xml:space="preserve">
+    <value>必须指定临时文件或内存流模式</value>
+  </data>
+    <data name="UnsupportedWhisperModel" xml:space="preserve">
+    <value>不支持的Wihsper模型</value>
+  </data>
+</root>
