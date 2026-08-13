@@ -1,9 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Centurion.Core.Tools;
 
@@ -24,14 +20,14 @@ public static class PythonInterop
             return _pythonPath;
 
         // 1. 通过 BinaryLocator 查找（先尝试 python，再 python3）
-        string[] candidates = OperatingSystem.IsWindows()
+        var candidates = OperatingSystem.IsWindows()
             ? new[] { "python.exe", "python" }
             : new[] { "python3", "python" };
 
         foreach (var name in candidates)
         {
             // 传入 "python" 子目录作为自定义搜索目录，以支持嵌入式部署
-            string? found = BinaryLocator.Locate(name, "python");
+            var found = BinaryLocator.Locate(name, "python");
             if (File.Exists(found))
             {
                 _pythonPath = found;
@@ -106,20 +102,43 @@ public static class PythonInterop
         using var process = Process.Start(psi);
         if (process == null) throw new Exception("Failed to start Python process.");
 
-        // 写入输入
-        await process.StandardInput.WriteAsync(jsonInput);
-        process.StandardInput.Close();
+        // 异步读取 stdout/stderr，防止死锁
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
 
-        // 异步读取输出和错误
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask = process.StandardError.ReadToEndAsync();
+        // 检查进程是否立即退出
+        if (process.HasExited)
+        {
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+               throw new Exception($"Python process exited immediately (exit code {process.ExitCode}). stderr: {stderr}");
+        }
+
+        // 尝试写入 stdin
+        try
+        {
+            await process.StandardInput.WriteAsync(jsonInput);
+            process.StandardInput.Close();
+        }
+        catch (IOException ex) when (ex.Message.Contains("pipe"))
+        {
+            // 管道错误，可能进程在写入时退出
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+            throw new Exception($"Failed to write to stdin (pipe closed). Process may have exited. stderr: {stderr}", ex);
+        }
+
+        // 等待进程退出
         await process.WaitForExitAsync(ct);
 
-        var output = await outputTask;
-        var error = await errorTask;
-        if (process.ExitCode != 0)
-            throw new Exception($"Python script failed (code {process.ExitCode}): {error}");
+        var stdoutFinal = await stdoutTask;
+        var stderrFinal = await stderrTask;
 
-        return output;
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"Python script exited with code {process.ExitCode}. stderr: {stderrFinal}");
+        }
+
+        return stdoutFinal;
     }
 }

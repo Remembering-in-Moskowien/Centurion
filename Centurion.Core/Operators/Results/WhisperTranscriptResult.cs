@@ -153,4 +153,12 @@ public class TokenInfo
 
     [JsonProperty("t_dtw")]
     public int Tdtw { get; set; }
+    
+    public bool IsSpecialToken()
+    {
+        // 判断文本是否以 "[_" 开头并以 "]" 结尾，且包含特定标识
+        return Text.StartsWith("[_") && Text.EndsWith("]") && 
+               (Text.Contains("_BEG_") || Text.Contains("_TT_") || 
+                Text.Contains("_EOT_") || Text.Contains("_SOT_"));
+    }
 }

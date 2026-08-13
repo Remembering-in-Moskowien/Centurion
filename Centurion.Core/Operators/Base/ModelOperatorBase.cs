@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Tools;
 using Centurion.Core.Operators.Payload;
-using Centurion.Core.Operators.Results;
 
 namespace Centurion.Core.Operators.Base;
 

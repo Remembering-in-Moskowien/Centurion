@@ -1,6 +1,7 @@
 ﻿using Centurion.Core;
 using Centurion.Cli.Console;
 using System.ComponentModel;
+using Centurion.Core.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -39,7 +40,7 @@ public sealed class SpawnSettings : CommandSettings
     [Description("输入的SRT/媒体文件")]
     public required FileInfo InputFile { get; init; } = null!;
 
-    [CommandOption("-o|--outputfile <OUTPUT_FILE>", true)]
+    [CommandOption("-o|--outputfile <OUTPUT_FILE>")]
     [Description("输出的ASS字幕文件")]
     public required FileInfo OutputFile { get; init; } = null!;
 
@@ -54,6 +55,18 @@ public sealed class SpawnSettings : CommandSettings
     [CommandOption("-l|--lang|--language <LANG>")]
     [Description("音频识别语言代码，默认 en（中文使用 zh）")]
     public string Language { get; init; } = "en";
+    
+    [CommandOption("--max-length <MAX_LENGTH>")]
+    [Description("分句最大长度（字符数），默认80")]
+    public int MaxLength { get; init; } = 80;
+
+    [CommandOption("--target-length <TARGET_LENGTH>")]
+    [Description("目标分句长度（字符数），默认50")]
+    public int TargetLength { get; init; } = 50;
+
+    [CommandOption("--spread-range <SPREAD_RANGE>")]
+    [Description("长度分布的扩散范围，默认10")]
+    public int SpreadRange { get; init; } = 10;
 }
 
 // 2. 实现Spawn命令执行逻辑
@@ -65,12 +78,22 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
         try
         {
             var inputPath = settings.InputFile.FullName;
-            var outputPath = settings.OutputFile.FullName;
+            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
             var spawnOptions = GetSpawnerOptions(inputPath);
+
+            var subtitleGenerationOptions = new SubtitleGenerationOptions
+            {
+                MaxLength = settings.MaxLength,
+                TargetLength = settings.TargetLength,
+                InitialPrompt = settings.InitialPrompt,
+                Language = settings.Language,
+                ModelName = settings.ModelName,
+                SpreadRange = settings.SpreadRange
+            };
 
             // 异步获取字幕文档
             var assDoc =
-                await AssSubSpawner.AssSpawnerAsync(spawnOptions, inputPath, settings.ModelName, settings.Language, settings.InitialPrompt, ct);
+                await AssSubSpawner.AssSpawnerAsync(spawnOptions, inputPath, subtitleGenerationOptions, ct);
             // 写入ASS文件
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
             AnsiConsole.MarkupLine($"[green]{Localization.Get("SuccessGenerated")}[/] {outputPath}");

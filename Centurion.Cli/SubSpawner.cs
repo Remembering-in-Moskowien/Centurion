@@ -45,9 +45,7 @@ public static class AssSubSpawner
     public static async Task<AssSub> AssSpawnerAsync(
         AssSubSpawnerOptions options,
         string path,
-        string modelName,
-        string langCode,
-        string? initialPrompt = null,
+        SubtitleGenerationOptions genOptions,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(path);
@@ -55,7 +53,7 @@ public static class AssSubSpawner
         if ((options & AssSubSpawnerOptions.Srt) != 0)
             return await SpawnSrtAsync(path, ct);
         if ((options & AssSubSpawnerOptions.Media) != 0)
-            return await SpawnAudioAsync(options, path, modelName, langCode, initialPrompt, ct);
+            return await SpawnAudioAsync(options, path, genOptions, ct);
         throw new ArgumentException("当前传入的生成配置不受支持", nameof(options));
     }
 
@@ -156,10 +154,8 @@ public static class AssSubSpawner
     /// <returns>完整ASS字幕文档</returns>
     private static async Task<AssSub> SpawnAudioAsync(
         AssSubSpawnerOptions options,
-        string audioPath,
-        string modelName,
-        string langCode, // 新增,
-        string? initialPrompt,
+        string path,
+        SubtitleGenerationOptions genOptions,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
@@ -171,18 +167,18 @@ public static class AssSubSpawner
             using var ffmpegOp = new FFmpegOperator();
             var ffmpegPayload = new FFmpegConvertPayload
             {
-                InputFilePath = audioPath,
+                InputFilePath = path,
                 OutputFilePath = tempWav
             };
             var ffmpegReq = new OperatorsRequest<FFmpegConvertPayload> { Payload = ffmpegPayload };
             await ffmpegOp.SendRequestAsync<FFmpegFileResult, FFmpegConvertPayload>(ffmpegReq, ct);
 
-            using var whisperOp = new WhisperCliOperator(modelName);
+            using var whisperOp = new WhisperCliOperator(genOptions.ModelName);
             var whisperPayload = new WhisperTranscribePayload
             {
                 FilePath = ffmpegPayload.OutputFilePath,
-                Language = langCode,
-                InitialPrompt = initialPrompt   // 新增
+                Language = genOptions.Language,
+                InitialPrompt = genOptions.InitialPrompt   // 新增
             };
             var whisperReq = new OperatorsRequest<WhisperTranscribePayload> { Payload = whisperPayload };
             tokens = await whisperOp
@@ -200,6 +196,7 @@ public static class AssSubSpawner
 
         // 因为 TokenInfo 已经是词级片段，直接转换为 WordTiming 列表
         var wordTimings = tokens
+            .Where(token => !token.IsSpecialToken())  // 关键：过滤掉特殊令牌
             .Select(token => new WordTiming
             {
                 Text = FilterText(token.Text),
@@ -216,7 +213,9 @@ public static class AssSubSpawner
         var mergePayload = new WordMergePayload
         {
             Words = wordTimings,
-            Language = langCode
+            Language = genOptions.Language,
+            MaxLength = genOptions.MaxLength,
+            SpreadRange = genOptions.SpreadRange
         };
         var mergeReq = new OperatorsRequest<WordMergePayload> { Payload = mergePayload };
         var mergeResult = await mergeOp.SendRequestAsync<WordMergeResult, WordMergePayload>(mergeReq, ct);

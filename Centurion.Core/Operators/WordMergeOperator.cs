@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Centurion.Core.Operators.Base;
 using Centurion.Core.Operators.Payload;
 using Centurion.Core.Operators.Results;
 using Centurion.Core.Tools;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Centurion.Core.Operators;
@@ -97,15 +91,21 @@ public class WordMergeOperator(string modelName = "sat-3l-sm") : ModelOperatorBa
 
         if (string.IsNullOrEmpty(_pythonPath) || string.IsNullOrEmpty(_scriptPath))
             throw new InvalidOperationException("Python environment not properly initialized.");
+        
+        ConsoleServices.Output.WriteLine("分句开始");
 
         // 1. 准备输入 JSON（使用驼峰命名，符合 Python 脚本期望）
         var input = new
         {
-            words = payload.Words.Select(w => new { text = w.Text, start = w.Start, end = w.End })
+            words = payload.Words.Select(w => new { text = w.Text, start = w.Start, end = w.End }),
+            max_length = payload.MaxLength,
+            target_length = payload.TargetLength,
+            spread_range = payload.SpreadRange
         };
         var jsonInput = JsonSerializer.Serialize(input, new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
 
         // 2. 调用 Python 脚本
@@ -120,6 +120,9 @@ public class WordMergeOperator(string modelName = "sat-3l-sm") : ModelOperatorBa
         }
         catch (Exception ex)
         {
+            ConsoleServices.Output.WriteError($"Python script execution failed: {ex.Message}");
+            if (ex.InnerException != null)
+                ConsoleServices.Output.WriteError($"Inner exception: {ex.InnerException.Message}");
             throw new InvalidOperationException($"Python script execution failed: {ex.Message}", ex);
         }
 
@@ -173,6 +176,8 @@ public class WordMergeOperator(string modelName = "sat-3l-sm") : ModelOperatorBa
         {
             sent.Text = NormalizeSpaces(sent.Text);
         }
+        
+        ConsoleServices.Output.WriteLine("分句成功");
             
         return (TResult)(object)result;
     }
@@ -184,7 +189,7 @@ public class WordMergeOperator(string modelName = "sat-3l-sm") : ModelOperatorBa
     {
         if (string.IsNullOrEmpty(text)) return text;
         // 1. 将连续多个空白（包括空格、制表符、换行）替换为单个空格
-        string normalized = MultipleSpacesRegex.Replace(text, " ");
+        var normalized = MultipleSpacesRegex.Replace(text, " ");
         // 2. 去除首尾空格
         normalized = normalized.Trim();
         // 3. 处理标点前的多余空格，例如将 "Hello , world" -> "Hello, world"
@@ -196,109 +201,170 @@ public class WordMergeOperator(string modelName = "sat-3l-sm") : ModelOperatorBa
 // 嵌入资源类（存放 Python 脚本字符串）
 internal static class EmbeddedResources
 {
-    public const string SatSplitScript = """
+    public const string SatSplitScript = """"
                                          import sys
                                          import json
-                                         import os
-                                         import io
+                                         import re
                                          from wtpsplit import SaT
-
-                                         # 强制 UTF-8 编码
-                                         sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
-                                         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
+                                         
+                                         # 时间间隙阈值（毫秒），可根据需要调整
+                                         TIME_GAP_THRESHOLD = 1500  # 适当降低以便更细粒度分段
+                                         
+                                         def split_by_time_gap(words, gap_threshold_ms):
+                                             """
+                                             按单词间的时间间隙将单词列表切分成多个段落
+                                             """
+                                             if not words:
+                                                 return []
+                                             words = sorted(words, key=lambda x: x['start'])
+                                             segments = []
+                                             current_seg = [words[0]]
+                                             for i in range(1, len(words)):
+                                                 gap = words[i]['start'] - words[i-1]['end']
+                                                 if gap > gap_threshold_ms:
+                                                     segments.append(current_seg)
+                                                     current_seg = [words[i]]
+                                                 else:
+                                                     current_seg.append(words[i])
+                                             if current_seg:
+                                                 segments.append(current_seg)
+                                             return segments
+                                         
+                                         def split_by_punctuation(words):
+                                             """
+                                             根据句号、问号、感叹号将一个段落拆分成多个子段落
+                                             返回子段落列表，每个子段落是单词列表
+                                             """
+                                             if not words:
+                                                 return []
+                                             # 尝试找到每个单词文本是否以 .!? 结尾（可能包含后续空格）
+                                             sub_segments = []
+                                             current = []
+                                             for w in words:
+                                                 current.append(w)
+                                                 # 检查文本末尾是否为 . ! ?（忽略可能的前后空格）
+                                                 if w['text'].strip().endswith(('.', '!', '?')):
+                                                     sub_segments.append(current)
+                                                     current = []
+                                             if current:
+                                                 sub_segments.append(current)
+                                             # 如果没有标点，整个作为一个段落
+                                             return sub_segments if sub_segments else [words]
+                                         
                                          def main():
+                                             # 读取输入
+                                             raw = sys.stdin.read()
+                                             if not raw:
+                                                 json.dump({'sentences': []}, sys.stdout)
+                                                 return
                                              try:
-                                                 raw = sys.stdin.read()
-                                                 if not raw:
-                                                     json.dump({'Sentences': []}, sys.stdout)
-                                                     return
                                                  data = json.loads(raw)
                                              except json.JSONDecodeError as e:
-                                                 print(f"JSON 解析错误: {e}", file=sys.stderr)
-                                                 sys.exit(1)
-
-                                             # 兼容大小写：优先使用大写键名
-                                             words = data.get('Words') or data.get('words')
-                                             if not words:
-                                                 json.dump({'Sentences': []}, sys.stdout)
+                                                 json.dump({'error': f'JSON decode error: {e}'}, sys.stdout)
                                                  return
-
-                                             # 统一转换为大写键名，便于后续处理
-                                             normalized_words = []
+                                         
+                                             words = data.get('words') or data.get('Words')
+                                             if not words:
+                                                 json.dump({'sentences': []}, sys.stdout)
+                                                 return
+                                         
+                                             # 统一键名为小写
+                                             norm_words = []
                                              for w in words:
-                                                 normalized_words.append({
-                                                     'Text': w.get('Text') or w.get('text', ''),
-                                                     'Start': w.get('Start') or w.get('start', 0),
-                                                     'End': w.get('End') or w.get('end', 0)
+                                                 norm_words.append({
+                                                     'text': w.get('text') or w.get('Text', ''),
+                                                     'start': w.get('start') or w.get('Start', 0),
+                                                     'end': w.get('end') or w.get('End', 0)
                                                  })
-
-                                             normalized_words.sort(key=lambda x: x['Start'])
-                                             full_text = ' '.join([w['Text'] for w in normalized_words])
-
-                                             # 模型缓存目录
-                                             script_dir = os.path.dirname(os.path.abspath(__file__))
-                                             os.environ["HF_HOME"] = os.path.join(script_dir, '..', 'models')
-
+                                         
+                                             # 按时间间隙分段
+                                             time_segments = split_by_time_gap(norm_words, TIME_GAP_THRESHOLD)
+                                             if not time_segments:
+                                                 json.dump({'sentences': []}, sys.stdout)
+                                                 return
+                                         
+                                             # 加载 SAT 模型（只一次）
                                              sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
-                                             sentences = sat.split(full_text, 
-                                             max_length=80, 
-                                             prior_type="gaussian",
-                                             prior_kwargs={"target_length": 50, "spread": 10})
-
-                                             # 构建词位置映射（三元组：起始字符、结束字符、词字典）
-                                             word_positions = []
-                                             pos = 0
-                                             for w in normalized_words:
-                                                 start = pos
-                                                 end = start + len(w['Text'])
-                                                 word_positions.append((start, end, w))  # 注意：仅三个元素
-                                                 pos = end + 1  # 跳过分隔空格
-
-                                             result_sentences = []
-                                             search_start = 0
-                                             for sent in sentences:
-                                                 # 尝试精确匹配
-                                                 idx = full_text.find(sent, search_start)
-                                                 if idx == -1:
-                                                     # 尝试忽略首尾空白
-                                                     stripped = sent.strip()
-                                                     idx = full_text.find(stripped, search_start)
-                                                     if idx != -1:
-                                                         sent_end = idx + len(stripped)
-                                                         sent = full_text[idx:sent_end]
-                                                     else:
-                                                         # 完全找不到，跳过该句并推进 search_start 至少1
-                                                         print(f"警告: 无法定位句子: '{sent}'", file=sys.stderr)
-                                                         search_start += 1
+                                         
+                                             all_sentences = []
+                                         
+                                             for seg in time_segments:
+                                                 # 按标点进一步细分
+                                                 sub_segments = split_by_punctuation(seg)
+                                                 for sub in sub_segments:
+                                                     if not sub:
                                                          continue
-                                                 else:
-                                                     sent_end = idx + len(sent)
-
-                                                 # 找出与 [idx, sent_end) 重叠的词
-                                                 overlap_words = []
-                                                 for s, e, w in word_positions:  # 解包三元组
-                                                     if s < sent_end and e > idx:
-                                                         overlap_words.append(w)
-
-                                                 if overlap_words:
-                                                     result_sentences.append({
-                                                         'Text': sent,
-                                                         'Start': min(w['Start'] for w in overlap_words),
-                                                         'End': max(w['End'] for w in overlap_words)
-                                                     })
-                                                 # 无论是否找到，都推进搜索起点
-                                                 search_start = sent_end
-
-                                             # 输出符合 C# 模型的大小写要求
-                                             json.dump({'Sentences': result_sentences}, sys.stdout)
-
+                                                     full_text = ' '.join([w['text'] for w in sub])
+                                                     if not full_text.strip():
+                                                         continue
+                                         
+                                                     # 调用 SAT 分句（可调整 max_length 等参数）
+                                                     try:
+                                                         sentences = sat.split(full_text,
+                                                             max_length=50,
+                                                             prior_type="gaussian",
+                                                             prior_kwargs={"target_length": 30, "spread": 10})
+                                                     except Exception as e:
+                                                         # 记录错误但继续处理其他段
+                                                         print(f"SAT split error: {e}", file=sys.stderr)
+                                                         continue
+                                         
+                                                     # 构建字符位置映射
+                                                     word_positions = []
+                                                     pos = 0
+                                                     for w in sub:
+                                                         start = pos
+                                                         end = start + len(w['text'])
+                                                         word_positions.append((start, end, w))
+                                                         pos = end + 1
+                                         
+                                                     # 将句子映射到时间
+                                                     search_start = 0
+                                                     for sent in sentences:
+                                                         idx = full_text.find(sent, search_start)
+                                                         if idx == -1:
+                                                             # 尝试去掉首尾空格
+                                                             stripped = sent.strip()
+                                                             idx = full_text.find(stripped, search_start)
+                                                             if idx != -1:
+                                                                 sent_end = idx + len(stripped)
+                                                                 sent = full_text[idx:sent_end]
+                                                             else:
+                                                                 search_start += 1
+                                                                 continue
+                                                         else:
+                                                             sent_end = idx + len(sent)
+                                         
+                                                         overlap = []
+                                                         for s, e, w in word_positions:
+                                                             if s < sent_end and e > idx:
+                                                                 overlap.append(w)
+                                         
+                                                         if overlap:
+                                                             all_sentences.append({
+                                                                 'text': sent,
+                                                                 'start': min(w['start'] for w in overlap),
+                                                                 'end': max(w['end'] for w in overlap)
+                                                             })
+                                                         search_start = sent_end
+                                         
+                                             # 按时间排序
+                                             all_sentences.sort(key=lambda x: x['start'])
+                                         
+                                             # 输出结果
+                                             json.dump({'sentences': all_sentences}, sys.stdout)
+                                         
                                          if __name__ == '__main__':
                                              try:
                                                  main()
                                              except Exception as e:
                                                  import traceback
+                                                 error_payload = {
+                                                     'error': str(e),
+                                                     'traceback': traceback.format_exc()
+                                                 }
+                                                 json.dump(error_payload, sys.stdout)
                                                  traceback.print_exc(file=sys.stderr)
                                                  sys.exit(1)
-                                         """;
+                                         """";
 }
