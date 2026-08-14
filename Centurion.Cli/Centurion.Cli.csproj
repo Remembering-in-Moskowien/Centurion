@@ -1,19 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.57.2" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Spectre.Console" Version="0.57.2"/>
+        <PackageReference Include="Spectre.Console.Cli" Version="0.55.0"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Centurion.Core\Centurion.Core.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Centurion.Core\Centurion.Core.csproj"/>
+    </ItemGroup>
+
+    <Target Name="MoveSatelliteAssemblies" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
+        <ItemGroup>
+            <!-- 收集所有 .resources.dll 文件（卫星程序集） -->
+            <SatelliteAssemblies Include="$(OutputPath)**\*.resources.dll" />
+        </ItemGroup>
+        <!-- 移动它们到 Resources/ 子目录下，保留原相对路径 -->
+        <Move SourceFiles="@(SatelliteAssemblies)" DestinationFolder="$(OutputPath)Resources\%(RecursiveDir)" />
+        <!-- 删除原来的文化文件夹 -->
+        <RemoveDir Directories="@(SatelliteAssemblies->'%(RootDir)%(Directory)')" Condition="Exists('%(RootDir)%(Directory)')" />
+    </Target>
 
 </Project>

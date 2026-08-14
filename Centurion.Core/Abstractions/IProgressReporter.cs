@@ -1,4 +1,5 @@
 ﻿// Centurion.Core/Abstractions/IProgressReporter.cs
+
 namespace Centurion.Core.Abstractions;
 
 public interface IProgressReporter

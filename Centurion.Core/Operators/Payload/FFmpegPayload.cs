@@ -4,8 +4,8 @@ namespace Centurion.Core.Operators.Payload;
 public class FFmpegConvertPayload
 {
     /// <summary>输入音频路径</summary>
-    public string InputFilePath { get; set; } = string.Empty;
+    public string InputFilePath { get; init; } = string.Empty;
 
     /// <summary>必填，输出文件路径</summary>
-    public string? OutputFilePath { get; set; }
+    public string? OutputFilePath { get; init; }
 }

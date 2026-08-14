@@ -82,8 +82,8 @@ internal static class SubTools
 
     public sealed class HashVerifyResult
     {
-        public bool IsMatch { get; set; }
-        public string ActualHash { get; set; } = string.Empty;
+        public bool IsMatch { get; init; }
+        public string ActualHash { get; init; } = string.Empty;
     }
 
     private static readonly Regex ConvertRegex =
@@ -116,5 +116,23 @@ internal static class SubTools
             _ => 1d
         };
         return num * multiplier;
+    }
+
+    private static readonly Regex MultipleSpacesRegex = new(@"\s{2,}", RegexOptions.Compiled);
+    private static readonly Regex IllegalSpacesRegex = new(@"\s+(?=[.,!?;:'])", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 规范化文本中的空格：去除连续空格、首尾空格，并移除标点前的多余空格。
+    /// </summary>
+    public static string NormalizeSpaces(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        // 将连续多个空白替换为单个空格
+        var normalized = MultipleSpacesRegex.Replace(text, " ");
+        // 去除首尾空格
+        normalized = normalized.Trim();
+        // 处理标点前的多余空格，例如 "Hello , world" -> "Hello, world"
+        normalized = IllegalSpacesRegex.Replace(normalized, "");
+        return normalized;
     }
 }

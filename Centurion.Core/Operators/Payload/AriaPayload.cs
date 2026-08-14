@@ -6,13 +6,13 @@ namespace Centurion.Core.Operators.Payload;
 public class AriaDownloadPayload
 {
     /// <summary>下载地址</summary>
-    public string Url { get; set; } = string.Empty;
+    public string Url { get; init; } = string.Empty;
 
     /// <summary>文件完整保存路径</summary>
-    public string FullSavePath { get; set; } = string.Empty;
+    public string FullSavePath { get; init; } = string.Empty;
 
     /// <summary>文件校验哈希值</summary>
-    public string FileHash { get; set; } = string.Empty;
+    public string FileHash { get; init; } = string.Empty;
 
     /// <summary>单文件分片数 -x</summary>
     public int SplitThread { get; set; } = 16;

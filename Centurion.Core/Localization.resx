@@ -1,188 +1,336 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-    <resheader name="resmimetype">
-        <value>text/microsoft-resx</value>
-    </resheader>
-    <resheader name="version">
-        <value>2.0</value>
-    </resheader>
-    <resheader name="reader">
-        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        </value>
-    </resheader>
-    <resheader name="writer">
-        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        </value>
-    </resheader>
-    <data name="AssContentLoaded" xml:space="preserve">
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ===== 原有键（保持不变） ===== -->
+  <data name="AssContentLoaded" xml:space="preserve">
     <value>ASS content loaded from file.</value>
   </data>
-    <data name="SrtOutput" xml:space="preserve">
+  <data name="SrtOutput" xml:space="preserve">
     <value>SRT Output:</value>
   </data>
-    <data name="WhisperFactoryInitialized" xml:space="preserve">
+  <data name="WhisperFactoryInitialized" xml:space="preserve">
     <value>Whisper factory initialized.</value>
   </data>
-    <data name="TranscriptionStarted" xml:space="preserve">
+  <data name="TranscriptionStarted" xml:space="preserve">
     <value>Transcription started.</value>
   </data>
-    <data name="TranscriptionCompleted" xml:space="preserve">
+  <data name="TranscriptionCompleted" xml:space="preserve">
     <value>Transcription completed. Total segments: {0}</value>
   </data>
-    <data name="FFmpegFailed" xml:space="preserve">
+  <data name="FFmpegFailed" xml:space="preserve">
     <value>FFmpeg failed: {0}</value>
   </data>
-    <data name="FFmpegSuccessPath" xml:space="preserve">
+  <data name="FFmpegSuccessPath" xml:space="preserve">
     <value>FFmpeg succeeded: {0}</value>
   </data>
-    <data name="FFmpegSuccessSize" xml:space="preserve">
+  <data name="FFmpegSuccessSize" xml:space="preserve">
     <value>FFmpeg succeeded: conversion finished, output stream length {0} bytes</value>
   </data>
-    <data name="FileNotFoundFFmpeg" xml:space="preserve">
+  <data name="FileNotFoundFFmpeg" xml:space="preserve">
     <value>FFmpeg not found</value>
   </data>
-    <data name="FileNotFoundInput" xml:space="preserve">
+  <data name="FileNotFoundInput" xml:space="preserve">
     <value>Input file not found</value>
   </data>
-    <data name="FFmpegConversionFailed" xml:space="preserve">
+  <data name="FFmpegConversionFailed" xml:space="preserve">
     <value>FFmpeg conversion failed ExitCode:{0}
 Log:{1}</value>
   </data>
-    <data name="WhisperFactoryNotInitialized" xml:space="preserve">
+  <data name="WhisperFactoryNotInitialized" xml:space="preserve">
     <value>Whisper factory has not been initialized.</value>
   </data>
-    <data name="ErrorClosingFileStream" xml:space="preserve">
+  <data name="ErrorClosingFileStream" xml:space="preserve">
     <value>Error closing file stream: {0}</value>
   </data>
-    <data name="UnsupportedOption" xml:space="preserve">
+  <data name="UnsupportedOption" xml:space="preserve">
     <value>Unsupported option</value>
   </data>
-    <data name="UnsupportedSubcommand" xml:space="preserve">
+  <data name="UnsupportedSubcommand" xml:space="preserve">
     <value>Unsupported subcommand: {0}</value>
   </data>
-    <data name="NoSubcommandSpecified" xml:space="preserve">
+  <data name="NoSubcommandSpecified" xml:space="preserve">
     <value>No subcommand specified.</value>
   </data>
-    <data name="OptionInputFileRequiresFilename" xml:space="preserve">
+  <data name="OptionInputFileRequiresFilename" xml:space="preserve">
     <value>The --inputfile option requires a filename argument.</value>
   </data>
-    <data name="OptionOutputFileRequiresFilename" xml:space="preserve">
+  <data name="OptionOutputFileRequiresFilename" xml:space="preserve">
     <value>The --outputfile option requires a filename argument.</value>
   </data>
-    <data name="UnsupportedArgument" xml:space="preserve">
+  <data name="UnsupportedArgument" xml:space="preserve">
     <value>Unsupported argument: {0}</value>
   </data>
-    <data name="MustSpecifyInputFile" xml:space="preserve">
+  <data name="MustSpecifyInputFile" xml:space="preserve">
     <value>The --inputfile or -i option is required.</value>
   </data>
-    <data name="MustSpecifyOutputFile" xml:space="preserve">
+  <data name="MustSpecifyOutputFile" xml:space="preserve">
     <value>The --outputfile or -o option is required.</value>
   </data>
-    <data name="TempFileOptionNotSpecified" xml:space="preserve">
+  <data name="TempFileOptionNotSpecified" xml:space="preserve">
     <value>Temp file option not specified</value>
   </data>
-    <data name="InvalidTimeFormat" xml:space="preserve">
+  <data name="InvalidTimeFormat" xml:space="preserve">
     <value>Invalid time format. Expected format: HH:MM:SS.CC</value>
   </data>
-    <data name="InvalidAssSubtitleLineFormat" xml:space="preserve">
+  <data name="InvalidAssSubtitleLineFormat" xml:space="preserve">
     <value>Invalid ASS subtitle line format.</value>
   </data>
-    <data name="InvalidAssStyleFormat" xml:space="preserve">
+  <data name="InvalidAssStyleFormat" xml:space="preserve">
     <value>Invalid ASS style format.</value>
   </data>
-    <data name="LanguageCannotBeNullOrEmpty" xml:space="preserve">
+  <data name="LanguageCannotBeNullOrEmpty" xml:space="preserve">
     <value>Language cannot be null or empty.</value>
   </data>
-    <data name="UnsupportedLanguage" xml:space="preserve">
+  <data name="UnsupportedLanguage" xml:space="preserve">
     <value>Unsupported language: {0}</value>
   </data>
-    <data name="WhisperModelFound" xml:space="preserve">
+  <data name="WhisperModelFound" xml:space="preserve">
     <value>Whisper model found: {0}</value>
   </data>
-    <data name="WhisperModelNotFound" xml:space="preserve">
+  <data name="WhisperModelNotFound" xml:space="preserve">
     <value>Whisper model not found. Downloading to {0}...</value>
   </data>
-    <data name="UsingAria2Executable" xml:space="preserve">
+  <data name="UsingAria2Executable" xml:space="preserve">
     <value>Using aria2 executable at: {0}</value>
   </data>
-    <data name="FailedToStartAria2Process" xml:space="preserve">
+  <data name="FailedToStartAria2Process" xml:space="preserve">
     <value>Failed to start aria2 process.</value>
   </data>
-    <data name="Aria2FailedWithExitCode" xml:space="preserve">
+  <data name="Aria2FailedWithExitCode" xml:space="preserve">
     <value>aria2 failed with exit code {0} while downloading Whisper model.</value>
   </data>
-    <data name="WhisperModelDownloadedSuccessfully" xml:space="preserve">
+  <data name="WhisperModelDownloadedSuccessfully" xml:space="preserve">
     <value>Whisper model downloaded successfully: {0}</value>
   </data>
-    <data name="DownloadCompleteVerifyingFileHash" xml:space="preserve">
+  <data name="DownloadCompleteVerifyingFileHash" xml:space="preserve">
     <value>Download complete, verifying file hash...</value>
   </data>
-    <data name="SuccessGenerated" xml:space="preserve">
+  <data name="SuccessGenerated" xml:space="preserve">
     <value>Generation succeeded:</value>
   </data>
-    <data name="ErrorLabel" xml:space="preserve">
+  <data name="ErrorLabel" xml:space="preserve">
     <value>Error:</value>
   </data>
-    <data name="UsageLabel" xml:space="preserve">
+  <data name="UsageLabel" xml:space="preserve">
     <value>Usage:</value>
   </data>
-    <data name="SpawnCommandDescription" xml:space="preserve">
+  <data name="SpawnCommandDescription" xml:space="preserve">
     <value>  Centurion spawn --inputfile &lt;filename&gt; --outputfile &lt;filename&gt; [--tempfile]</value>
   </data>
-    <data name="OptionsLabel" xml:space="preserve">
+  <data name="OptionsLabel" xml:space="preserve">
     <value>Options:</value>
   </data>
-    <data name="InputFileOption" xml:space="preserve">
+  <data name="InputFileOption" xml:space="preserve">
     <value>  --inputfile, -i   Input file path (required)</value>
   </data>
-    <data name="OutputFileOption" xml:space="preserve">
+  <data name="OutputFileOption" xml:space="preserve">
     <value>  --outputfile, -o  Output ASS file path (required)</value>
   </data>
-    <data name="TempFileOption" xml:space="preserve">
+  <data name="TempFileOption" xml:space="preserve">
     <value>  --tempfile, -t    Use temporary file processing for audio (optional)</value>
   </data>
-    <data name="UnsupportedInputFileType" xml:space="preserve">
+  <data name="UnsupportedInputFileType" xml:space="preserve">
     <value>Unsupported input file type: {0}</value>
   </data>
-    <data name="ConfirmContinueInstallation" xml:space="preserve">
+  <data name="ConfirmContinueInstallation" xml:space="preserve">
     <value>Continue with installation?</value>
   </data>
-    <data name="CannotContinueWithoutWhisperModel" xml:space="preserve">
+  <data name="CannotContinueWithoutWhisperModel" xml:space="preserve">
     <value>Cannot continue without Whisper model.</value>
   </data>
-    <data name="Aria2ExecutableNotFound" xml:space="preserve">
+  <data name="Aria2ExecutableNotFound" xml:space="preserve">
     <value>aria2c.exe not found. Please place aria2c.exe next to the application.</value>
   </data>
-    <data name="AriaPayloadError" xml:space="preserve">
+  <data name="AriaPayloadError" xml:space="preserve">
     <value>Payload type must be AriaDownloadPayload</value>
   </data>
-    <data name="FFmpegPayloadError" xml:space="preserve">
+  <data name="FFmpegPayloadError" xml:space="preserve">
     <value>Payload must be FFmpegConvertPayload</value>
   </data>
-    <data name="DownloadMissingFile" xml:space="preserve">
+  <data name="DownloadMissingFile" xml:space="preserve">
     <value>File Download completed, but the file was not found.</value>
   </data>
-    <data name="Downloading" xml:space="preserve">
+  <data name="Downloading" xml:space="preserve">
     <value>Downloading...</value>
   </data>
-    <data name="DownloadingFile" xml:space="preserve">
+  <data name="DownloadingFile" xml:space="preserve">
     <value>Downloading {0}</value>
   </data>
-    <data name="FileHashNotMatch" xml:space="preserve">
-    <value>File hash mismacthed. Hope: {1};Real: {2}</value>
+  <data name="FileHashNotMatch" xml:space="preserve">
+    <value>File hash mismacthed. Hope: {0};Real: {1}</value>
   </data>
-    <data name="WhisperPayloadError" xml:space="preserve">
+  <data name="WhisperPayloadError" xml:space="preserve">
     <value>Payload must be WhisperTranscribePayload</value>
   </data>
-    <data name="ConfigurationIsNotSupported" xml:space="preserve">
+  <data name="ConfigurationIsNotSupported" xml:space="preserve">
     <value>The currently provided generation configuration is not supported.</value>
   </data>
-    <data name="ModeMustBeSpecified" xml:space="preserve">
+  <data name="ModeMustBeSpecified" xml:space="preserve">
     <value>A temporary file or memory stream mode must be specified.</value>
   </data>
-    <data name="UnsupportedWhisperModel" xml:space="preserve">
+  <data name="UnsupportedWhisperModel" xml:space="preserve">
     <value>Unsupported Whisper model</value>
   </data>
+
+  <!-- ===== 新增缺失的键（英文） ===== -->
+  <data name="UnsupportedModel" xml:space="preserve">
+    <value>Unsupported model: {0}</value>
+  </data>
+  <data name="ModelNotFound" xml:space="preserve">
+    <value>Model '{0}' not found.</value>
+  </data>
+  <data name="CannotContinueWithoutModel" xml:space="preserve">
+    <value>Cannot continue without model.</value>
+  </data>
+  <data name="BinaryNotFound" xml:space="preserve">
+    <value>Binary '{0}' not found.</value>
+  </data>
+  <data name="FailedStartFFmpegProcess" xml:space="preserve">
+    <value>Failed to start FFmpeg process.</value>
+  </data>
+  <data name="FFmpegOutputFileMissing" xml:space="preserve">
+    <value>FFmpeg did not produce output file: {0}</value>
+  </data>
+  <data name="PayloadMustBeWhisperPayload" xml:space="preserve">
+    <value>Payload must be WhisperTranscribePayload</value>
+  </data>
+  <data name="WhisperExecutionFailed" xml:space="preserve">
+    <value>whisper-cli execution failed with exit code {0}</value>
+  </data>
+  <data name="WhisperJsonNotFound" xml:space="preserve">
+    <value>whisper-cli did not output JSON file</value>
+  </data>
+  <data name="TranscriptionEmpty" xml:space="preserve">
+    <value>Transcription result is empty</value>
+  </data>
+  <data name="PythonNotFound" xml:space="preserve">
+    <value>Python 3.9+ not found. Please install Python and ensure it is in PATH.</value>
+  </data>
+  <data name="CreatingVirtualEnv" xml:space="preserve">
+    <value>Creating Python virtual environment...</value>
+  </data>
+  <data name="VirtualEnvCreated" xml:space="preserve">
+    <value>Virtual environment created.</value>
+  </data>
+  <data name="InstallingPackages" xml:space="preserve">
+    <value>Installing Python packages to virtual environment...</value>
+  </data>
+  <data name="PackagesInstalled" xml:space="preserve">
+    <value>All packages installed.</value>
+  </data>
+  <data name="FailedToStartPythonProcess" xml:space="preserve">
+    <value>Failed to start Python process.</value>
+  </data>
+  <data name="PythonScriptFailed" xml:space="preserve">
+    <value>Python script exited with code {0}. stderr: {1}</value>
+  </data>
+  <data name="FailedToStartPythonVenv" xml:space="preserve">
+    <value>Failed to start Python venv creation.</value>
+  </data>
+  <data name="VirtualEnvCreationFailed" xml:space="preserve">
+    <value>Virtual environment creation failed: {0}</value>
+  </data>
+  <data name="PackageAlreadyInstalled" xml:space="preserve">
+    <value>Python package '{0}' already installed.</value>
+  </data>
+  <data name="InstallingPackage" xml:space="preserve">
+    <value>Installing Python package '{0}' ...</value>
+  </data>
+  <data name="PackageInstalledSuccess" xml:space="preserve">
+    <value>Python package '{0}' installed successfully.</value>
+  </data>
+  <data name="InstallingMissingPackage" xml:space="preserve">
+    <value>Installing missing package '{0}' ...</value>
+  </data>
+  <data name="GeneratingSubtitles" xml:space="preserve">
+    <value>Generating subtitles for: {0}, options: {1}</value>
+  </data>
+  <data name="UnsupportedOptions" xml:space="preserve">
+    <value>Unsupported generation options</value>
+  </data>
+  <data name="ProcessingSrt" xml:space="preserve">
+    <value>Processing SRT file: {0}</value>
+  </data>
+  <data name="SrtDone" xml:space="preserve">
+    <value>SRT parsed, {0} subtitles generated</value>
+  </data>
+  <data name="ProcessingAudio" xml:space="preserve">
+    <value>Processing audio: {0}, model: {1}, language: {2}</value>
+  </data>
+  <data name="FFmpegDone" xml:space="preserve">
+    <value>FFmpeg conversion done, temp file: {0}</value>
+  </data>
+  <data name="WhisperStart" xml:space="preserve">
+    <value>Whisper transcription started</value>
+  </data>
+  <data name="WhisperNoSegments" xml:space="preserve">
+    <value>Whisper returned no segments</value>
+  </data>
+  <data name="NoWordTimings" xml:space="preserve">
+    <value>No valid word timings after filtering</value>
+  </data>
+  <data name="WhisperDone" xml:space="preserve">
+    <value>Whisper transcription done, {0} words</value>
+  </data>
+  <data name="GentleStart" xml:space="preserve">
+    <value>Gentle alignment started</value>
+  </data>
+  <data name="GentleNoWords" xml:space="preserve">
+    <value>Gentle returned no valid words</value>
+  </data>
+  <data name="GentleDone" xml:space="preserve">
+    <value>Gentle alignment done, {0} words</value>
+  </data>
+  <data name="GentleFallback" xml:space="preserve">
+    <value>Gentle alignment returned empty, falling back to Whisper timestamps</value>
+  </data>
+  <data name="DiarizationStart" xml:space="preserve">
+    <value>Speaker diarization started, num_speakers: {0}</value>
+  </data>
+  <data name="DiarizationDone" xml:space="preserve">
+    <value>Speaker diarization done, {0} segments</value>
+  </data>
+  <data name="SatStart" xml:space="preserve">
+    <value>SAT split started, max_len: {0}, target_len: {1}</value>
+  </data>
+  <data name="SatEmpty" xml:space="preserve">
+    <value>SAT split returned empty result</value>
+  </data>
+  <data name="SatDone" xml:space="preserve">
+    <value>SAT split done, {0} groups</value>
+  </data>
+  <data name="BuildingAss" xml:space="preserve">
+    <value>Building ASS subtitles...</value>
+  </data>
+  <data name="AssDone" xml:space="preserve">
+    <value>ASS subtitles built, {0} lines</value>
+  </data>
+  <data name="AudioProcessingError" xml:space="preserve">
+    <value>Error during audio processing: {0}</value>
+  </data>
+  <data name="GentleServiceNotRunning" xml:space="preserve">
+    <value>Gentle service is not running at {0}.</value>
+  </data>
+  <data name="GentleServiceHint" xml:space="preserve">
+    <value>Please ensure the Gentle container is started and mapped to this address. Example: docker run -d -p 8765:8765 lowerquality/gentle</value>
+  </data>
+  <data name="GentleServiceReady" xml:space="preserve">
+    <value>Gentle service is ready ({0}).</value>
+  </data>
+  <data name="GentleRequestFailed" xml:space="preserve">
+    <value>Gentle service request failed.</value>
+  </data>
+
 </root>

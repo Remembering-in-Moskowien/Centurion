@@ -1,4 +1,5 @@
 ﻿// Centurion.Core/Abstractions/IConsoleOutput.cs
+
 namespace Centurion.Core.Abstractions;
 
 public interface IConsoleOutput
@@ -9,6 +10,6 @@ public interface IConsoleOutput
     void WriteWarning(string message);
     void WriteSuccess(string message);
     void WriteInfo(string message);
-    void WriteMarkup(string markup);      // 支持颜色标记
+    void WriteMarkup(string markup); // 支持颜色标记
     void WriteMarkupLine(string markup);
 }

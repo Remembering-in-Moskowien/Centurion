@@ -2,10 +2,14 @@
 
 public class SubtitleGenerationOptions
 {
-    public string ModelName { get; set; } = "base";
-    public string Language { get; set; } = "en";
-    public string? InitialPrompt { get; set; }
-    public int MaxLength { get; set; } = 80;
-    public int TargetLength { get; set; } = 50;
-    public int SpreadRange { get; set; } = 10;
+    public string ModelName { get; init; } = "base";
+    public string Language { get; init; } = "en";
+    public string? InitialPrompt { get; init; }
+    public int MaxLength { get; init; } = 80;
+    public int TargetLength { get; init; } = 50;
+    public int SpreadRange { get; init; } = 10;
+    public int NumSpeakers { get; set; } = 0;
+    public bool Karaoke { get; set; } = false;
+    public bool UseGentle { get; set; }
+    public string GentleUrl { get; init; } = "http://localhost:8765";
 }

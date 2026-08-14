@@ -28,7 +28,7 @@ public interface IOperators : IDisposable
 /// <typeparam name="TPayload">业务载荷</typeparam>
 public class OperatorsRequest<TPayload>
 {
-    public required TPayload Payload { get; set; }
+    public required TPayload Payload { get; init; }
 }
 
 /// <summary>

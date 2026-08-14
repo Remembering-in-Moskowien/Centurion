@@ -3,11 +3,14 @@ using System.Text.RegularExpressions;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Operators.Payload;
 using Centurion.Core.Tools;
+using Microsoft.Extensions.Localization;
 
 namespace Centurion.Core.Operators;
 
 public class AriaOperator : IOperators
 {
+    private readonly IStringLocalizer<Localization> _localizer;
+    private readonly IBinaryLocator _binaryLocator;
     private string? _aria2BinaryPath;
     private Process? _runningAriaProcess;
     private bool _disposed;
@@ -16,13 +19,22 @@ public class AriaOperator : IOperators
         @"\[.+?([0-9.]+[KMG]iB)/([0-9.]+[KMG]iB)\(([0-9]{1,3})%\)\s*CN:[0-9.]+\s*DL:([0-9.]+[KMG]iB).*ETA:([^\s]+)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    /// <summary>
+    /// 构造函数，注入本地化服务。
+    /// </summary>
+    public AriaOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
+    {
+        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+        _binaryLocator = binaryLocator;
+    }
+
     public async Task EnsureTargetAvailableAsync()
     {
         if (!string.IsNullOrEmpty(_aria2BinaryPath) && File.Exists(_aria2BinaryPath))
             return;
 
         var bin = OperatingSystem.IsWindows() ? "aria2c.exe" : "aria2c";
-        _aria2BinaryPath = BinaryLocator.Locate(bin, "aria");
+        _aria2BinaryPath = _binaryLocator.Locate(bin, "aria");
     }
 
     public async Task<TResult> SendRequestAsync<TResult, TPayload>(
@@ -31,7 +43,7 @@ public class AriaOperator : IOperators
     {
         await EnsureTargetAvailableAsync();
         if (request.Payload is not AriaDownloadPayload payload)
-            throw new ArgumentException(Localization.Get("AriaPayloadError"), nameof(request));
+            throw new ArgumentException(_localizer["AriaPayloadError"], nameof(request));
 
         // 前置校验：目录创建、磁盘空间预检查可在此扩展
         var targetDir = Path.GetDirectoryName(payload.FullSavePath)!;
@@ -65,7 +77,7 @@ public class AriaOperator : IOperators
 
         // 启动进程并持有引用，用于Dispose/取消时Kill
         using var process = Process.Start(startInfo)
-                            ?? throw new InvalidOperationException(Localization.Get("FailedToStartAria2Process"));
+                            ?? throw new InvalidOperationException(_localizer["FailedToStartAria2Process"]);
         _runningAriaProcess = process;
 
         var progressState = new AriaProgressState();
@@ -79,11 +91,11 @@ public class AriaOperator : IOperators
         await WaitForFirstProgressAsync(progressState, payload.ProgressRefreshMs, cancellationToken);
 
         // 渲染进度条
-        ConsoleServices.Progress.StartProgress(Localization.Get("Downloading"), ctx =>
+        ConsoleServices.Progress.StartProgress(_localizer["Downloading"], ctx =>
         {
             var task = ctx.AddTask(
-                Localization.Get("DownloadingFile", Path.GetFileName(payload.FullSavePath)), 
-                maxValue: (long)progressState.TotalBytes
+                _localizer["DownloadingFile", Path.GetFileName(payload.FullSavePath)],
+                (long)progressState.TotalBytes
             );
 
             while (!process.HasExited)
@@ -92,8 +104,9 @@ public class AriaOperator : IOperators
                 task.SetValue((long)progressState.DownloadedBytes);
                 Thread.Sleep(payload.ProgressRefreshMs);
             }
+
             task.SetValue((long)progressState.TotalBytes);
-            task.SetDescription(Localization.Get("DownloadCompleteVerifyingFileHash"));
+            task.SetDescription(_localizer["DownloadCompleteVerifyingFileHash"]);
         });
 
         // 资源清理
@@ -105,18 +118,23 @@ public class AriaOperator : IOperators
         // 进程退出码校验
         if (process.ExitCode != 0)
             throw new AriaProcessExitException(
-                Localization.Get("Aria2FailedWithExitCode", process.ExitCode), process.ExitCode);
+                _localizer["Aria2FailedWithExitCode", process.ExitCode], process.ExitCode);
 
         // 文件存在校验
         if (!File.Exists(payload.FullSavePath))
-            throw new FileNotFoundException(Localization.Get("DownloadMissingFile", payload.FullSavePath),
+            throw new FileNotFoundException(_localizer["DownloadMissingFile", payload.FullSavePath],
                 payload.FullSavePath);
 
         // 哈希校验
         var hashResult = SubTools.VerifyHash(payload.FullSavePath, payload.FileHash);
         if (!hashResult.IsMatch)
             throw new FileHashMismatchException(
-                Localization.Get("FileHashNotMatch"), payload.FullSavePath, payload.FileHash, hashResult.ActualHash);
+                _localizer["FileHashNotMatch",
+                    payload.FileHash,
+                    hashResult.ActualHash],
+                payload.FullSavePath,
+                payload.FileHash,
+                hashResult.ActualHash);
 
         // 泛型返回，如需自定义结果可新建DownloadResult实体
         return (TResult)(object)new { Success = true, FilePath = payload.FullSavePath };

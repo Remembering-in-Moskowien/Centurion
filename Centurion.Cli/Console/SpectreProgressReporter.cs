@@ -1,4 +1,5 @@
 ﻿// Centurion.Cli.Console/SpectreProgressReporter.cs
+
 using Centurion.Core.Abstractions;
 using Spectre.Console;
 
@@ -27,25 +28,44 @@ public class SpectreProgressReporter : IProgressReporter
     }
 }
 
-internal class SpectreProgressContext : IProgressContext
+internal class SpectreProgressContext(ProgressContext context) : IProgressContext
 {
-    private readonly ProgressContext _context;
-    public SpectreProgressContext(ProgressContext context) => _context = context;
     public IProgressTask AddTask(string description, long maxValue = 100)
     {
-        var task = _context.AddTask(description, maxValue: maxValue);
+        var task = context.AddTask(description, maxValue: maxValue);
         return new SpectreProgressTask(task);
     }
-    public void Refresh() => _context.Refresh();
+
+    public void Refresh()
+    {
+        context.Refresh();
+    }
 }
 
-internal class SpectreProgressTask : IProgressTask
+internal class SpectreProgressTask(ProgressTask task) : IProgressTask
 {
-    private readonly ProgressTask _task;
-    public SpectreProgressTask(ProgressTask task) => _task = task;
-    public void SetValue(long value) => _task.Value = value;
-    public void SetMaxValue(long maxValue) => _task.MaxValue = maxValue;
-    public void SetDescription(string description) => _task.Description = description;
-    public void Increment(long amount = 1) => _task.Increment(amount);
-    public void Dispose() => _task.StopTask();
+    public void SetValue(long value)
+    {
+        task.Value = value;
+    }
+
+    public void SetMaxValue(long maxValue)
+    {
+        task.MaxValue = maxValue;
+    }
+
+    public void SetDescription(string description)
+    {
+        task.Description = description;
+    }
+
+    public void Increment(long amount = 1)
+    {
+        task.Increment(amount);
+    }
+
+    public void Dispose()
+    {
+        task.StopTask();
+    }
 }

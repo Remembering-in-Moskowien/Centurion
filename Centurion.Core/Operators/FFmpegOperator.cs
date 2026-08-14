@@ -4,15 +4,27 @@ using Centurion.Core.Operators.Payload;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Tools;
 using Centurion.Core.Operators.Results;
+using Microsoft.Extensions.Localization;
 
 namespace Centurion.Core.Operators;
 
-/// <summary>FFmpeg音频转换算子，实现统一IOperators接口</summary>
+/// <summary>FFmpeg音频转换算子，实现统一IOperators接口，支持DI和本地化</summary>
 public class FFmpegOperator : IOperators
 {
+    private readonly IStringLocalizer<Localization> _localizer;
+    private readonly IBinaryLocator _binaryLocator;
     private string? _ffmpegBinaryPath;
     private Process? _runningProcess;
     private bool _disposed;
+
+    /// <summary>
+    /// 构造函数，注入本地化服务。
+    /// </summary>
+    public FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
+    {
+        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+        _binaryLocator = binaryLocator;
+    }
 
     public async Task EnsureTargetAvailableAsync()
     {
@@ -20,7 +32,7 @@ public class FFmpegOperator : IOperators
             return;
 
         var bin = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
-        _ffmpegBinaryPath = BinaryLocator.Locate(bin, "ffmpeg");
+        _ffmpegBinaryPath = _binaryLocator.Locate(bin, "ffmpeg");
     }
 
     public async Task<TResult> SendRequestAsync<TResult, TPayload>(
@@ -31,11 +43,11 @@ public class FFmpegOperator : IOperators
 
         // 校验载荷类型
         if (request.Payload is not FFmpegConvertPayload payload)
-            throw new ArgumentException(Localization.Get("FFmpegPayloadError"), nameof(request));
+            throw new ArgumentException(_localizer["FFmpegPayloadError"], nameof(request));
 
         // 前置文件校验
         if (!File.Exists(payload.InputFilePath))
-            throw new FileNotFoundException(Localization.Get("FileNotFoundInput"), payload.InputFilePath);
+            throw new FileNotFoundException(_localizer["FileNotFoundInput"], payload.InputFilePath);
 
         var startInfo = new ProcessStartInfo(_ffmpegBinaryPath!)
         {
@@ -48,7 +60,7 @@ public class FFmpegOperator : IOperators
         var args = startInfo.ArgumentList;
 
         // 统一基础音频转Whisper参数
-        //ffmpeg -y -i test.mp4 -ac 1 -ar 16000 -acodec pcm_s16le -af aresample -f wav -
+        // ffmpeg -y -i test.mp4 -ac 1 -ar 16000 -acodec pcm_s16le -af aresample -f wav -
         args.Add("-y");
         args.Add("-i");
         args.Add(payload.InputFilePath);
@@ -73,7 +85,7 @@ public class FFmpegOperator : IOperators
 
         // 启动进程并持有用于Dispose/取消销毁
         using var process = Process.Start(startInfo)
-                            ?? throw new InvalidOperationException(Localization.Get("FailedStartFFmpegProcess"));
+                            ?? throw new InvalidOperationException(_localizer["FailedStartFFmpegProcess"]);
         _runningProcess = process;
 
         StringBuilder errorBuilder = new();
@@ -96,15 +108,14 @@ public class FFmpegOperator : IOperators
 
         var errorLog = errorBuilder.ToString();
         if (process.ExitCode != 0)
-        {
             throw new FFmpegProcessExitException(
-                Localization.Get("FFmpegConversionFailed", process.ExitCode),
+                _localizer["FFmpegConversionFailed", process.ExitCode],
                 process.ExitCode, errorLog);
-        }
 
-        if (!File.Exists(outputFile)) throw new FileNotFoundException(Localization.Get("FFmpegOutputFileMissing"), outputFile);
+        if (!File.Exists(outputFile))
+            throw new FileNotFoundException(_localizer["FFmpegOutputFileMissing"], outputFile);
 
-        ConsoleServices.Output.WriteLine(Localization.Get("FFmpegSuccessPath", outputFile));
+        ConsoleServices.Output.WriteLine(_localizer["FFmpegSuccessPath", outputFile]);
         var fileResult = new FFmpegFileResult { OutputPath = outputFile };
         return (TResult)(object)fileResult;
     }
