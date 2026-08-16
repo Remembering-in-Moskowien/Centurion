@@ -19,12 +19,12 @@
     <Target Name="MoveSatelliteAssemblies" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <ItemGroup>
             <!-- 收集所有 .resources.dll 文件（卫星程序集） -->
-            <SatelliteAssemblies Include="$(OutputPath)**\*.resources.dll" />
+            <SatelliteAssemblies Include="$(OutputPath)**\*.resources.dll"/>
         </ItemGroup>
         <!-- 移动它们到 Resources/ 子目录下，保留原相对路径 -->
-        <Move SourceFiles="@(SatelliteAssemblies)" DestinationFolder="$(OutputPath)Resources\%(RecursiveDir)" />
+        <Move SourceFiles="@(SatelliteAssemblies)" DestinationFolder="$(OutputPath)Resources\%(RecursiveDir)"/>
         <!-- 删除原来的文化文件夹 -->
-        <RemoveDir Directories="@(SatelliteAssemblies->'%(RootDir)%(Directory)')" Condition="Exists('%(RootDir)%(Directory)')" />
+        <RemoveDir Directories="@(SatelliteAssemblies->'%(RootDir)%(Directory)')" Condition="Exists('%(RootDir)%(Directory)')"/>
     </Target>
 
 </Project>

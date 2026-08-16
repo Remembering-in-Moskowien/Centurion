@@ -3,12 +3,10 @@ using System.Reflection;
 using Centurion.Cli.Console;
 using Centurion.Cli.Commands;
 using Centurion.Core;
-using Centurion.Core.Models;
 using Centurion.Core.Operators;
 using Centurion.Core.Services;
 using Centurion.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -34,6 +32,7 @@ AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
         if (File.Exists(path))
             return Assembly.LoadFrom(path);
     }
+
     return null;
 };
 
@@ -62,26 +61,9 @@ services.AddSingleton<IBinaryLocator, BinaryLocator>();
 services.AddTransient<FFmpegOperator>();
 services.AddSingleton<AssSubSpawner>();
 services.AddSingleton<SatSplitService>();
-services.AddSingleton<GentleService>();
+services.AddScoped<MfaCliOperator>();
 
 services.AddTransient<AriaOperator>();
-
-// 注册键控 ModelManager（传入 IServiceProvider）
-services.AddKeyedSingleton<ModelManager>("vad", (sp, key) =>
-    new ModelManager(
-        "silero_vad.onnx",
-        ModelRegistry.VadModels,
-        sp.GetRequiredService<IStringLocalizer<Localization>>(),
-        sp,
-        "vad"));
-
-services.AddKeyedSingleton<ModelManager>("wespeaker", (sp, key) =>
-    new ModelManager(
-        "wespeaker-resnet34-lm",
-        ModelRegistry.WespeakerModels,
-        sp.GetRequiredService<IStringLocalizer<Localization>>(),
-        sp,
-        "diarization"));
 
 // 注册 SpeakerDiarizationService（其构造函数使用 [FromKeyedServices]）
 services.AddSingleton<SpeakerDiarizationService>();

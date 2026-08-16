@@ -10,7 +10,7 @@ public static class ModelRegistry
         {
             {
                 "tiny",
-                new ModelMeta("ggml-tiny.bin", 
+                new ModelMeta("ggml-tiny.bin",
                     "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
                     "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21")
             },

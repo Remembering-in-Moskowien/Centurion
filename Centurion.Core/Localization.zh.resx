@@ -1,334 +1,443 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=0.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        </value>
+    </resheader>
 
-  <!-- 原有键的中文翻译（若已有则覆盖，若无则新增） -->
-  <data name="AssContentLoaded" xml:space="preserve">
+    <!-- 原有键的中文翻译（若已有则覆盖，若无则新增） -->
+    <data name="AssContentLoaded" xml:space="preserve">
     <value>已从文件加载 ASS 内容。</value>
   </data>
-  <data name="SrtOutput" xml:space="preserve">
+    <data name="SrtOutput" xml:space="preserve">
     <value>SRT 输出：</value>
   </data>
-  <data name="WhisperFactoryInitialized" xml:space="preserve">
+    <data name="WhisperFactoryInitialized" xml:space="preserve">
     <value>Whisper 工厂已初始化。</value>
   </data>
-  <data name="TranscriptionStarted" xml:space="preserve">
+    <data name="TranscriptionStarted" xml:space="preserve">
     <value>转录开始。</value>
   </data>
-  <data name="TranscriptionCompleted" xml:space="preserve">
+    <data name="TranscriptionCompleted" xml:space="preserve">
     <value>转录完成，共 {0} 个片段。</value>
   </data>
-  <data name="FFmpegFailed" xml:space="preserve">
+    <data name="FFmpegFailed" xml:space="preserve">
     <value>FFmpeg 失败：{0}</value>
   </data>
-  <data name="FFmpegSuccessPath" xml:space="preserve">
+    <data name="FFmpegSuccessPath" xml:space="preserve">
     <value>FFmpeg 成功：{0}</value>
   </data>
-  <data name="FFmpegSuccessSize" xml:space="preserve">
+    <data name="FFmpegSuccessSize" xml:space="preserve">
     <value>FFmpeg 成功：转换完成，输出流长度 {0} 字节</value>
   </data>
-  <data name="FileNotFoundFFmpeg" xml:space="preserve">
+    <data name="FileNotFoundFFmpeg" xml:space="preserve">
     <value>未找到 FFmpeg</value>
   </data>
-  <data name="FileNotFoundInput" xml:space="preserve">
+    <data name="FileNotFoundInput" xml:space="preserve">
     <value>未找到输入文件</value>
   </data>
-  <data name="FFmpegConversionFailed" xml:space="preserve">
+    <data name="FFmpegConversionFailed" xml:space="preserve">
     <value>FFmpeg 转换失败，退出码：{0}，日志：{1}</value>
   </data>
-  <data name="WhisperFactoryNotInitialized" xml:space="preserve">
+    <data name="WhisperFactoryNotInitialized" xml:space="preserve">
     <value>Whisper 工厂尚未初始化。</value>
   </data>
-  <data name="ErrorClosingFileStream" xml:space="preserve">
+    <data name="ErrorClosingFileStream" xml:space="preserve">
     <value>关闭文件流时出错：{0}</value>
   </data>
-  <data name="UnsupportedOption" xml:space="preserve">
+    <data name="UnsupportedOption" xml:space="preserve">
     <value>不支持的选项</value>
   </data>
-  <data name="UnsupportedSubcommand" xml:space="preserve">
+    <data name="UnsupportedSubcommand" xml:space="preserve">
     <value>不支持的子命令：{0}</value>
   </data>
-  <data name="NoSubcommandSpecified" xml:space="preserve">
+    <data name="NoSubcommandSpecified" xml:space="preserve">
     <value>未指定子命令。</value>
   </data>
-  <data name="OptionInputFileRequiresFilename" xml:space="preserve">
+    <data name="OptionInputFileRequiresFilename" xml:space="preserve">
     <value>--inputfile 选项需要指定文件名。</value>
   </data>
-  <data name="OptionOutputFileRequiresFilename" xml:space="preserve">
+    <data name="OptionOutputFileRequiresFilename" xml:space="preserve">
     <value>--outputfile 选项需要指定文件名。</value>
   </data>
-  <data name="UnsupportedArgument" xml:space="preserve">
+    <data name="UnsupportedArgument" xml:space="preserve">
     <value>不支持的参数：{0}</value>
   </data>
-  <data name="MustSpecifyInputFile" xml:space="preserve">
+    <data name="MustSpecifyInputFile" xml:space="preserve">
     <value>必须指定 --inputfile 或 -i 选项。</value>
   </data>
-  <data name="MustSpecifyOutputFile" xml:space="preserve">
+    <data name="MustSpecifyOutputFile" xml:space="preserve">
     <value>必须指定 --outputfile 或 -o 选项。</value>
   </data>
-  <data name="TempFileOptionNotSpecified" xml:space="preserve">
+    <data name="TempFileOptionNotSpecified" xml:space="preserve">
     <value>未指定临时文件选项。</value>
   </data>
-  <data name="InvalidTimeFormat" xml:space="preserve">
+    <data name="InvalidTimeFormat" xml:space="preserve">
     <value>时间格式无效，应为 HH:MM:SS.CC。</value>
   </data>
-  <data name="InvalidAssSubtitleLineFormat" xml:space="preserve">
+    <data name="InvalidAssSubtitleLineFormat" xml:space="preserve">
     <value>无效的 ASS 字幕行格式。</value>
   </data>
-  <data name="InvalidAssStyleFormat" xml:space="preserve">
+    <data name="InvalidAssStyleFormat" xml:space="preserve">
     <value>无效的 ASS 样式格式。</value>
   </data>
-  <data name="LanguageCannotBeNullOrEmpty" xml:space="preserve">
+    <data name="LanguageCannotBeNullOrEmpty" xml:space="preserve">
     <value>语言不能为空。</value>
   </data>
-  <data name="UnsupportedLanguage" xml:space="preserve">
+    <data name="UnsupportedLanguage" xml:space="preserve">
     <value>不支持的语言：{0}</value>
   </data>
-  <data name="WhisperModelFound" xml:space="preserve">
+    <data name="WhisperModelFound" xml:space="preserve">
     <value>找到 Whisper 模型：{0}</value>
   </data>
-  <data name="WhisperModelNotFound" xml:space="preserve">
+    <data name="WhisperModelNotFound" xml:space="preserve">
     <value>未找到 Whisper 模型，正在下载至 {0}...</value>
   </data>
-  <data name="UsingAria2Executable" xml:space="preserve">
+    <data name="UsingAria2Executable" xml:space="preserve">
     <value>使用 aria2 可执行文件：{0}</value>
   </data>
-  <data name="FailedToStartAria2Process" xml:space="preserve">
+    <data name="FailedToStartAria2Process" xml:space="preserve">
     <value>启动 aria2 进程失败。</value>
   </data>
-  <data name="Aria2FailedWithExitCode" xml:space="preserve">
+    <data name="Aria2FailedWithExitCode" xml:space="preserve">
     <value>aria2 下载 Whisper 模型失败，退出码 {0}。</value>
   </data>
-  <data name="WhisperModelDownloadedSuccessfully" xml:space="preserve">
+    <data name="WhisperModelDownloadedSuccessfully" xml:space="preserve">
     <value>Whisper 模型下载成功：{0}</value>
   </data>
-  <data name="DownloadCompleteVerifyingFileHash" xml:space="preserve">
+    <data name="DownloadCompleteVerifyingFileHash" xml:space="preserve">
     <value>下载完成，正在验证文件哈希...</value>
   </data>
-  <data name="SuccessGenerated" xml:space="preserve">
+    <data name="SuccessGenerated" xml:space="preserve">
     <value>生成成功：</value>
   </data>
-  <data name="ErrorLabel" xml:space="preserve">
+    <data name="ErrorLabel" xml:space="preserve">
     <value>错误：</value>
   </data>
-  <data name="UsageLabel" xml:space="preserve">
+    <data name="UsageLabel" xml:space="preserve">
     <value>用法：</value>
   </data>
-  <data name="SpawnCommandDescription" xml:space="preserve">
+    <data name="SpawnCommandDescription" xml:space="preserve">
     <value>  Centurion spawn --inputfile &lt;文件名&gt; --outputfile &lt;文件名&gt; [--tempfile]</value>
   </data>
-  <data name="OptionsLabel" xml:space="preserve">
+    <data name="OptionsLabel" xml:space="preserve">
     <value>选项：</value>
   </data>
-  <data name="InputFileOption" xml:space="preserve">
+    <data name="InputFileOption" xml:space="preserve">
     <value>  --inputfile, -i   输入文件路径（必需）</value>
   </data>
-  <data name="OutputFileOption" xml:space="preserve">
+    <data name="OutputFileOption" xml:space="preserve">
     <value>  --outputfile, -o  输出 ASS 文件路径（必需）</value>
   </data>
-  <data name="TempFileOption" xml:space="preserve">
+    <data name="TempFileOption" xml:space="preserve">
     <value>  --tempfile, -t    使用临时文件处理音频（可选）</value>
   </data>
-  <data name="UnsupportedInputFileType" xml:space="preserve">
+    <data name="UnsupportedInputFileType" xml:space="preserve">
     <value>不支持的输入文件类型：{0}</value>
   </data>
-  <data name="ConfirmContinueInstallation" xml:space="preserve">
+    <data name="ConfirmContinueInstallation" xml:space="preserve">
     <value>是否继续安装？</value>
   </data>
-  <data name="CannotContinueWithoutWhisperModel" xml:space="preserve">
+    <data name="CannotContinueWithoutWhisperModel" xml:space="preserve">
     <value>没有 Whisper 模型无法继续。</value>
   </data>
-  <data name="Aria2ExecutableNotFound" xml:space="preserve">
+    <data name="Aria2ExecutableNotFound" xml:space="preserve">
     <value>未找到 aria2c.exe，请将其放置在应用程序旁边。</value>
   </data>
-  <data name="AriaPayloadError" xml:space="preserve">
+    <data name="AriaPayloadError" xml:space="preserve">
     <value>载荷类型必须为 AriaDownloadPayload</value>
   </data>
-  <data name="FFmpegPayloadError" xml:space="preserve">
+    <data name="FFmpegPayloadError" xml:space="preserve">
     <value>载荷必须为 FFmpegConvertPayload</value>
   </data>
-  <data name="DownloadMissingFile" xml:space="preserve">
+    <data name="DownloadMissingFile" xml:space="preserve">
     <value>下载完成，但未找到文件。</value>
   </data>
-  <data name="Downloading" xml:space="preserve">
+    <data name="Downloading" xml:space="preserve">
     <value>正在下载...</value>
   </data>
-  <data name="DownloadingFile" xml:space="preserve">
+    <data name="DownloadingFile" xml:space="preserve">
     <value>正在下载 {0}</value>
   </data>
-  <data name="FileHashNotMatch" xml:space="preserve">
+    <data name="FileHashNotMatch" xml:space="preserve">
     <value>文件哈希不匹配，期望：{0}，实际：{1}</value>
   </data>
-  <data name="WhisperPayloadError" xml:space="preserve">
+    <data name="WhisperPayloadError" xml:space="preserve">
     <value>载荷必须为 WhisperTranscribePayload</value>
   </data>
-  <data name="ConfigurationIsNotSupported" xml:space="preserve">
+    <data name="ConfigurationIsNotSupported" xml:space="preserve">
     <value>当前提供的生成配置不受支持。</value>
   </data>
-  <data name="ModeMustBeSpecified" xml:space="preserve">
+    <data name="ModeMustBeSpecified" xml:space="preserve">
     <value>必须指定临时文件或内存流模式。</value>
   </data>
-  <data name="UnsupportedWhisperModel" xml:space="preserve">
+    <data name="UnsupportedWhisperModel" xml:space="preserve">
     <value>不支持的 Whisper 模型</value>
   </data>
 
-  <!-- ===== 新增缺失的键 ===== -->
-  <data name="UnsupportedModel" xml:space="preserve">
+    <!-- ===== 新增缺失的键 ===== -->
+    <data name="UnsupportedModel" xml:space="preserve">
     <value>不支持的模型：{0}</value>
   </data>
-  <data name="ModelNotFound" xml:space="preserve">
+    <data name="ModelNotFound" xml:space="preserve">
     <value>未找到模型 '{0}'。</value>
   </data>
-  <data name="CannotContinueWithoutModel" xml:space="preserve">
+    <data name="CannotContinueWithoutModel" xml:space="preserve">
     <value>无模型无法继续。</value>
   </data>
-  <data name="BinaryNotFound" xml:space="preserve">
+    <data name="BinaryNotFound" xml:space="preserve">
     <value>未找到可执行文件 '{0}'。</value>
+  </data>
+    <data name="FailedStartFFmpegProcess" xml:space="preserve">
+    <value>启动 FFmpeg 进程失败。</value>
+  </data>
+    <data name="FFmpegOutputFileMissing" xml:space="preserve">
+    <value>FFmpeg 未生成输出文件：{0}</value>
+  </data>
+    <data name="PayloadMustBeWhisperPayload" xml:space="preserve">
+    <value>载荷必须为 WhisperTranscribePayload 类型</value>
+  </data>
+    <data name="WhisperExecutionFailed" xml:space="preserve">
+    <value>whisper-cli 执行失败，退出码 {0}</value>
+  </data>
+    <data name="WhisperJsonNotFound" xml:space="preserve">
+    <value>whisper-cli 未输出 JSON 文件</value>
+  </data>
+    <data name="TranscriptionEmpty" xml:space="preserve">
+    <value>转录结果为空</value>
+  </data>
+    <data name="PythonNotFound" xml:space="preserve">
+    <value>未找到 Python 3.9+，请安装 Python 并将其添加到 PATH 环境变量。</value>
+  </data>
+    <data name="CreatingVirtualEnv" xml:space="preserve">
+    <value>正在创建 Python 虚拟环境...</value>
+  </data>
+    <data name="VirtualEnvCreated" xml:space="preserve">
+    <value>虚拟环境创建成功。</value>
+  </data>
+    <data name="InstallingPackages" xml:space="preserve">
+    <value>正在向虚拟环境安装 Python 包...</value>
+  </data>
+    <data name="PackagesInstalled" xml:space="preserve">
+    <value>所有包安装完成。</value>
+  </data>
+    <data name="FailedToStartPythonProcess" xml:space="preserve">
+    <value>启动 Python 进程失败。</value>
+  </data>
+    <data name="PythonScriptFailed" xml:space="preserve">
+    <value>Python 脚本退出，代码 {0}，错误输出：{1}</value>
+  </data>
+    <data name="FailedToStartPythonVenv" xml:space="preserve">
+    <value>启动 Python venv 创建失败。</value>
+  </data>
+    <data name="VirtualEnvCreationFailed" xml:space="preserve">
+    <value>虚拟环境创建失败：{0}</value>
+  </data>
+    <data name="PackageAlreadyInstalled" xml:space="preserve">
+    <value>Python 包 '{0}' 已安装。</value>
+  </data>
+    <data name="InstallingPackage" xml:space="preserve">
+    <value>正在安装 Python 包 '{0}' ...</value>
+  </data>
+    <data name="PackageInstalledSuccess" xml:space="preserve">
+    <value>Python 包 '{0}' 安装成功。</value>
+  </data>
+    <data name="InstallingMissingPackage" xml:space="preserve">
+    <value>正在安装缺失包 '{0}' ...</value>
+  </data>
+    <data name="GeneratingSubtitles" xml:space="preserve">
+    <value>正在生成字幕：{0}，选项：{1}</value>
+  </data>
+    <data name="UnsupportedOptions" xml:space="preserve">
+    <value>不支持的生成选项</value>
+  </data>
+    <data name="ProcessingSrt" xml:space="preserve">
+    <value>正在处理 SRT 文件：{0}</value>
+  </data>
+    <data name="SrtDone" xml:space="preserve">
+    <value>SRT 解析完成，生成 {0} 条字幕</value>
+  </data>
+    <data name="ProcessingAudio" xml:space="preserve">
+    <value>正在处理音频：{0}，模型：{1}，语言：{2}</value>
+  </data>
+    <data name="FFmpegDone" xml:space="preserve">
+    <value>FFmpeg 转换完成，临时文件：{0}</value>
+  </data>
+    <data name="WhisperStart" xml:space="preserve">
+    <value>Whisper 转录开始</value>
+  </data>
+    <data name="WhisperNoSegments" xml:space="preserve">
+    <value>Whisper 未返回任何片段</value>
+  </data>
+    <data name="NoWordTimings" xml:space="preserve">
+    <value>过滤后无有效词级时间</value>
+  </data>
+    <data name="WhisperDone" xml:space="preserve">
+    <value>Whisper 转录成功，获得 {0} 个词</value>
+  </data>
+    <data name="GentleStart" xml:space="preserve">
+    <value>Gentle 对齐开始</value>
+  </data>
+    <data name="GentleNoWords" xml:space="preserve">
+    <value>Gentle 未返回有效词</value>
+  </data>
+    <data name="GentleDone" xml:space="preserve">
+    <value>Gentle 对齐成功，获得 {0} 个词</value>
+  </data>
+    <data name="GentleFallback" xml:space="preserve">
+    <value>Gentle 对齐返回空结果，回退到 Whisper 时间戳</value>
+  </data>
+    <data name="DiarizationStart" xml:space="preserve">
+    <value>说话人分割开始，说话人数：{0}</value>
+  </data>
+    <data name="DiarizationDone" xml:space="preserve">
+    <value>说话人分割完成，检测到 {0} 个说话人段</value>
+  </data>
+    <data name="SatStart" xml:space="preserve">
+    <value>SAT 分句开始，最大长度：{0}，目标长度：{1}</value>
+  </data>
+    <data name="SatEmpty" xml:space="preserve">
+    <value>SAT 分句返回空结果</value>
+  </data>
+    <data name="SatDone" xml:space="preserve">
+    <value>SAT 分句成功，获得 {0} 个词组</value>
+  </data>
+    <data name="BuildingAss" xml:space="preserve">
+    <value>正在构建 ASS 字幕...</value>
+  </data>
+    <data name="AssDone" xml:space="preserve">
+    <value>ASS 字幕构建完成，共 {0} 条字幕行</value>
+  </data>
+    <data name="AudioProcessingError" xml:space="preserve">
+    <value>音频处理过程中发生错误：{0}</value>
+  </data>
+    <data name="GentleServiceNotRunning" xml:space="preserve">
+    <value>Gentle 服务未运行 ({0})。</value>
+  </data>
+    <data name="GentleServiceHint" xml:space="preserve">
+    <value>请确保 Gentle 容器已启动并映射到该地址。例如：docker run -d -p 8765:8765 lowerquality/gentle</value>
+  </data>
+    <data name="GentleServiceReady" xml:space="preserve">
+    <value>Gentle 服务已就绪 ({0})。</value>
+  </data>
+    <data name="GentleRequestFailed" xml:space="preserve">
+    <value>Gentle 服务请求失败。</value>
+  </data>
+    <data name="WhisperXStart" xml:space="preserve">
+  <value>WhisperX 转录和说话人分割开始</value>
+</data>
+    <data name="WhisperXDone" xml:space="preserve">
+  <value>WhisperX 完成，处理了 {0} 个词</value>
+</data>
+    <data name="WhisperXNoSegments" xml:space="preserve">
+  <value>WhisperX 未返回任何片段</value>
+</data>
+    <data name="MFACondaNotFound" xml:space="preserve">
+  <value>未找到 Conda，请安装 Miniconda。</value>
+</data>
+    <data name="MFAEnvDirNotFound" xml:space="preserve">
+  <value>无法确定 Conda 环境目录。</value>
+</data>
+    <data name="MFAInstallingConda" xml:space="preserve">
+  <value>正在通过 Conda 安装 montreal-forced-aligner...</value>
+</data>
+    <data name="MFAInstallCondaFailed" xml:space="preserve">
+  <value>启动 conda 安装失败。</value>
+</data>
+    <data name="MFAInstallCondaFailedWithError" xml:space="preserve">
+  <value>Conda 安装失败：{0}</value>
+</data>
+    <data name="MFABinaryNotFound" xml:space="preserve">
+  <value>安装后未找到 MFA 可执行文件。</value>
+</data>
+    <data name="MFAInstalled" xml:space="preserve">
+  <value>montreal-forced-aligner 已安装。</value>
+</data>
+    <data name="MFADownloadingModels" xml:space="preserve">
+  <value>正在下载 MFA 模型...</value>
+</data>
+    <data name="MFAModelsDownloaded" xml:space="preserve">
+  <value>MFA 模型已下载。</value>
+</data>
+    <data name="MFARunFailed" xml:space="preserve">
+  <value>启动 MFA 进程失败。</value>
+</data>
+    <data name="MFACommandFailed" xml:space="preserve">
+  <value>MFA 命令失败：{0}</value>
+</data>
+    <data name="MFAPayloadError" xml:space="preserve">
+  <value>载荷必须为 MFAAlignPayload</value>
+</data>
+    <data name="MFATextGridNotFound" xml:space="preserve">
+  <value>未找到 TextGrid 输出文件。</value>
+</data>
+    <data name="MFAParseError" xml:space="preserve">
+  <value>在 TextGrid 中未找到 'word' 层级。</value>
+</data>
+    <data name="MFAStart" xml:space="preserve">
+  <value>正在启动 MFA 强制对齐...</value>
+</data>
+    <data name="MFADone" xml:space="preserve">
+  <value>MFA 对齐完成，处理了 {0} 个词</value>
+</data>
+    <data name="MFANoWords" xml:space="preserve">
+  <value>MFA 未返回任何词，回退到 Whisper 时间戳</value>
+</data>
+  <data name="FFmpegNotFound" xml:space="preserve">
+    <value>未找到 FFmpeg 可执行文件。</value>
+  </data>
+  <data name="FileNotFoundInput" xml:space="preserve">
+    <value>输入文件不存在。</value>
+  </data>
+  <data name="SegmentsEmpty" xml:space="preserve">
+    <value>分段时间列表不能为空。</value>
+  </data>
+  <data name="UnsupportedPayloadType" xml:space="preserve">
+    <value>不支持的载荷类型。</value>
+  </data>
+  <data name="UnexpectedResultType" xml:space="preserve">
+    <value>期望的结果类型为 {0}，实际为 {1}。</value>
+  </data>
+  <data name="FFmpegConversionFailed" xml:space="preserve">
+    <value>FFmpeg 转换失败，退出码 {0}。</value>
+  </data>
+  <data name="FFmpegOutputFileMissing" xml:space="preserve">
+    <value>输出文件未生成。</value>
   </data>
   <data name="FailedStartFFmpegProcess" xml:space="preserve">
     <value>启动 FFmpeg 进程失败。</value>
   </data>
-  <data name="FFmpegOutputFileMissing" xml:space="preserve">
-    <value>FFmpeg 未生成输出文件：{0}</value>
+  <data name="FFmpegSuccessPath" xml:space="preserve">
+    <value>FFmpeg 转换成功：{0}</value>
   </data>
-  <data name="PayloadMustBeWhisperPayload" xml:space="preserve">
-    <value>载荷必须为 WhisperTranscribePayload 类型</value>
+  <data name="FFmpegSplitFailed" xml:space="preserve">
+    <value>切割片段 {0} 失败，退出码 {1}。</value>
   </data>
-  <data name="WhisperExecutionFailed" xml:space="preserve">
-    <value>whisper-cli 执行失败，退出码 {0}</value>
+  <data name="FFmpegSplitSuccess" xml:space="preserve">
+    <value>已保存片段：{0}</value>
   </data>
-  <data name="WhisperJsonNotFound" xml:space="preserve">
-    <value>whisper-cli 未输出 JSON 文件</value>
-  </data>
-  <data name="TranscriptionEmpty" xml:space="preserve">
-    <value>转录结果为空</value>
-  </data>
-  <data name="PythonNotFound" xml:space="preserve">
-    <value>未找到 Python 3.9+，请安装 Python 并将其添加到 PATH 环境变量。</value>
-  </data>
-  <data name="CreatingVirtualEnv" xml:space="preserve">
-    <value>正在创建 Python 虚拟环境...</value>
-  </data>
-  <data name="VirtualEnvCreated" xml:space="preserve">
-    <value>虚拟环境创建成功。</value>
-  </data>
-  <data name="InstallingPackages" xml:space="preserve">
-    <value>正在向虚拟环境安装 Python 包...</value>
-  </data>
-  <data name="PackagesInstalled" xml:space="preserve">
-    <value>所有包安装完成。</value>
-  </data>
-  <data name="FailedToStartPythonProcess" xml:space="preserve">
-    <value>启动 Python 进程失败。</value>
-  </data>
-  <data name="PythonScriptFailed" xml:space="preserve">
-    <value>Python 脚本退出，代码 {0}，错误输出：{1}</value>
-  </data>
-  <data name="FailedToStartPythonVenv" xml:space="preserve">
-    <value>启动 Python venv 创建失败。</value>
-  </data>
-  <data name="VirtualEnvCreationFailed" xml:space="preserve">
-    <value>虚拟环境创建失败：{0}</value>
-  </data>
-  <data name="PackageAlreadyInstalled" xml:space="preserve">
-    <value>Python 包 '{0}' 已安装。</value>
-  </data>
-  <data name="InstallingPackage" xml:space="preserve">
-    <value>正在安装 Python 包 '{0}' ...</value>
-  </data>
-  <data name="PackageInstalledSuccess" xml:space="preserve">
-    <value>Python 包 '{0}' 安装成功。</value>
-  </data>
-  <data name="InstallingMissingPackage" xml:space="preserve">
-    <value>正在安装缺失包 '{0}' ...</value>
-  </data>
-  <data name="GeneratingSubtitles" xml:space="preserve">
-    <value>正在生成字幕：{0}，选项：{1}</value>
-  </data>
-  <data name="UnsupportedOptions" xml:space="preserve">
-    <value>不支持的生成选项</value>
-  </data>
-  <data name="ProcessingSrt" xml:space="preserve">
-    <value>正在处理 SRT 文件：{0}</value>
-  </data>
-  <data name="SrtDone" xml:space="preserve">
-    <value>SRT 解析完成，生成 {0} 条字幕</value>
-  </data>
-  <data name="ProcessingAudio" xml:space="preserve">
-    <value>正在处理音频：{0}，模型：{1}，语言：{2}</value>
-  </data>
-  <data name="FFmpegDone" xml:space="preserve">
-    <value>FFmpeg 转换完成，临时文件：{0}</value>
-  </data>
-  <data name="WhisperStart" xml:space="preserve">
-    <value>Whisper 转录开始</value>
-  </data>
-  <data name="WhisperNoSegments" xml:space="preserve">
-    <value>Whisper 未返回任何片段</value>
-  </data>
-  <data name="NoWordTimings" xml:space="preserve">
-    <value>过滤后无有效词级时间</value>
-  </data>
-  <data name="WhisperDone" xml:space="preserve">
-    <value>Whisper 转录成功，获得 {0} 个词</value>
-  </data>
-  <data name="GentleStart" xml:space="preserve">
-    <value>Gentle 对齐开始</value>
-  </data>
-  <data name="GentleNoWords" xml:space="preserve">
-    <value>Gentle 未返回有效词</value>
-  </data>
-  <data name="GentleDone" xml:space="preserve">
-    <value>Gentle 对齐成功，获得 {0} 个词</value>
-  </data>
-  <data name="GentleFallback" xml:space="preserve">
-    <value>Gentle 对齐返回空结果，回退到 Whisper 时间戳</value>
-  </data>
-  <data name="DiarizationStart" xml:space="preserve">
-    <value>说话人分割开始，说话人数：{0}</value>
-  </data>
-  <data name="DiarizationDone" xml:space="preserve">
-    <value>说话人分割完成，检测到 {0} 个说话人段</value>
-  </data>
-  <data name="SatStart" xml:space="preserve">
-    <value>SAT 分句开始，最大长度：{0}，目标长度：{1}</value>
-  </data>
-  <data name="SatEmpty" xml:space="preserve">
-    <value>SAT 分句返回空结果</value>
-  </data>
-  <data name="SatDone" xml:space="preserve">
-    <value>SAT 分句成功，获得 {0} 个词组</value>
-  </data>
-  <data name="BuildingAss" xml:space="preserve">
-    <value>正在构建 ASS 字幕...</value>
-  </data>
-  <data name="AssDone" xml:space="preserve">
-    <value>ASS 字幕构建完成，共 {0} 条字幕行</value>
-  </data>
-  <data name="AudioProcessingError" xml:space="preserve">
-    <value>音频处理过程中发生错误：{0}</value>
-  </data>
-  <data name="GentleServiceNotRunning" xml:space="preserve">
-    <value>Gentle 服务未运行 ({0})。</value>
-  </data>
-  <data name="GentleServiceHint" xml:space="preserve">
-    <value>请确保 Gentle 容器已启动并映射到该地址。例如：docker run -d -p 8765:8765 lowerquality/gentle</value>
-  </data>
-  <data name="GentleServiceReady" xml:space="preserve">
-    <value>Gentle 服务已就绪 ({0})。</value>
-  </data>
-  <data name="GentleRequestFailed" xml:space="preserve">
-    <value>Gentle 服务请求失败。</value>
-  </data>
+  <data name="TaskTempDeleted" xml:space="preserve">
+  <value>已删除任务临时目录：{0}</value>
+</data>
+  <data name="TaskTempDeleteError" xml:space="preserve">
+  <value>删除任务临时目录失败：{0}</value>
+</data>
+  <data name="SegmentTempDeleted" xml:space="preserve">
+  <value>已删除分段临时目录：{0}</value>
+</data>
+  <data name="SegmentTempDeleteError" xml:space="preserve">
+  <value>删除分段临时目录失败：{0}</value>
+</data>
 </root>

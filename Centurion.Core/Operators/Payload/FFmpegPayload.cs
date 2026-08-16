@@ -9,3 +9,10 @@ public class FFmpegConvertPayload
     /// <summary>必填，输出文件路径</summary>
     public string? OutputFilePath { get; init; }
 }
+
+public class FFmpegSplitPayload
+{
+    public string InputFilePath { get; set; } = string.Empty;
+    public List<(long StartMs, long EndMs)> Segments { get; set; } = new();
+    public string OutputDirectory { get; set; } = string.Empty;
+}

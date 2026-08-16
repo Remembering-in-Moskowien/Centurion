@@ -12,4 +12,5 @@ public class SubtitleGenerationOptions
     public bool Karaoke { get; set; } = false;
     public bool UseGentle { get; set; }
     public string GentleUrl { get; init; } = "http://localhost:8765";
+    public bool UseMfa { get; set; }
 }

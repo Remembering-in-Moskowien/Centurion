@@ -1,7 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-
-namespace Centurion.Core.Tools;
+﻿namespace Centurion.Core.Tools;
 
 public interface IPythonInterop
 {
@@ -24,4 +21,7 @@ public interface IPythonInterop
     /// 确保指定包已安装（在虚拟环境中）
     /// </summary>
     Task EnsureDependenciesAsync(string pythonPath, CancellationToken ct = default, params string[] packages);
+
+    Task<string> LocateCondaAsync(CancellationToken ct = default);
+    string GetCondaEnvironmentPath();
 }

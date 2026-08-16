@@ -16,7 +16,7 @@ public class SatSplitService : PythonServiceBase
     /// <summary>
     /// 构造函数，不注入任何 ModelManager。
     /// </summary>
-    public SatSplitService() : base(modelManager: null)
+    public SatSplitService() : base(null)
     {
     }
 

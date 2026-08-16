@@ -1,6 +1,5 @@
 ﻿using Centurion.Core.Exceptions;
 using Centurion.Core.Operators;
-using Centurion.Core.Tools;
 using Centurion.Core.Operators.Payload;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -38,7 +37,7 @@ public class ModelManager : IDisposable
         TargetMeta = null;
         ModelFolder = string.Empty;
         ModelFilePath = string.Empty;
-        
+
         if (string.IsNullOrEmpty(modelName))
         {
             ManagementEnabled = false;
@@ -48,11 +47,9 @@ public class ModelManager : IDisposable
         ManagementEnabled = true;
         _modelName = modelName.Trim().ToLowerInvariant();
         if (!modelDict.TryGetValue(_modelName, out var tempMeta))
-        {
             throw new ArgumentException(
                 _localizer["UnsupportedModel", _modelName],
                 nameof(modelName));
-        }
 
         TargetMeta = tempMeta;
         ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder);

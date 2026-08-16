@@ -1,6 +1,4 @@
-﻿using System.Net.Http;
-
-namespace Centurion.Core.Tools;
+﻿namespace Centurion.Core.Tools;
 
 public static class DockerChecker
 {

@@ -1,29 +1,24 @@
-﻿using Centurion.Core.Operators.Results;
-using Centurion.Core.Services.Base;
+﻿using Centurion.Core.Services.Base;
 using Centurion.Core.Services.Dto;
-using Centurion.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace Centurion.Core.Services;
 
-public class SpeakerDiarizationService(
-    [FromKeyedServices("vad")] ModelManager vadModelManager,
-    [FromKeyedServices("wespeaker")] ModelManager wespeakerModelManager)
-    : PythonServiceBase(modelManager: null)
+/// <summary>
+/// 说话人分割服务（基于 diarize 库）
+/// </summary>
+public class SpeakerDiarizationService() : PythonServiceBase(null)
 {
-    private readonly ModelManager _vadModelManager = vadModelManager ?? throw new ArgumentNullException(nameof(vadModelManager));
-    private readonly ModelManager _wespeakerModelManager = wespeakerModelManager ?? throw new ArgumentNullException(nameof(wespeakerModelManager));
+    protected override string ScriptName => "diarize_service.py";
+    protected override int StartupDelayMs => 3000; // 模型加载耗时
 
-    protected override string ScriptName => "diarize_alternative.py";
-    protected override int StartupDelayMs => 3000;
-
-    public override async Task EnsureModelAvailableAsync()
-    {
-        await _vadModelManager.EnsureModelAvailableAsync();
-        await _wespeakerModelManager.EnsureModelAvailableAsync();
-    }
-
+    /// <summary>
+    /// 对音频进行说话人分割
+    /// </summary>
+    /// <param name="audioFile">音频文件路径</param>
+    /// <param name="numSpeakers">说话人数（0 表示自动检测）</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>说话人分段列表</returns>
     public async Task<List<SpeakerSegment>> DiarizeAsync(
         string audioFile,
         int numSpeakers = 0,

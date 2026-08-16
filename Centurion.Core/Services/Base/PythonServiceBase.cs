@@ -79,6 +79,24 @@ public abstract class PythonServiceBase : IDisposable
                 StandardOutputEncoding = new UTF8Encoding(false),
                 StandardErrorEncoding = new UTF8Encoding(false)
             };
+
+            // ---------- 缓存重定向 ----------
+            // Hugging Face 缓存（transformers, huggingface-hub, wtpsplit 等）
+            psi.EnvironmentVariables["HF_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "huggingface");
+            // PyTorch Hub 缓存
+            psi.EnvironmentVariables["TORCH_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "torch_cache");
+            // XDG 缓存（影响 diarize 等遵循 XDG 规范的库）
+            psi.EnvironmentVariables["XDG_CACHE_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "cache");
+            // 强制 UTF-8 编码
+            psi.EnvironmentVariables["PYTHONUTF8"] = "1";
+            // Hugging Face 镜像加速
+            psi.EnvironmentVariables["HF_ENDPOINT"] = "https://hf-mirror.com";
+
+            // 确保缓存目录存在
+            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "huggingface"));
+            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "torch_cache"));
+            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "cache"));
+
             _process = Process.Start(psi) ?? throw new Exception($"Failed to start Python service: {ScriptName}");
             _stdin = _process.StandardInput;
             _stdout = _process.StandardOutput;
@@ -95,7 +113,10 @@ public abstract class PythonServiceBase : IDisposable
                         ConsoleServices.Output?.WriteError($"[{ScriptName} stderr] {line}");
                     }
                 }
-                catch (ObjectDisposedException) { /* 进程已释放 */ }
+                catch (ObjectDisposedException)
+                {
+                    /* 进程已释放 */
+                }
                 catch (Exception ex)
                 {
                     ConsoleServices.Output?.WriteError($"Error reading stderr: {ex.Message}");
@@ -122,8 +143,16 @@ public abstract class PythonServiceBase : IDisposable
         await _stdin!.WriteLineAsync(jsonRequest);
         await _stdin.FlushAsync(ct);
 
-        var response = await _stdout!.ReadLineAsync(ct);
-        return response ?? throw new Exception($"No response from Python service {ScriptName}.");
+        // 循环读取，直到遇到以 '{' 开头的行（即 JSON 响应）
+        string? response;
+        do
+        {
+            response = await _stdout!.ReadLineAsync(ct);
+            if (response == null)
+                throw new Exception($"No response from Python service {ScriptName}.");
+        } while (!response.TrimStart().StartsWith('{'));
+
+        return response;
     }
 
     public void Dispose()

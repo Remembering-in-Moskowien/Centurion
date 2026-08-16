@@ -15,4 +15,5 @@ public class WordTiming
     public required string Text { get; init; }
     public double Start { get; init; }
     public double End { get; init; }
+    public required string Speaker { get; set; }
 }

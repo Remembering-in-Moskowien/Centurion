@@ -1,30 +1,25 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
-using Centurion.Core.Operators.Payload;
 using Centurion.Core.Exceptions;
-using Centurion.Core.Tools;
+using Centurion.Core.Operators.Payload;
 using Centurion.Core.Operators.Results;
+using Centurion.Core.Tools;
 using Microsoft.Extensions.Localization;
 
 namespace Centurion.Core.Operators;
 
-/// <summary>FFmpeg音频转换算子，实现统一IOperators接口，支持DI和本地化</summary>
-public class FFmpegOperator : IOperators
+/// <summary>
+/// FFmpeg 算子：支持音频转换和按时间段切割。
+/// 统一通过 SendRequestAsync 入口，根据载荷类型自动分发。
+/// </summary>
+public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
+    : IOperators
 {
-    private readonly IStringLocalizer<Localization> _localizer;
-    private readonly IBinaryLocator _binaryLocator;
+    private readonly IStringLocalizer<Localization> _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private string? _ffmpegBinaryPath;
     private Process? _runningProcess;
     private bool _disposed;
-
-    /// <summary>
-    /// 构造函数，注入本地化服务。
-    /// </summary>
-    public FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
-    {
-        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
-        _binaryLocator = binaryLocator;
-    }
 
     public async Task EnsureTargetAvailableAsync()
     {
@@ -32,7 +27,9 @@ public class FFmpegOperator : IOperators
             return;
 
         var bin = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
-        _ffmpegBinaryPath = _binaryLocator.Locate(bin, "ffmpeg");
+        _ffmpegBinaryPath = binaryLocator.Locate(bin, "ffmpeg");
+        if (string.IsNullOrEmpty(_ffmpegBinaryPath) || !File.Exists(_ffmpegBinaryPath))
+            throw new FileNotFoundException(_localizer["FFmpegNotFound"]);
     }
 
     public async Task<TResult> SendRequestAsync<TResult, TPayload>(
@@ -41,54 +38,41 @@ public class FFmpegOperator : IOperators
     {
         await EnsureTargetAvailableAsync();
 
-        // 校验载荷类型
-        if (request.Payload is not FFmpegConvertPayload payload)
-            throw new ArgumentException(_localizer["FFmpegPayloadError"], nameof(request));
+        if (request.Payload is FFmpegConvertPayload convertPayload)
+        {
+            var result = await ConvertAudioAsync(convertPayload, cancellationToken);
+            if (typeof(TResult) != typeof(FFmpegConvertResult))
+                throw new InvalidOperationException(_localizer["UnexpectedResultType", typeof(FFmpegConvertResult).Name, typeof(TResult).Name]);
+            return (TResult)(object)result;
+        }
+        else if (request.Payload is FFmpegSplitPayload splitPayload)
+        {
+            var result = await SplitAudioAsync(splitPayload, cancellationToken);
+            if (typeof(TResult) != typeof(FFmpegSplitResult))
+                throw new InvalidOperationException(_localizer["UnexpectedResultType", typeof(FFmpegSplitResult).Name, typeof(TResult).Name]);
+            return (TResult)(object)result;
+        }
+        else
+        {
+            throw new ArgumentException(_localizer["UnsupportedPayloadType"], nameof(request));
+        }
+    }
 
-        // 前置文件校验
+    /// <summary>音频转换（16kHz 单声道 WAV）</summary>
+    private async Task<FFmpegConvertResult> ConvertAudioAsync(FFmpegConvertPayload payload, CancellationToken ct)
+    {
         if (!File.Exists(payload.InputFilePath))
             throw new FileNotFoundException(_localizer["FileNotFoundInput"], payload.InputFilePath);
 
-        var startInfo = new ProcessStartInfo(_ffmpegBinaryPath!)
-        {
-            CreateNoWindow = true,
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        var args = startInfo.ArgumentList;
-
-        // 统一基础音频转Whisper参数
-        // ffmpeg -y -i test.mp4 -ac 1 -ar 16000 -acodec pcm_s16le -af aresample -f wav -
-        args.Add("-y");
-        args.Add("-i");
-        args.Add(payload.InputFilePath);
-        args.Add("-ac");
-        args.Add("1");
-        args.Add("-ar");
-        args.Add("16000");
-        args.Add("-acodec");
-        args.Add("pcm_s16le");
-        args.Add("-af");
-        args.Add("aresample");
-        args.Add("-f");
-        args.Add("wav");
-
-        var outputFile = string.Empty;
-
-        // 输出到本地文件
-        outputFile = payload.OutputFilePath!;
+        var outputFile = payload.OutputFilePath!;
         var targetDir = Path.GetDirectoryName(outputFile)!;
-        if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
-        args.Add(outputFile);
+        if (!Directory.Exists(targetDir))
+            Directory.CreateDirectory(targetDir);
 
-        // 启动进程并持有用于Dispose/取消销毁
-        using var process = Process.Start(startInfo)
-                            ?? throw new InvalidOperationException(_localizer["FailedStartFFmpegProcess"]);
-        _runningProcess = process;
+        var args = $"-y -i \"{payload.InputFilePath}\" -ac 1 -ar 16000 -acodec pcm_s16le -af aresample -f wav \"{outputFile}\"";
 
-        StringBuilder errorBuilder = new();
+        using var process = StartProcess(args);
+        var errorBuilder = new StringBuilder();
         process.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
@@ -96,28 +80,90 @@ public class FFmpegOperator : IOperators
         };
         process.BeginErrorReadLine();
 
-        cancellationToken.Register(() =>
-        {
-            if (!process.HasExited) process.Kill();
-        });
+        ct.Register(() => { if (!process.HasExited) process.Kill(); });
 
-        // 等待进程退出（支持取消）
-        await process.WaitForExitAsync(cancellationToken);
-        _runningProcess = null;
-        cancellationToken.ThrowIfCancellationRequested();
+        await process.WaitForExitAsync(ct);
+        ct.ThrowIfCancellationRequested();
 
-        var errorLog = errorBuilder.ToString();
         if (process.ExitCode != 0)
+        {
             throw new FFmpegProcessExitException(
                 _localizer["FFmpegConversionFailed", process.ExitCode],
-                process.ExitCode, errorLog);
+                process.ExitCode, errorBuilder.ToString());
+        }
 
         if (!File.Exists(outputFile))
             throw new FileNotFoundException(_localizer["FFmpegOutputFileMissing"], outputFile);
 
-        ConsoleServices.Output.WriteLine(_localizer["FFmpegSuccessPath", outputFile]);
-        var fileResult = new FFmpegFileResult { OutputPath = outputFile };
-        return (TResult)(object)fileResult;
+        ConsoleServices.Output?.WriteLine(_localizer["FFmpegSuccessPath", outputFile]);
+        return new FFmpegConvertResult() { OutputPath = outputFile };
+    }
+
+    /// <summary>按时间段切割音频为多个片段</summary>
+    private async Task<FFmpegSplitResult> SplitAudioAsync(FFmpegSplitPayload payload, CancellationToken ct)
+    {
+        if (!File.Exists(payload.InputFilePath))
+            throw new FileNotFoundException(_localizer["FileNotFoundInput"], payload.InputFilePath);
+
+        if (payload.Segments == null || payload.Segments.Count == 0)
+            throw new ArgumentException(_localizer["SegmentsEmpty"], nameof(payload));
+
+        var outputDir = payload.OutputDirectory;
+        if (string.IsNullOrEmpty(outputDir))
+            outputDir = Path.Combine(Environment.CurrentDirectory, "temp");
+
+        if (!Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
+
+        var outputFiles = new List<string>();
+        for (int i = 0; i < payload.Segments.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var (startMs, endMs) = payload.Segments[i];
+            var startSec = (startMs / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
+            var endSec = (endMs / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
+            var outputFile = Path.Combine(outputDir, $"segment_{i + 1:D4}.wav");
+
+            var args = $"-y -i \"{payload.InputFilePath}\" -ss {startSec} -to {endSec} " +
+                       $"-ac 1 -ar 16000 -acodec pcm_s16le \"{outputFile}\"";
+
+            using var process = StartProcess(args);
+            ct.Register(() => { if (!process.HasExited) process.Kill(); });
+
+            await process.WaitForExitAsync(ct);
+            ct.ThrowIfCancellationRequested();
+
+            if (process.ExitCode != 0)
+            {
+                var error = await process.StandardError.ReadToEndAsync();
+                throw new FFmpegProcessExitException(
+                    _localizer["FFmpegSplitFailed", i + 1, process.ExitCode],
+                    process.ExitCode, error);
+            }
+
+            outputFiles.Add(outputFile);
+            ConsoleServices.Output?.WriteLine(_localizer["FFmpegSplitSuccess", outputFile]);
+        }
+
+        return new FFmpegSplitResult { OutputFiles = outputFiles };
+    }
+
+    private Process StartProcess(string arguments)
+    {
+        var psi = new ProcessStartInfo(_ffmpegBinaryPath!, arguments)
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            StandardErrorEncoding = Encoding.UTF8,
+            StandardOutputEncoding = Encoding.UTF8
+        };
+        var process = Process.Start(psi);
+        if (process == null)
+            throw new InvalidOperationException(_localizer["FailedStartFFmpegProcess"]);
+        return process;
     }
 
     public void Dispose()
@@ -126,27 +172,21 @@ public class FFmpegOperator : IOperators
         GC.SuppressFinalize(this);
     }
 
-    ~FFmpegOperator()
-    {
-        Dispose(false);
-    }
+    ~FFmpegOperator() => Dispose(false);
 
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
         if (disposing)
         {
-            // 杀死后台运行的ffmpeg进程，防止残留
             if (_runningProcess != null && !_runningProcess.HasExited)
             {
                 _runningProcess.Kill();
                 _runningProcess.WaitForExit();
             }
-
             _runningProcess?.Dispose();
             _runningProcess = null;
         }
-
         _disposed = true;
     }
 }

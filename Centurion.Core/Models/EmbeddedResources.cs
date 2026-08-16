@@ -8,46 +8,37 @@ public class EmbeddedResources
                                                #!/usr/bin/env python3
                                                import sys
                                                import json
-                                               import signal
                                                from diarize import diarize
 
                                                def main():
-                                                   signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
-                                                   signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
-
                                                    while True:
                                                        line = sys.stdin.readline()
                                                        if not line:
                                                            break
                                                        try:
                                                            data = json.loads(line)
-                                                       except json.JSONDecodeError as e:
-                                                           sys.stdout.write(json.dumps({'error': f'JSON parse error: {e}'}) + '\n')
-                                                           sys.stdout.flush()
-                                                           continue
-
-                                                       audio_file = data.get('audio_file')
-                                                       if not audio_file:
-                                                           sys.stdout.write(json.dumps({'error': 'Missing audio_file'}) + '\n')
-                                                           sys.stdout.flush()
-                                                           continue
-
-                                                       try:
+                                                           audio_file = data.get('audio_file')
                                                            num_speakers = data.get('num_speakers', 0)
-                                                           threshold = data.get('threshold', 0.5)
-                                                           result = diarize(audio_file, 
-                                                                            num_speakers=num_speakers if num_speakers > 0 else None,
-                                                                            threshold=threshold)
-                                                           segments = [{'start': seg.start, 'end': seg.end, 'speaker': seg.speaker} 
-                                                                       for seg in result.segments]
-                                                           sys.stdout.write(json.dumps({'segments': segments}) + '\n')
+                                                           if not audio_file:
+                                                               json.dump({'error': 'Missing audio_file'}, sys.stdout)
+                                                               sys.stdout.write('\n')
+                                                               sys.stdout.flush()
+                                                               continue
+
+                                                           # 执行说话人分割
+                                                           result = diarize(audio_file, num_speakers=num_speakers if num_speakers > 0 else None)
+                                                           segments = [{'start': seg.start, 'end': seg.end, 'speaker': seg.speaker} for seg in result.segments]
+                                                           json.dump({'segments': segments}, sys.stdout)
+                                                           sys.stdout.write('\n')
+                                                           sys.stdout.flush()
                                                        except Exception as e:
                                                            import traceback
                                                            err = {'error': str(e), 'traceback': traceback.format_exc()}
-                                                           sys.stdout.write(json.dumps(err) + '\n')
-                                                       sys.stdout.flush()
+                                                           json.dump(err, sys.stdout)
+                                                           sys.stdout.write('\n')
+                                                           sys.stdout.flush()
 
-                                               if __name__ == '__main__':
+                                               if __name__ == "__main__":
                                                    main()
                                                """;
 
@@ -55,18 +46,23 @@ public class EmbeddedResources
 
     #region Sat Split Script
 
-    public const string SatSplitServiceScript = """
+    public const string SatSplitServiceScript = """"
                                                 #!/usr/bin/env python3
+                                                """
+                                                SAT 分句服务（常驻进程）
+                                                输入：stdin 接收 JSON，包含 words（词列表，每个词有 text, start, end）
+                                                输出：stdout 返回 JSON，包含 sentences 数组，每个 sentence 有 text, start, end, words（词级列表）
+                                                参数：max_length, target_length, spread_range（可选）
+                                                """
+
                                                 import sys
                                                 import json
                                                 import signal
                                                 import re
                                                 from wtpsplit import SaT
 
-                                                # 全局加载模型（只一次）
-                                                sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
-
-                                                TIME_GAP_THRESHOLD = 1500
+                                                # ---------- 常量 ----------
+                                                TIME_GAP_THRESHOLD = 1500  # 大段切分阈值（毫秒）
 
                                                 def split_by_time_gap(words, gap_threshold_ms):
                                                     if not words:
@@ -99,9 +95,14 @@ public class EmbeddedResources
                                                         sub_segments.append(current)
                                                     return sub_segments if sub_segments else [words]
 
+                                                # ---------- 加载 SAT 模型（只一次） ----------
+                                                # 使用 CPU 执行提供程序，若需 GPU 可改为 ["CUDAExecutionProvider", "CPUExecutionProvider"]
+                                                sat = SaT("sat-3l-sm", ort_providers=["CPUExecutionProvider"])
+
                                                 def process_words(words, max_len, target_len, spread):
                                                     if not words:
                                                         return []
+
                                                     time_segments = split_by_time_gap(words, TIME_GAP_THRESHOLD)
                                                     all_sentences = []
 
@@ -115,16 +116,15 @@ public class EmbeddedResources
                                                                 continue
 
                                                             try:
-                                                                sentences = sat.split(
-                                                                    full_text,
-                                                                    max_length=max_len,
-                                                                    prior_type="gaussian",
-                                                                    prior_kwargs={"target_length": target_len, "spread": spread}
-                                                                )
+                                                                sentences = sat.split(full_text,
+                                                                                      max_length=max_len,
+                                                                                      prior_type="gaussian",
+                                                                                      prior_kwargs={"target_length": target_len, "spread": spread})
                                                             except Exception as e:
                                                                 print(f"SAT split error: {e}", file=sys.stderr)
                                                                 continue
 
+                                                            # 构建字符位置映射（相对于当前 sub）
                                                             word_positions = []
                                                             pos = 0
                                                             for w in sub:
@@ -135,6 +135,9 @@ public class EmbeddedResources
 
                                                             search_start = 0
                                                             for sent in sentences:
+                                                                if not sent or not sent.strip():
+                                                                    continue
+
                                                                 idx = full_text.find(sent, search_start)
                                                                 if idx == -1:
                                                                     stripped = sent.strip()
@@ -148,20 +151,21 @@ public class EmbeddedResources
                                                                 else:
                                                                     sent_end = idx + len(sent)
 
-                                                                overlap = []
+                                                                words_in_sent = []
                                                                 for s, e, w in word_positions:
                                                                     if s < sent_end and e > idx:
-                                                                        overlap.append(w)
+                                                                        words_in_sent.append(w)
 
-                                                                if overlap:
+                                                                if words_in_sent:
                                                                     all_sentences.append({
                                                                         'text': sent,
-                                                                        'start': min(w['start'] for w in overlap),
-                                                                        'end': max(w['end'] for w in overlap)
+                                                                        'start': words_in_sent[0]['start'],
+                                                                        'end': words_in_sent[-1]['end'],
+                                                                        'words': words_in_sent
                                                                     })
+
                                                                 search_start = sent_end
 
-                                                    all_sentences.sort(key=lambda x: x['start'])
                                                     return all_sentences
 
                                                 def main():
@@ -189,6 +193,7 @@ public class EmbeddedResources
                                                             max_len = data.get('max_length', 80)
                                                             target_len = data.get('target_length', 50)
                                                             spread = data.get('spread_range', 10)
+
                                                             sentences = process_words(words, max_len, target_len, spread)
                                                             sys.stdout.write(json.dumps({'sentences': sentences}) + '\n')
                                                         except Exception as e:
@@ -198,8 +203,13 @@ public class EmbeddedResources
                                                         sys.stdout.flush()
 
                                                 if __name__ == '__main__':
-                                                    main()
-                                                """;
+                                                    try:
+                                                        main()
+                                                    except Exception as e:
+                                                        import traceback
+                                                        traceback.print_exc(file=sys.stderr)
+                                                        sys.exit(1)
+                                                """";
 
     #endregion
 

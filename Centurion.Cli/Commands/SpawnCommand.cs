@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel;
 using Centurion.Core;
 using Centurion.Core.Models;
-using Centurion.Core.Tools;
 using Microsoft.Extensions.Localization;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -50,22 +49,14 @@ public sealed class SpawnSettings : CommandSettings
     [Description("生成带卡拉OK特效的ASS字幕（\\K标签）")]
     public bool Karaoke { get; init; }
 
-    [CommandOption("--gentle [GENTLE_URL]")]
-    [Description("启用高精度模式（使用 Gentle 强制对齐）。若不指定 URL，则使用默认地址 http://localhost:8765")]
-    public FlagValue<string>? GentleUrl { get; set; }
+    [CommandOption("--mfa")]
+    [Description("使用 MFA（Montreal Forced Aligner）进行高精度强制对齐")]
+    public bool UseMfa { get; init; }
 }
 
-public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
+public sealed class SpawnCommand(AssSubSpawner subSpawner, IStringLocalizer<Localization> localizer)
+    : AsyncCommand<SpawnSettings>
 {
-    private readonly AssSubSpawner _subSpawner;
-    private readonly IStringLocalizer<Localization> _localizer;
-
-    public SpawnCommand(AssSubSpawner subSpawner, IStringLocalizer<Localization> localizer)
-    {
-        _subSpawner = subSpawner;
-        _localizer = localizer;
-    }
-
     protected override async Task<int> ExecuteAsync(
         CommandContext context,
         SpawnSettings settings,
@@ -73,23 +64,6 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
     {
         try
         {
-            // 高精度模式判断
-            bool useGentle = settings.GentleUrl is { IsSet: true };
-            string gentleUrl = string.IsNullOrEmpty(settings.GentleUrl?.Value)
-                ? "http://localhost:8765"
-                : settings.GentleUrl.Value;
-
-            if (useGentle)
-            {
-                if (!await DockerChecker.IsGentleAvailableAsync(gentleUrl))
-                {
-                    ConsoleServices.Output.WriteError(_localizer["GentleServiceNotRunning", gentleUrl]);
-                    ConsoleServices.Output.WriteLine(_localizer["GentleServiceHint"]);
-                    return 1;
-                }
-                ConsoleServices.Output.WriteLine(_localizer["GentleServiceReady", gentleUrl]);
-            }
-
             // 路径处理
             var inputPath = settings.InputFile.FullName;
             var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
@@ -105,27 +79,27 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
                 SpreadRange = settings.SpreadRange,
                 NumSpeakers = settings.NumSpeakers,
                 Karaoke = settings.Karaoke,
-                UseGentle = useGentle,
-                GentleUrl = gentleUrl
+                UseMfa = settings.UseMfa
             };
 
-            var assDoc = await _subSpawner.AssSpawnerAsync(spawnOptions, inputPath, genOptions, ct);
+            var assDoc = await subSpawner.AssSpawnerAsync(spawnOptions, inputPath, genOptions, ct);
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
 
-            AnsiConsole.MarkupLine($"[green]{_localizer["SuccessGenerated"]}[/] {outputPath}");
+            AnsiConsole.MarkupLine($"[green]{localizer["SuccessGenerated"]}[/] {outputPath}");
             return 0;
         }
         catch (Exception ex)
         {
             if (ex.Message.Contains("Gentle") || ex.Message.Contains("connection"))
             {
-                ConsoleServices.Output.WriteError(_localizer["GentleRequestFailed"]);
+                ConsoleServices.Output.WriteError(localizer["GentleRequestFailed"]);
                 ConsoleServices.Output.WriteLine(ex.Message);
             }
             else
             {
-                ConsoleServices.Output.WriteError($"{_localizer["ErrorLabel"]} {ex.Message}");
+                ConsoleServices.Output.WriteError($"{localizer["ErrorLabel"]} {ex.Message}");
             }
+
             return 1;
         }
     }
@@ -137,7 +111,7 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
         {
             ".srt" => AssSubSpawnerOptions.Srt,
             _ when MediaFileExtensions.Contains(ext) => AssSubSpawnerOptions.Media,
-            _ => throw new ArgumentException(_localizer["UnsupportedInputFileType", ext], nameof(inputPath))
+            _ => throw new ArgumentException(localizer["UnsupportedInputFileType", ext], nameof(inputPath))
         };
     }
 

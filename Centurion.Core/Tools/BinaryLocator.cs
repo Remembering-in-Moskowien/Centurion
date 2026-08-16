@@ -6,15 +6,10 @@ namespace Centurion.Core.Tools;
 /// <summary>
 /// 跨平台二进制查找工具：本地目录 + PATH 环境变量检索，支持 DI 和本地化。
 /// </summary>
-public class BinaryLocator : IBinaryLocator
+public class BinaryLocator(IStringLocalizer<Localization> localizer) : IBinaryLocator
 {
-    private readonly IStringLocalizer<Localization> _localizer;
+    private readonly IStringLocalizer<Localization> _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private readonly Dictionary<string, string> _binaryCache = new(StringComparer.OrdinalIgnoreCase);
-
-    public BinaryLocator(IStringLocalizer<Localization> localizer)
-    {
-        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
-    }
 
     public string Locate(string binaryName, params string[] localSearchRelativeDirs)
     {
@@ -64,5 +59,8 @@ public class BinaryLocator : IBinaryLocator
             _localizer["BinaryNotFound", binaryName], binaryName);
     }
 
-    public void ClearCache() => _binaryCache.Clear();
+    public void ClearCache()
+    {
+        _binaryCache.Clear();
+    }
 }
