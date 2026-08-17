@@ -3,13 +3,13 @@ using System.Text.RegularExpressions;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Operators.Payload;
 using Centurion.Core.Tools;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Operators;
 
 public class AriaOperator : IOperators
 {
-    private readonly IStringLocalizer<Localization> _localizer;
+    // localization removed
     private readonly IBinaryLocator _binaryLocator;
     private string? _aria2BinaryPath;
     private Process? _runningAriaProcess;
@@ -20,11 +20,10 @@ public class AriaOperator : IOperators
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
-    /// 构造函数，注入本地化服务。
+    /// 构造函数。
     /// </summary>
-    public AriaOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
+    public AriaOperator(IBinaryLocator binaryLocator)
     {
-        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
         _binaryLocator = binaryLocator;
     }
 
@@ -43,7 +42,7 @@ public class AriaOperator : IOperators
     {
         await EnsureTargetAvailableAsync();
         if (request.Payload is not AriaDownloadPayload payload)
-            throw new ArgumentException(_localizer["AriaPayloadError"], nameof(request));
+            throw new ArgumentException("Payload type must be AriaDownloadPayload", nameof(request));
 
         // 前置校验：目录创建、磁盘空间预检查可在此扩展
         var targetDir = Path.GetDirectoryName(payload.FullSavePath)!;
@@ -77,7 +76,7 @@ public class AriaOperator : IOperators
 
         // 启动进程并持有引用，用于Dispose/取消时Kill
         using var process = Process.Start(startInfo)
-                            ?? throw new InvalidOperationException(_localizer["FailedToStartAria2Process"]);
+                    ?? throw new InvalidOperationException("Failed to start aria2 process.");
         _runningAriaProcess = process;
 
         var progressState = new AriaProgressState();
@@ -91,10 +90,10 @@ public class AriaOperator : IOperators
         await WaitForFirstProgressAsync(progressState, payload.ProgressRefreshMs, cancellationToken);
 
         // 渲染进度条
-        ConsoleServices.Progress.StartProgress(_localizer["Downloading"], ctx =>
+        ConsoleServices.Progress.StartProgress("Downloading...", ctx =>
         {
             var task = ctx.AddTask(
-                _localizer["DownloadingFile", Path.GetFileName(payload.FullSavePath)],
+                string.Format("Downloading {0}", Path.GetFileName(payload.FullSavePath)),
                 (long)progressState.TotalBytes
             );
 
@@ -106,7 +105,7 @@ public class AriaOperator : IOperators
             }
 
             task.SetValue((long)progressState.TotalBytes);
-            task.SetDescription(_localizer["DownloadCompleteVerifyingFileHash"]);
+            task.SetDescription("Download complete, verifying file hash...");
         });
 
         // 资源清理
@@ -118,20 +117,17 @@ public class AriaOperator : IOperators
         // 进程退出码校验
         if (process.ExitCode != 0)
             throw new AriaProcessExitException(
-                _localizer["Aria2FailedWithExitCode", process.ExitCode], process.ExitCode);
+                string.Format("aria2 failed with exit code {0} while downloading Whisper model.", process.ExitCode), process.ExitCode);
 
         // 文件存在校验
         if (!File.Exists(payload.FullSavePath))
-            throw new FileNotFoundException(_localizer["DownloadMissingFile", payload.FullSavePath],
-                payload.FullSavePath);
+            throw new FileNotFoundException("File Download completed, but the file was not found.", payload.FullSavePath);
 
         // 哈希校验
         var hashResult = SubTools.VerifyHash(payload.FullSavePath, payload.FileHash);
         if (!hashResult.IsMatch)
             throw new FileHashMismatchException(
-                _localizer["FileHashNotMatch",
-                    payload.FileHash,
-                    hashResult.ActualHash],
+                string.Format("File hash mismacthed. Hope: {0};Real: {1}", payload.FileHash, hashResult.ActualHash),
                 payload.FullSavePath,
                 payload.FileHash,
                 hashResult.ActualHash);

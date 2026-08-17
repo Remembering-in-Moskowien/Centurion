@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using Centurion.Core.Exceptions;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Tools;
 
@@ -10,22 +10,17 @@ namespace Centurion.Core.Tools;
 /// Python 交互服务：使用 Miniconda 管理环境，支持依赖缓存和镜像加速。
 /// Conda 环境创建在程序目录下的 conda_env/ 中，避免占用用户系统盘。
 /// </summary>
-public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer<Localization> localizer)
-    : IPythonInterop
+public class PythonInteropService(IBinaryLocator binaryLocator) : IPythonInterop
 {
     private readonly IBinaryLocator _binaryLocator = binaryLocator ?? throw new ArgumentNullException(nameof(binaryLocator));
-    private readonly IStringLocalizer<Localization> _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     private readonly SemaphoreSlim _envLock = new(1, 1);
     private string? _condaPythonPath;
     private bool _dependenciesReady;
-    private readonly string _condaEnvPrefix = Path.Combine(AppContext.BaseDirectory, "conda_env"); // 环境前缀路径
+    private readonly string _condaEnvPrefix = Path.Combine(AppContext.BaseDirectory, "conda_env");
     private readonly string _condaEnvPythonVersion = "3.11";
 
     public bool UseTsinghuaMirror { get; set; } = true;
 
-    // 环境前缀路径：程序目录/conda_env/
-
-    // ---------- 公共接口 ----------
     public async Task<string> LocatePythonAsync(CancellationToken ct = default)
     {
         if (_condaPythonPath != null && File.Exists(_condaPythonPath))
@@ -58,7 +53,7 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
 
         using var process = Process.Start(psi);
         if (process == null)
-            throw new Exception(_localizer["FailedToStartPythonProcess"]);
+            throw new Exception("Failed to start Python process.");
 
         var outputBuilder = new StringBuilder();
         var errorBuilder = new StringBuilder();
@@ -81,7 +76,7 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
         await process.WaitForExitAsync(ct);
 
         if (process.ExitCode != 0)
-            throw new Exception(string.Format(_localizer["PythonScriptFailed"], process.ExitCode,
+            throw new Exception(string.Format("Python script exited with code {0}. stderr: {1}", process.ExitCode,
                 errorBuilder.ToString()));
 
         return outputBuilder.ToString();
@@ -94,7 +89,6 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
             await EnsureCondaEnvironmentAsync(ct, packages);
     }
 
-    // ---------- Conda 核心 ----------
     private async Task<string> EnsureCondaEnvironmentAsync(CancellationToken ct = default, params string[] packages)
     {
         if (_condaPythonPath != null && File.Exists(_condaPythonPath) && _dependenciesReady)
@@ -112,7 +106,6 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
 
             await ConfigureCondaChannelsAsync(condaExe, ct);
 
-            // 检查环境前缀路径
             var envPath = await GetCondaEnvPathAsync(condaExe, _condaEnvPrefix, ct);
             if (string.IsNullOrEmpty(envPath) || !Directory.Exists(envPath))
             {
@@ -130,7 +123,6 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
             if (!File.Exists(pythonPath))
                 throw new Exception($"Python not found in Conda environment: {pythonPath}");
 
-            // 仅在依赖未就绪时执行检查
             if (!_dependenciesReady)
             {
                 if (packages != null && packages.Length > 0)
@@ -273,7 +265,6 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
 
     private async Task<string> GetCondaEnvPathAsync(string condaExe, string prefixPath, CancellationToken ct)
     {
-        // 检查目录是否存在且包含 python.exe 或 python
         if (!Directory.Exists(prefixPath))
             return null!;
 
@@ -349,11 +340,14 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
     private async Task InstallMissingPackagesOnlyAsync(string condaExe, string envPath, CancellationToken ct,
         params string[] packages)
     {
-        // 获取两个包列表（一次进程调用，而不是每个包一次）
+        // 获取 conda 和 pip 已安装包并合并
         var condaPackages = await GetCondaPackageListAsync(condaExe, envPath, ct);
         var pipPackages = await GetPipPackageListAsync(condaExe, envPath, ct);
+        var installedPackages = new HashSet<string>(condaPackages, StringComparer.OrdinalIgnoreCase);
+        foreach (var pkg in pipPackages)
+            installedPackages.Add(pkg);
 
-        // 检查 ffmpeg（属于 Conda 包）
+        // 特殊处理 ffmpeg（conda 包）
         if (!condaPackages.Contains("ffmpeg"))
         {
             ConsoleServices.Output?.WriteLine("Installing ffmpeg 7 via Conda...");
@@ -364,32 +358,31 @@ public class PythonInteropService(IBinaryLocator binaryLocator, IStringLocalizer
             ConsoleServices.Output?.WriteLine("ffmpeg already installed.");
         }
 
-        // 升级 pip（轻量操作，始终执行）
+        // 升级 pip
         await RunCondaCommandAsync(condaExe, $"run -p \"{envPath}\" python -m pip install --upgrade pip", ct);
 
-        // 按优先级安装 Python 包（先装基础依赖，再装应用包）
+        // 优先级包
         var priorityPackages = new[] { "torch", "numpy", "scipy", "certifi" };
         var remainingPackages = packages.Except(priorityPackages).ToList();
 
-        // 安装优先级包
         foreach (var pkg in priorityPackages)
             if (packages.Contains(pkg))
-                await InstallPackageIfMissing(condaExe, envPath, pkg, ct, pipPackages);
+                await InstallPackageIfMissing(condaExe, envPath, pkg, ct, installedPackages);
 
-        // 安装其余包（diarize, wtpsplit 等）
-        foreach (var pkg in remainingPackages) await InstallPackageIfMissing(condaExe, envPath, pkg, ct, pipPackages);
+        foreach (var pkg in remainingPackages)
+            await InstallPackageIfMissing(condaExe, envPath, pkg, ct, installedPackages);
     }
 
     private async Task InstallPackageIfMissing(string condaExe, string envPath, string package, CancellationToken ct,
-        HashSet<string> pipPackages)
+        HashSet<string> installedPackages)
     {
-        if (pipPackages.Contains(package))
+        if (installedPackages.Contains(package))
         {
-            ConsoleServices.Output?.WriteLine($"Python package '{package}' already installed.");
+            ConsoleServices.Output?.WriteLine($"Package '{package}' already installed.");
             return;
         }
 
-        ConsoleServices.Output?.WriteLine($"Installing Python package '{package}'...");
+        ConsoleServices.Output?.WriteLine($"Installing package '{package}'...");
         await InstallPackageWithRetry(condaExe, envPath, package, ct);
     }
 

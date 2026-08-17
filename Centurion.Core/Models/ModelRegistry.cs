@@ -59,8 +59,8 @@ public static class ModelRegistry
             {
                 "wespeaker-resnet34-lm",
                 new ModelMeta("wespeaker_resnet34_LM.onnx",
-                    "https://wespeaker-1256283475.cos.ap-shanghai.myqcloud.com/models/voxceleb/voxceleb_resnet34_LM.onnx",
-                    "7bb2f06e9df17cdf1ef14ee8a15ab08ed28e8d0ef5054ee135741560df2ec068")
+                    "https://wenet.org.cn/downloads?models=wespeaker&version=voxceleb_resnet34_LM.zip",
+                    "9872B375F2C6A3851CA471CBBF59E06EFD23A627D78BF5872E1F0269FD298449")
             }
         };
 }

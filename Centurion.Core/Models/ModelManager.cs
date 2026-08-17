@@ -2,7 +2,7 @@
 using Centurion.Core.Operators;
 using Centurion.Core.Operators.Payload;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
+// localization removed; strings are now hard-coded
 
 namespace Centurion.Core.Models;
 
@@ -12,7 +12,7 @@ namespace Centurion.Core.Models;
 /// </summary>
 public class ModelManager : IDisposable
 {
-    private readonly IStringLocalizer<Localization> _localizer;
+    // localization removed
     private readonly IServiceProvider _serviceProvider;
     private readonly string _modelName;
 
@@ -27,11 +27,11 @@ public class ModelManager : IDisposable
     /// <exception cref="ArgumentException">当 modelName 不在 modelDict 中时抛出</exception>
     public ModelManager(string modelName,
         IReadOnlyDictionary<string, ModelMeta> modelDict,
-        IStringLocalizer<Localization> localizer,
+        // localizer removed
         IServiceProvider serviceProvider,
         string categoryFolder = "common")
     {
-        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+        // localizer removed
         _serviceProvider = serviceProvider;
         _modelName = string.Empty;
         TargetMeta = null;
@@ -48,7 +48,7 @@ public class ModelManager : IDisposable
         _modelName = modelName.Trim().ToLowerInvariant();
         if (!modelDict.TryGetValue(_modelName, out var tempMeta))
             throw new ArgumentException(
-                _localizer["UnsupportedModel", _modelName],
+                string.Format("Unsupported model: {0}", _modelName),
                 nameof(modelName));
 
         TargetMeta = tempMeta;
@@ -80,7 +80,7 @@ public class ModelManager : IDisposable
         var hashResult = SubTools.VerifyHash(ModelFilePath, TargetMeta!.Sha256Hash);
         if (!hashResult.IsMatch)
             throw new FileHashMismatchException(
-                _localizer["FileHashNotMatch"],
+                string.Format("File hash mismacthed. Hope: {0};Real: {1}", TargetMeta!.Sha256Hash, hashResult.ActualHash),
                 ModelFilePath,
                 TargetMeta!.Sha256Hash,
                 hashResult.ActualHash);
@@ -90,9 +90,9 @@ public class ModelManager : IDisposable
     {
         if (!ManagementEnabled) return;
         Directory.CreateDirectory(ModelFolder);
-        ConsoleServices.Output.WriteLine(_localizer["ModelNotFound", _modelName]);
-        if (!await ConsoleServices.Confirm.ConfirmAsync(_localizer["ConfirmContinueInstallation"]))
-            throw new InvalidOperationException(_localizer["FileHashNotMatch"]);
+        ConsoleServices.Output.WriteLine(string.Format("Model '{0}' not found.", _modelName));
+        if (!await ConsoleServices.Confirm.ConfirmAsync("Continue with installation?"))
+            throw new InvalidOperationException(string.Format("File hash mismacthed. Hope: {0};Real: {1}", TargetMeta!.Sha256Hash, "<unknown>"));
 
         using var aria = _serviceProvider.GetRequiredService<AriaOperator>();
         var dlRequest = new OperatorsRequest<AriaDownloadPayload>

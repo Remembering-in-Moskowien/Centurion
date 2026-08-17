@@ -1,13 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using Centurion.Core.Models;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Services.Base;
 
-/// <summary>
-/// Python 服务基类，负责进程生命周期、stdin/stdout 通信和 stderr 日志。
-/// 模型管理由可选的 ModelManager 提供，通过构造函数注入。
-/// </summary>
 public abstract class PythonServiceBase : IDisposable
 {
     private Process? _process;
@@ -15,42 +12,25 @@ public abstract class PythonServiceBase : IDisposable
     private StreamReader? _stdout;
     private bool _disposed;
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    // 可选的模型管理器（由子类决定是否注入）
     private readonly ModelManager? _modelManager;
 
-    // 子类必须提供 Python 脚本文件名（嵌入资源的键）
     protected abstract string ScriptName { get; }
+    protected virtual int StartupDelayMs => 8000;
 
-    // 子类可重写启动后的等待时间（模型加载耗时）
-    protected virtual int StartupDelayMs => 5000;
-
-    /// <summary>
-    /// 构造器，允许注入可选的 ModelManager。
-    /// </summary>
     protected PythonServiceBase(ModelManager? modelManager = null)
     {
         _modelManager = modelManager;
     }
 
-    /// <summary>
-    /// 确保模型可用（默认空实现，子类可重写以调用 _modelManager?.EnsureModelAvailableAsync()）
-    /// </summary>
     public virtual async Task EnsureModelAvailableAsync()
     {
         if (_modelManager != null)
             await _modelManager.EnsureModelAvailableAsync();
-        // 否则不做任何事
     }
 
-    /// <summary>
-    /// 启动 Python 服务进程，并准备通信管道。
-    /// </summary>
     public async Task StartAsync(string pythonPath, CancellationToken ct = default)
     {
-        // 确保模型已就绪（如果子类或注入的 ModelManager 需要）
         await EnsureModelAvailableAsync();
-
         if (_process != null && !_process.HasExited)
             return;
 
@@ -68,6 +48,9 @@ public abstract class PythonServiceBase : IDisposable
                 await File.WriteAllTextAsync(scriptPath, scriptContent, ct);
             }
 
+            if (!File.Exists(pythonPath))
+                throw new FileNotFoundException(string.Format("Python 3.9+ not found. Please install Python and ensure it is in PATH. ({0})", pythonPath));
+
             var psi = new ProcessStartInfo(pythonPath, $"\"{scriptPath}\"")
             {
                 RedirectStandardInput = true,
@@ -77,31 +60,34 @@ public abstract class PythonServiceBase : IDisposable
                 CreateNoWindow = true,
                 StandardInputEncoding = new UTF8Encoding(false),
                 StandardOutputEncoding = new UTF8Encoding(false),
-                StandardErrorEncoding = new UTF8Encoding(false)
+                StandardErrorEncoding = new UTF8Encoding(false),
+                WorkingDirectory = Path.GetDirectoryName(scriptPath)
             };
 
-            // ---------- 缓存重定向 ----------
-            // Hugging Face 缓存（transformers, huggingface-hub, wtpsplit 等）
+            psi.EnvironmentVariables["PYTHONUNBUFFERED"] = "1";
             psi.EnvironmentVariables["HF_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "huggingface");
-            // PyTorch Hub 缓存
             psi.EnvironmentVariables["TORCH_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "torch_cache");
-            // XDG 缓存（影响 diarize 等遵循 XDG 规范的库）
             psi.EnvironmentVariables["XDG_CACHE_HOME"] = Path.Combine(AppContext.BaseDirectory, "models", "cache");
-            // 强制 UTF-8 编码
             psi.EnvironmentVariables["PYTHONUTF8"] = "1";
-            // Hugging Face 镜像加速
             psi.EnvironmentVariables["HF_ENDPOINT"] = "https://hf-mirror.com";
 
-            // 确保缓存目录存在
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "huggingface"));
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "torch_cache"));
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "models", "cache"));
 
-            _process = Process.Start(psi) ?? throw new Exception($"Failed to start Python service: {ScriptName}");
+            _process = Process.Start(psi);
+            if (_process == null)
+                throw new Exception($"Failed to start Python process: {ScriptName}");
+
+            _process.EnableRaisingEvents = true;
+            _process.Exited += (sender, e) =>
+            {
+                ConsoleServices.Output?.WriteWarning($"Python exited: {ScriptName} ({_process?.ExitCode ?? -1})");
+            };
+
             _stdin = _process.StandardInput;
             _stdout = _process.StandardOutput;
 
-            // 后台读取 stderr，防止管道阻塞
             _ = Task.Run(async () =>
             {
                 try
@@ -113,17 +99,21 @@ public abstract class PythonServiceBase : IDisposable
                         ConsoleServices.Output?.WriteError($"[{ScriptName} stderr] {line}");
                     }
                 }
-                catch (ObjectDisposedException)
-                {
-                    /* 进程已释放 */
-                }
+                catch (ObjectDisposedException) { }
                 catch (Exception ex)
                 {
                     ConsoleServices.Output?.WriteError($"Error reading stderr: {ex.Message}");
                 }
             }, ct);
 
-            // 等待服务准备就绪（模型加载等）
+            await Task.Delay(500, ct);
+            if (_process.HasExited)
+            {
+                string? error = null;
+                try { error = await _process.StandardError.ReadToEndAsync(); } catch { }
+                throw new Exception($"Python process {ScriptName} exited with code {_process.ExitCode}");
+            }
+
             await Task.Delay(StartupDelayMs, ct);
         }
         finally
@@ -132,26 +122,30 @@ public abstract class PythonServiceBase : IDisposable
         }
     }
 
-    /// <summary>
-    /// 发送 JSON 请求并等待一行 JSON 响应。
-    /// </summary>
     protected async Task<string> SendRequestAsync(string jsonRequest, CancellationToken ct = default)
     {
         if (_process == null || _process.HasExited)
-            throw new InvalidOperationException($"Python service {ScriptName} is not running.");
+            throw new InvalidOperationException($"Python not running: {ScriptName} (exit {_process?.ExitCode ?? -1})");
 
         await _stdin!.WriteLineAsync(jsonRequest);
         await _stdin.FlushAsync(ct);
 
-        // 循环读取，直到遇到以 '{' 开头的行（即 JSON 响应）
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromMinutes(5));
         string? response;
-        do
+        try
         {
-            response = await _stdout!.ReadLineAsync(ct);
-            if (response == null)
-                throw new Exception($"No response from Python service {ScriptName}.");
-        } while (!response.TrimStart().StartsWith('{'));
-
+            do
+            {
+                response = await _stdout!.ReadLineAsync(cts.Token);
+                if (response == null)
+                    throw new Exception("Python returned no response");
+            } while (!response.TrimStart().StartsWith('{'));
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException("Python request timed out");
+        }
         return response;
     }
 

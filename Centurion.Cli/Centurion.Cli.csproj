@@ -26,5 +26,9 @@
         <!-- 删除原来的文化文件夹 -->
         <RemoveDir Directories="@(SatelliteAssemblies->'%(RootDir)%(Directory)')" Condition="Exists('%(RootDir)%(Directory)')"/>
     </Target>
+	
+	<PropertyGroup>
+		<ApplicationIcon>app.ico</ApplicationIcon>
+	</PropertyGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿namespace Centurion.Core.Services.Dto;
 
-public class SatSplitResult
+public class SentenceSplitResult
 {
     public string Text { get; set; } = string.Empty;
     public double Start { get; set; }

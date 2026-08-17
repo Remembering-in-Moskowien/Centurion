@@ -5,7 +5,7 @@ using Centurion.Core.Exceptions;
 using Centurion.Core.Operators.Payload;
 using Centurion.Core.Operators.Results;
 using Centurion.Core.Tools;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Operators;
 
@@ -13,10 +13,10 @@ namespace Centurion.Core.Operators;
 /// FFmpeg 算子：支持音频转换和按时间段切割。
 /// 统一通过 SendRequestAsync 入口，根据载荷类型自动分发。
 /// </summary>
-public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLocator binaryLocator)
+public class FFmpegOperator(IBinaryLocator binaryLocator)
     : IOperators
 {
-    private readonly IStringLocalizer<Localization> _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+    // localization removed
     private string? _ffmpegBinaryPath;
     private Process? _runningProcess;
     private bool _disposed;
@@ -29,7 +29,7 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
         var bin = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
         _ffmpegBinaryPath = binaryLocator.Locate(bin, "ffmpeg");
         if (string.IsNullOrEmpty(_ffmpegBinaryPath) || !File.Exists(_ffmpegBinaryPath))
-            throw new FileNotFoundException(_localizer["FFmpegNotFound"]);
+            throw new FileNotFoundException("FFmpeg executable not found.");
     }
 
     public async Task<TResult> SendRequestAsync<TResult, TPayload>(
@@ -42,19 +42,19 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
         {
             var result = await ConvertAudioAsync(convertPayload, cancellationToken);
             if (typeof(TResult) != typeof(FFmpegConvertResult))
-                throw new InvalidOperationException(_localizer["UnexpectedResultType", typeof(FFmpegConvertResult).Name, typeof(TResult).Name]);
+                throw new InvalidOperationException(string.Format("Expected result type {0} but got {1}.", typeof(FFmpegConvertResult).Name, typeof(TResult).Name));
             return (TResult)(object)result;
         }
         else if (request.Payload is FFmpegSplitPayload splitPayload)
         {
             var result = await SplitAudioAsync(splitPayload, cancellationToken);
             if (typeof(TResult) != typeof(FFmpegSplitResult))
-                throw new InvalidOperationException(_localizer["UnexpectedResultType", typeof(FFmpegSplitResult).Name, typeof(TResult).Name]);
+                throw new InvalidOperationException(string.Format("Expected result type {0} but got {1}.", typeof(FFmpegSplitResult).Name, typeof(TResult).Name));
             return (TResult)(object)result;
         }
         else
         {
-            throw new ArgumentException(_localizer["UnsupportedPayloadType"], nameof(request));
+            throw new ArgumentException("Unsupported payload type.", nameof(request));
         }
     }
 
@@ -62,7 +62,7 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
     private async Task<FFmpegConvertResult> ConvertAudioAsync(FFmpegConvertPayload payload, CancellationToken ct)
     {
         if (!File.Exists(payload.InputFilePath))
-            throw new FileNotFoundException(_localizer["FileNotFoundInput"], payload.InputFilePath);
+            throw new FileNotFoundException("Input file not found", payload.InputFilePath);
 
         var outputFile = payload.OutputFilePath!;
         var targetDir = Path.GetDirectoryName(outputFile)!;
@@ -88,14 +88,14 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
         if (process.ExitCode != 0)
         {
             throw new FFmpegProcessExitException(
-                _localizer["FFmpegConversionFailed", process.ExitCode],
+                string.Format("FFmpeg conversion failed ExitCode:{0}\nLog:{1}", process.ExitCode, errorBuilder.ToString()),
                 process.ExitCode, errorBuilder.ToString());
         }
 
         if (!File.Exists(outputFile))
-            throw new FileNotFoundException(_localizer["FFmpegOutputFileMissing"], outputFile);
+            throw new FileNotFoundException(string.Format("FFmpeg did not produce output file: {0}", outputFile), outputFile);
 
-        ConsoleServices.Output?.WriteLine(_localizer["FFmpegSuccessPath", outputFile]);
+        ConsoleServices.Output?.WriteLine(string.Format("FFmpeg succeeded: {0}", outputFile));
         return new FFmpegConvertResult() { OutputPath = outputFile };
     }
 
@@ -103,10 +103,10 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
     private async Task<FFmpegSplitResult> SplitAudioAsync(FFmpegSplitPayload payload, CancellationToken ct)
     {
         if (!File.Exists(payload.InputFilePath))
-            throw new FileNotFoundException(_localizer["FileNotFoundInput"], payload.InputFilePath);
+            throw new FileNotFoundException("Input file not found", payload.InputFilePath);
 
         if (payload.Segments == null || payload.Segments.Count == 0)
-            throw new ArgumentException(_localizer["SegmentsEmpty"], nameof(payload));
+            throw new ArgumentException("Segment list cannot be empty.", nameof(payload));
 
         var outputDir = payload.OutputDirectory;
         if (string.IsNullOrEmpty(outputDir))
@@ -138,12 +138,12 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
             {
                 var error = await process.StandardError.ReadToEndAsync();
                 throw new FFmpegProcessExitException(
-                    _localizer["FFmpegSplitFailed", i + 1, process.ExitCode],
+                    string.Format("Segment {0} split failed with exit code {1}.", i + 1, process.ExitCode),
                     process.ExitCode, error);
             }
 
             outputFiles.Add(outputFile);
-            ConsoleServices.Output?.WriteLine(_localizer["FFmpegSplitSuccess", outputFile]);
+            ConsoleServices.Output?.WriteLine(string.Format("Segment saved: {0}", outputFile));
         }
 
         return new FFmpegSplitResult { OutputFiles = outputFiles };
@@ -162,7 +162,7 @@ public class FFmpegOperator(IStringLocalizer<Localization> localizer, IBinaryLoc
         };
         var process = Process.Start(psi);
         if (process == null)
-            throw new InvalidOperationException(_localizer["FailedStartFFmpegProcess"]);
+            throw new InvalidOperationException("Failed to start FFmpeg process.");
         return process;
     }
 

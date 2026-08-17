@@ -1,14 +1,14 @@
 ﻿using Centurion.Core.Exceptions;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Tools;
 
 /// <summary>
 /// 跨平台二进制查找工具：本地目录 + PATH 环境变量检索，支持 DI 和本地化。
 /// </summary>
-public class BinaryLocator(IStringLocalizer<Localization> localizer) : IBinaryLocator
+public class BinaryLocator() : IBinaryLocator
 {
-    private readonly IStringLocalizer<Localization> _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
+    // localization removed
     private readonly Dictionary<string, string> _binaryCache = new(StringComparer.OrdinalIgnoreCase);
 
     public string Locate(string binaryName, params string[] localSearchRelativeDirs)
@@ -39,8 +39,7 @@ public class BinaryLocator(IStringLocalizer<Localization> localizer) : IBinaryLo
         // 3. 读取 PATH 环境变量
         var pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrWhiteSpace(pathEnv))
-            throw new BinaryNotFoundException(
-                _localizer["BinaryNotFound", binaryName], binaryName);
+            throw new BinaryNotFoundException(string.Format("Binary '{0}' not found.", binaryName), binaryName);
 
         var separator = OperatingSystem.IsWindows() ? ';' : ':';
         var envDirs = pathEnv.Split(separator)
@@ -56,7 +55,7 @@ public class BinaryLocator(IStringLocalizer<Localization> localizer) : IBinaryLo
         }
 
         throw new BinaryNotFoundException(
-            _localizer["BinaryNotFound", binaryName], binaryName);
+            string.Format("Binary '{0}' not found.", binaryName), binaryName);
     }
 
     public void ClearCache()

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using Centurion.Core;
 using Centurion.Core.Models;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -54,7 +54,7 @@ public sealed class SpawnSettings : CommandSettings
     public bool UseMfa { get; init; }
 }
 
-public sealed class SpawnCommand(AssSubSpawner subSpawner, IStringLocalizer<Localization> localizer)
+public sealed class SpawnCommand(AssSubSpawner subSpawner)
     : AsyncCommand<SpawnSettings>
 {
     protected override async Task<int> ExecuteAsync(
@@ -85,19 +85,19 @@ public sealed class SpawnCommand(AssSubSpawner subSpawner, IStringLocalizer<Loca
             var assDoc = await subSpawner.AssSpawnerAsync(spawnOptions, inputPath, genOptions, ct);
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
 
-            AnsiConsole.MarkupLine($"[green]{localizer["SuccessGenerated"]}[/] {outputPath}");
+            AnsiConsole.MarkupLine($"[green]Generation succeeded:[/]{outputPath}");
             return 0;
         }
         catch (Exception ex)
         {
             if (ex.Message.Contains("Gentle") || ex.Message.Contains("connection"))
             {
-                ConsoleServices.Output.WriteError(localizer["GentleRequestFailed"]);
+                ConsoleServices.Output.WriteError("Gentle service request failed.");
                 ConsoleServices.Output.WriteLine(ex.Message);
             }
             else
             {
-                ConsoleServices.Output.WriteError($"{localizer["ErrorLabel"]} {ex.Message}");
+                ConsoleServices.Output.WriteError($"Error: {ex.Message}");
             }
 
             return 1;
@@ -111,7 +111,7 @@ public sealed class SpawnCommand(AssSubSpawner subSpawner, IStringLocalizer<Loca
         {
             ".srt" => AssSubSpawnerOptions.Srt,
             _ when MediaFileExtensions.Contains(ext) => AssSubSpawnerOptions.Media,
-            _ => throw new ArgumentException(localizer["UnsupportedInputFileType", ext], nameof(inputPath))
+            _ => throw new ArgumentException(string.Format("Unsupported input file type: {0}", ext), nameof(inputPath))
         };
     }
 

@@ -46,7 +46,7 @@ public class EmbeddedResources
 
     #region Sat Split Script
 
-    public const string SatSplitServiceScript = """"
+    public const string SentenceSplitServiceScript = """"
                                                 #!/usr/bin/env python3
                                                 """
                                                 SAT 分句服务（常驻进程）
@@ -217,7 +217,7 @@ public class EmbeddedResources
     {
         return fileName switch
         {
-            "sat_split_service.py" => SatSplitServiceScript,
+            "sat_split_service.py" => SentenceSplitServiceScript,
             "diarize_service.py" => DiarizeServiceScript,
             _ => throw new ArgumentException($"Unknown script: {fileName}")
         };

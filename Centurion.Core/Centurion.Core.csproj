@@ -7,10 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Catalyst" Version="26.7.2845" />
+        <PackageReference Include="Catalyst.Models.English" Version="1.0.30952" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11"/>
-        <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.11"/>
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
     </ItemGroup>
 

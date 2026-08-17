@@ -3,18 +3,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Centurion.Core.Operators.Payload;
 using Centurion.Core.Tools;
-using Microsoft.Extensions.Localization;
+// localization removed; strings hard-coded
 
 namespace Centurion.Core.Operators;
 
 /// <summary>
 /// MFA 强制对齐算子，基于 MFA 命令行工具。
-/// 自动安装 Conda 依赖和模型。
 /// </summary>
-public class MfaCliOperator(
-    IStringLocalizer<Localization> localizer,
-    IPythonInterop pythonInterop)
+public class MfaCliOperator : IDisposable
 {
+    // localization removed
+    private readonly IPythonInterop _pythonInterop;
     private string? _openFstBinPath;
     private string? _mfaBinaryPath;
     private Process? _runningProcess;
@@ -24,18 +23,20 @@ public class MfaCliOperator(
     private const string AcousticModel = "english_mfa";
     private const string Dictionary = "english_us_mfa";
 
-    /// <summary>
-    /// 确保 MFA 已安装，并下载模型。
-    /// </summary>
+    public MfaCliOperator(IPythonInterop pythonInterop)
+    {
+        _pythonInterop = pythonInterop;
+    }
+
     public async Task EnsureTargetAvailableAsync()
     {
-        var condaExe = await pythonInterop.LocateCondaAsync();
+        var condaExe = await _pythonInterop.LocateCondaAsync();
         if (string.IsNullOrEmpty(condaExe))
-            throw new InvalidOperationException(localizer["MFACondaNotFound"]);
+            throw new InvalidOperationException("Conda not found. Please install Miniconda.");
 
-        var condaEnvDir = pythonInterop.GetCondaEnvironmentPath();
+        var condaEnvDir = _pythonInterop.GetCondaEnvironmentPath();
         if (string.IsNullOrEmpty(condaEnvDir))
-            throw new InvalidOperationException(localizer["MFAEnvDirNotFound"]);
+            throw new InvalidOperationException("Could not determine Conda environment directory.");
 
         var mfaPath = OperatingSystem.IsWindows()
             ? Path.Combine(condaEnvDir, "Scripts", "mfa.exe")
@@ -59,15 +60,12 @@ public class MfaCliOperator(
             using var process = Process.Start(psi);
             if (process == null) throw new Exception("Failed to start conda install.");
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
             await process.WaitForExitAsync();
-            await Task.WhenAll(stderrTask, stdoutTask);
-
-            var stderr = await stderrTask;
             if (process.ExitCode != 0)
-                throw new Exception($"Conda install failed: {stderr}");
+            {
+                var error = await process.StandardError.ReadToEndAsync();
+                throw new Exception($"Conda install failed: {error}");
+            }
 
             if (!File.Exists(mfaPath))
                 throw new Exception("montreal-forced-aligner installation succeeded but mfa executable not found.");
@@ -86,20 +84,20 @@ public class MfaCliOperator(
     private async Task EnsureModelsAvailableAsync()
     {
         var acousticCheck = await RunMfaCommandAsync("model list acoustic");
-        if (!acousticCheck.Contains(AcousticModel))
-        {
-            ConsoleServices.Output?.WriteLine(localizer["MFADownloadingModels"]);
-            await RunMfaCommandAsync($"model download acoustic {AcousticModel}");
-        }
+            if (!acousticCheck.Contains(AcousticModel))
+            {
+                ConsoleServices.Output?.WriteLine("Downloading MFA models...");
+                await RunMfaCommandAsync($"model download acoustic {AcousticModel}");
+            }
 
         var dictionaryCheck = await RunMfaCommandAsync("model list dictionary");
         if (!dictionaryCheck.Contains(Dictionary))
         {
-            ConsoleServices.Output?.WriteLine(localizer["MFADownloadingModels"]);
+            ConsoleServices.Output?.WriteLine("Downloading MFA models...");
             await RunMfaCommandAsync($"model download dictionary {Dictionary}");
         }
 
-        ConsoleServices.Output?.WriteLine(localizer["MFAModelsDownloaded"]);
+        ConsoleServices.Output?.WriteLine("MFA models downloaded.");
     }
 
     private async Task<string> RunMfaCommandAsync(string arguments)
@@ -125,17 +123,14 @@ public class MfaCliOperator(
 
         var output = await process.StandardOutput.ReadToEndAsync();
         var error = await process.StandardError.ReadToEndAsync();
-
         await process.WaitForExitAsync();
+
         if (process.ExitCode != 0)
             throw new Exception($"MFA command failed: {error}");
 
         return output;
     }
 
-    /// <summary>
-    /// 批量对齐整个语料库（平铺结构，所有 .wav 和 .lab 直接放在输入目录）
-    /// </summary>
     public async Task<Dictionary<string, List<MfaWord>>> AlignCorpusAsync(
         string inputDir,
         string outputDir,
@@ -156,8 +151,10 @@ public class MfaCliOperator(
         var tempDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "mfa_temp");
         Directory.CreateDirectory(tempDir);
 
+        // 修正参数拼接（各参数间添加空格）
         var args = $"align \"{inputDir}\" {Dictionary} {AcousticModel} \"{outputDir}\" " +
                    $"--cleanup_text false --overwrite --single_speaker " +
+                   $"--beam 100 --retry_beam 400 " +
                    $"--temporary_directory \"{tempDir}\"";
 
         await RunMfaCommandAsyncWithCancellation(args, inputDir, ct);
