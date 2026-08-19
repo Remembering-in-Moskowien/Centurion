@@ -26,53 +26,44 @@
 
 ---
 
-## 🧱 系统架构
-
-```mermaid
-flowchart LR
-    A[媒体文件] --> B[FFmpeg 转码]
-    B --> C[Whisper 转录]
-    C --> D[Catalyst 分句]
-    D --> E[说话人分割]
-    E --> F[ASS 生成]
-    F --> G[.ass 文件]
-每个步骤均为独立的算子（IOperator），可灵活组合或替换。
-
-🖥️ 使用命令
-spawn – 主要字幕生成命令
+## 🖥️ 使用命令
+### `spawn` – 主要字幕生成命令
 该命令从媒体文件生成完整字幕，支持多种选项。
 
-bash
-Centurion spawn -i <input> [options]
-常用选项
+```bash
+Centurion.Cli spawn -i <input> [options]
+```
+**常用选项**
 
-参数	说明
--i, --input	输入文件路径（必填）
--o, --output	输出 ASS 文件路径（默认输入文件名 + .ass）
--l, --language	语言代码，如 en, zh, ja（默认 en）
--m, --model	Whisper 模型：tiny, base, small, medium, large-v3（默认 base）
--p, --prompt	Whisper 初始提示词
---max-length	每行字幕最大字符数（默认 80）
---target-length	目标字符数（默认 50）
---spread-range	长度分布扩散范围（默认 10）
---num-speakers	说话人数量（0 为自动检测，默认 0）
--k, --karaoke	启用卡拉OK模式（生成 \K 标签）
-注意：--align 选项目前已被禁用，即使指定也会被忽略。我们将在未来版本中视情况恢复。
+|参数|	说明|
+|-----|-----|
+|-i, --input|	输入文件路径（必填）|
+|- -o, --output|	输出 ASS 文件路径（默认输入文件名 + .ass）
+|- -l, --language|	语言代码，如 en, zh, ja（默认 en）
+|- -m, --model|	Whisper 模型：tiny, base, small, medium, large-v3（默认 base）
+|- -p, --prompt|	Whisper 初始提示词
+|- --max-length|	每行字幕最大字符数（默认 80）
+|- --target-length|	目标字符数（默认 50）
+|- --spread-range|	长度分布扩散范围（默认 10）
+|- --num-speakers|	说话人数量（0 为自动检测，默认 0）
+|- -k, --karaoke|	启用卡拉OK模式（生成 \K 标签）
+> 注意：--align 选项目前已被禁用，即使指定也会被忽略。我们将在未来版本中视情况恢复。
 
-示例：
+### 示例：
 
-bash
-# 生成英文字幕（基础）
+```bash
+#生成英文字幕（基础）
 Centurion spawn -i video.mp4 -l en
 
-# 生成中文卡拉OK字幕
+#生成中文卡拉OK字幕
 Centurion spawn -i lecture.mp4 -o subs.ass -l zh --karaoke
-convert – 辅助转换命令
+```
+### `convert` – 辅助转换命令
 该命令用于简单的字幕格式转换或内容调整（当前功能有限），具体用法请参阅 Centurion convert --help。
 
 注意：convert 是次要辅助命令，主要功能由 spawn 提供。
 
-📦 安装
+## 📦 安装
 从 GitHub Releases 获取预发布包
 访问项目的 Releases 页面（请替换为实际地址）。
 
@@ -85,13 +76,14 @@ convert – 辅助转换命令
 从源码构建（不推荐，仅供开发）
 若需自行构建，请确保已安装 .NET 10 SDK，然后执行：
 
-bash
+```bash
 git clone <repository-url>
 cd Centurion
 dotnet build -c Release
+```
 构建产物位于 Centurion.Cli/bin/Release/net10.0/。
 
-🧠 模型管理
+## 🧠 模型管理
 首次运行 spawn 时，工具会自动下载所需模型至 models/ 目录：
 
 text
@@ -105,7 +97,7 @@ models/
     └── voxceleb_resnet293_LM.onnx
 所有模型均从 Hugging Face 镜像（hf-mirror.com）下载，无需手动干预。
 
-⚠️ 注意事项
+## ⚠️ 注意事项
 项目处于开发阶段，命令和参数可能会发生变化，请以实际运行结果为准。
 
 目前仅支持 CPU 推理，处理较长音频时 CPU 负载较高，建议在性能较好的机器上运行。
@@ -114,8 +106,5 @@ models/
 
 若模型下载失败，可检查网络代理设置；如有自定义镜像源需求，可通过环境变量 CENTURION_MODEL_MIRROR 指定（未实现，可后续扩展）。
 
-🤝 贡献与反馈
+## 🤝 贡献与反馈
 欢迎提交 Issue 和 Pull Request。因项目仍在早期，请先通过 Issue 讨论大的功能改动，避免无效工作。
-
-📄 许可证
-MIT
