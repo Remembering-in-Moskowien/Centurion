@@ -35,18 +35,18 @@ Centurion.Cli spawn -i <input> [options]
 ```
 **常用选项**
 
-|参数|	说明|
-|-----|-----|
-|-i, --input|	输入文件路径（必填）|
-|- -o, --output|	输出 ASS 文件路径（默认输入文件名 + .ass）
-|- -l, --language|	语言代码，如 en, zh, ja（默认 en）
-|- -m, --model|	Whisper 模型：tiny, base, small, medium, large-v3（默认 base）
-|- -p, --prompt|	Whisper 初始提示词
-|- --max-length|	每行字幕最大字符数（默认 80）
-|- --target-length|	目标字符数（默认 50）
-|- --spread-range|	长度分布扩散范围（默认 10）
-|- --num-speakers|	说话人数量（0 为自动检测，默认 0）
-|- -k, --karaoke|	启用卡拉OK模式（生成 \K 标签）
+| 参数            |	说明|
+|-----------------|-----|
+| -i, --input     |	输入文件路径（必填）|
+| -o, --output    |	输出 ASS 文件路径（默认输入文件名 + .ass）
+| -l, --language  |	语言代码，如 en, zh, ja（默认 en）
+| -m, --model     |	Whisper 模型：tiny, base, small, medium, large-v3（默认 base）
+| -p, --prompt    |	Whisper 初始提示词
+| --max-length    |	每行字幕最大字符数（默认 80）
+| --target-length |	目标字符数（默认 50）
+| --spread-range  |	长度分布扩散范围（默认 10）
+| --num-speakers  |	说话人数量（0 为自动检测，默认 0）
+| -k, --karaoke   |	启用卡拉OK模式（生成 \K 标签）
 > 注意：--align 选项目前已被禁用，即使指定也会被忽略。我们将在未来版本中视情况恢复。
 
 ### 示例：
