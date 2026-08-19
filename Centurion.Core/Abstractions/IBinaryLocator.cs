@@ -1,4 +1,6 @@
-﻿namespace Centurion.Core.Tools;
+﻿using Centurion.Core.Exceptions;
+
+namespace Centurion.Core.Abstractions;
 
 /// <summary>
 /// 二进制文件查找服务接口。

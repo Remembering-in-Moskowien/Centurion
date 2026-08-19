@@ -1,26 +1,24 @@
 ﻿using System.Globalization;
-using System.Reflection;
 using Centurion.Cli.Console;
 using Centurion.Cli.Commands;
 using Centurion.Core;
+using Centurion.Core.Abstractions;
+using Centurion.Core.Managers;
 using Centurion.Core.Operators;
-using Centurion.Core.Services;
+using Centurion.Core.Parsers;
 using Centurion.Core.Tools;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-// ---------- 配置 ConsoleServices ----------
 ConsoleServices.Output = new SpectreConsoleOutput();
 ConsoleServices.Progress = new SpectreProgressReporter();
 ConsoleServices.Confirm = new SpectreConfirmPrompt();
 
-// ---------- 设置默认语言（可根据需要改为 zh） ----------
 CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en");
 CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en");
 
-// ---------- 程序入口 ----------
 const string version = "alpha";
 AnsiConsole.Write(new FigletText($"Centurion {version}"));
 
@@ -32,32 +30,60 @@ Console.CancelKeyPress += (_, e) =>
     Console.WriteLine("Cancellation requested...");
 };
 
-// ---------- 构建 DI 容器 ----------
 var services = new ServiceCollection();
-
-// 注册日志服务（本地化已移除）
 services.AddLogging();
 
-// 注册核心服务
-services.AddSingleton<IPythonInterop, PythonInteropService>();
+// 基础服务
 services.AddSingleton<IBinaryLocator, BinaryLocator>();
-services.AddTransient<FFmpegOperator>();
-services.AddSingleton<AssSubSpawner>();
-services.AddScoped<MfaCliOperator>();
-services.AddTransient<AriaOperator>();
-services.AddSingleton<SpeakerDiarizationService>();
+services.AddSingleton<CondaEnvironmentManager>();
 
+// ---------- 算子注册 ----------
+// Aria 下载
+services.AddSingleton<AriaOperator>();
+
+// FFmpeg（拆分）
+services.AddTransient<FFmpegConvertOperator>();
+services.AddTransient<FFmpegSplitOperator>();
+
+// Catalyst 分句
 var modelCachePath = Path.Combine(AppContext.BaseDirectory, "models", "catalyst");
-services.AddSingleton<CatalystSplitService>(_ => 
-    new CatalystSplitService(modelCachePath, "en"));
+var catalystOptions = new CatalystSplitOptions
+{
+    ModelCachePath = modelCachePath,
+    DefaultLanguage = "en",
+    DefaultMaxLength = 80,
+    DefaultTargetLength = 50
+};
+services.AddSingleton<CatalystSplitOperator>(sp => new CatalystSplitOperator(catalystOptions));
 
-// ---------- 构建 CLI 应用 ----------
+// 说话人分割
+services.Configure<DiarizationOptions>(options =>
+{
+    options.ModelName = "voxceleb_resnet293_LM";
+    options.ClusterThreshold = 0.55;
+});
+services.AddSingleton<DiarizationOperator>();
+
+// MFA 对齐
+services.AddSingleton<SpeakerMfaAlignmentOperator>();
+
+// 字幕转换（SRT → ASS）
+services.AddSingleton<ISubtitleParser, SrtParser>();
+services.AddSingleton<SubtitleConverterOperator>();
+
+// 字幕生成（媒体）
+services.AddSingleton<SubtitleGeneratorOperator>();
+
+// 注册临时目录管理器（单例）
+services.AddSingleton<ITempDirectoryManager, TempDirectoryManager>();
+
 var registrar = new Centurion.Cli.TypeRegistrar(services);
 var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetApplicationName("Centurion");
     config.AddCommand<SpawnCommand>("spawn");
+    config.AddCommand<ConvertCommand>("convert");
 });
 
 return await app.RunAsync(args);

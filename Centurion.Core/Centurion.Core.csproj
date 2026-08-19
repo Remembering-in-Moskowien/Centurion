@@ -7,13 +7,16 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Catalyst" Version="26.7.2845" />
-        <PackageReference Include="Catalyst.Models.English" Version="1.0.30952" />
+        <PackageReference Include="Catalyst" Version="26.7.2845"/>
+        <PackageReference Include="Catalyst.Models.English" Version="1.0.30952"/>
+        <PackageReference Include="FasterWhisper.NET" Version="1.0.6" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11"/>
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0"/>
+        <PackageReference Include="NAudio" Version="3.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
+        <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.5" />
     </ItemGroup>
 
     <ItemGroup>

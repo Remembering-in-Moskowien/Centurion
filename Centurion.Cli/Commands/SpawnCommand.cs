@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Centurion.Core;
-using Centurion.Core.Models;
-// localization removed; strings hard-coded
+using Centurion.Core.Abstractions;
+using Centurion.Core.Operators;
+using Centurion.Core.Request;
+using Centurion.Core.Response;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -10,7 +12,7 @@ namespace Centurion.Cli.Commands;
 public sealed class SpawnSettings : CommandSettings
 {
     [CommandOption("-i|--inputfile <INPUT_FILE>", true)]
-    [Description("输入的SRT/媒体文件")]
+    [Description("输入的媒体文件")]
     public required FileInfo InputFile { get; init; } = null!;
 
     [CommandOption("-o|--outputfile <OUTPUT_FILE>")]
@@ -22,11 +24,11 @@ public sealed class SpawnSettings : CommandSettings
     public string ModelName { get; init; } = "base";
 
     [CommandOption("-p|--prompt <PROMPT>")]
-    [Description("Whisper 初始提示词，用于引导转录（例如：'Minecraft Bedwars'）")]
+    [Description("Whisper 初始提示词")]
     public string? InitialPrompt { get; init; }
 
     [CommandOption("-l|--lang|--language <LANG>")]
-    [Description("音频识别语言代码，默认 en（中文使用 zh）")]
+    [Description("音频识别语言代码，默认 en")]
     public string Language { get; init; } = "en";
 
     [CommandOption("--max-length <MAX_LENGTH>")]
@@ -54,7 +56,7 @@ public sealed class SpawnSettings : CommandSettings
     public bool UseMfa { get; init; }
 }
 
-public sealed class SpawnCommand(AssSubSpawner subSpawner)
+public sealed class SpawnCommand(SubtitleGeneratorOperator generator)
     : AsyncCommand<SpawnSettings>
 {
     protected override async Task<int> ExecuteAsync(
@@ -64,13 +66,17 @@ public sealed class SpawnCommand(AssSubSpawner subSpawner)
     {
         try
         {
-            // 路径处理
             var inputPath = settings.InputFile.FullName;
             var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
-            var spawnOptions = GetSpawnerOptions(inputPath);
 
-            var genOptions = new SubtitleGenerationOptions
+            // 验证输入是否为媒体文件
+            var ext = Path.GetExtension(inputPath).ToLowerInvariant();
+            if (!MediaFileExtensions.Contains(ext))
+                throw new ArgumentException($"Unsupported media file type: {ext}");
+
+            var payload = new MediaGenerationRequest
             {
+                InputFilePath = inputPath,
                 ModelName = settings.ModelName,
                 Language = settings.Language,
                 InitialPrompt = settings.InitialPrompt,
@@ -82,37 +88,20 @@ public sealed class SpawnCommand(AssSubSpawner subSpawner)
                 UseMfa = settings.UseMfa
             };
 
-            var assDoc = await subSpawner.AssSpawnerAsync(spawnOptions, inputPath, genOptions, ct);
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
+            var request = new OperatorsRequest<MediaGenerationRequest> { Payload = payload };
+            // 使用强类型 ProcessAsync（无需泛型参数）
+            var result = await generator.ProcessAsync(request, ct);
+
+            await File.WriteAllTextAsync(outputPath, result.Document.ToString(), ct);
 
             AnsiConsole.MarkupLine($"[green]Generation succeeded:[/]{outputPath}");
             return 0;
         }
         catch (Exception ex)
         {
-            if (ex.Message.Contains("Gentle") || ex.Message.Contains("connection"))
-            {
-                ConsoleServices.Output.WriteError("Gentle service request failed.");
-                ConsoleServices.Output.WriteLine(ex.Message);
-            }
-            else
-            {
-                ConsoleServices.Output.WriteError($"Error: {ex.Message}");
-            }
-
+            ConsoleServices.Output.WriteError($"Error: {ex.Message}");
             return 1;
         }
-    }
-
-    private AssSubSpawnerOptions GetSpawnerOptions(string inputPath)
-    {
-        var ext = Path.GetExtension(inputPath).ToLowerInvariant();
-        return ext switch
-        {
-            ".srt" => AssSubSpawnerOptions.Srt,
-            _ when MediaFileExtensions.Contains(ext) => AssSubSpawnerOptions.Media,
-            _ => throw new ArgumentException(string.Format("Unsupported input file type: {0}", ext), nameof(inputPath))
-        };
     }
 
     private static readonly HashSet<string> MediaFileExtensions =
