@@ -62,7 +62,7 @@ public class FFmpegSplitOperator(IBinaryLocator binaryLocator)
             var outputDir = payload.OutputDirectory ?? Path.Combine(Environment.CurrentDirectory, "temp");
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
-            outputFiles = new List<string>();
+            outputFiles = [];
             for (int i = 0; i < payload.Segments.Count; i++)
                 outputFiles.Add(Path.Combine(outputDir, $"segment_{i + 1:D4}.wav"));
         }

@@ -64,8 +64,8 @@ services.Configure<DiarizationOptions>(options =>
 });
 services.AddSingleton<DiarizationOperator>();
 
-// MFA 对齐
-services.AddSingleton<SpeakerMfaAlignmentOperator>();
+// Wav2Vec 对齐
+services.AddSingleton<TimeStampAlignmentOperator>();
 
 // 字幕转换（SRT → ASS）
 services.AddSingleton<ISubtitleParser, SrtParser>();

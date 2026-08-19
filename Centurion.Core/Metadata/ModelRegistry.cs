@@ -54,35 +54,35 @@ public static class ModelRegistry
                 "tiny",
                 new ModelMeta(
                     "https://hf-mirror.com/Systran/faster-whisper-tiny/resolve/main",
-                    new List<string> { "config.json", "model.bin", "vocabulary.txt" }
+                    ["config.json", "model.bin", "vocabulary.txt"]
                 )
             },
             {
                 "base",
                 new ModelMeta(
                     "https://hf-mirror.com/Systran/faster-whisper-base/resolve/main",
-                    new List<string> { "config.json", "model.bin", "vocabulary.txt" }
+                    ["config.json", "model.bin", "vocabulary.txt"]
                 )
             },
             {
                 "small",
                 new ModelMeta(
                     "https://hf-mirror.com/Systran/faster-whisper-small/resolve/main",
-                    new List<string> { "config.json", "model.bin", "vocabulary.txt" }
+                    ["config.json", "model.bin", "vocabulary.txt"]
                 )
             },
             {
                 "medium",
                 new ModelMeta(
                     "https://hf-mirror.com/Systran/faster-whisper-medium/resolve/main",
-                    new List<string> { "config.json", "model.bin", "vocabulary.txt" }
+                    ["config.json", "model.bin", "vocabulary.txt"]
                 )
             },
             {
                 "large-v3",
                 new ModelMeta(
                     "https://hf-mirror.com/Systran/faster-whisper-large-v3/resolve/main",
-                    new List<string> { "config.json", "model.bin", "vocabulary.txt" }
+                    ["config.json", "model.bin", "vocabulary.txt"]
                 )
             }
         };
@@ -96,6 +96,18 @@ public static class ModelRegistry
                 new ModelMeta(
                     "voxceleb_resnet293_LM.onnx",
                     "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet293_LM.onnx"
+                )
+            }
+        };
+    // ---------- Wav2Vec2 CTC 对齐模型（目录模型） ----------
+    public static IReadOnlyDictionary<string, ModelMeta> Wav2Vec2Models { get; } =
+        new Dictionary<string, ModelMeta>(StringComparer.OrdinalIgnoreCase)
+        {
+            {
+                "wav2vec2-base-960h",
+                new ModelMeta(
+                    "https://hf-mirror.com/onnx-community/wav2vec2-base-960h-ONNX/resolve/main/onnx",
+                    ["model.onnx"]
                 )
             }
         };

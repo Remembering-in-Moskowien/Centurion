@@ -12,48 +12,48 @@ namespace Centurion.Cli.Commands;
 public sealed class SpawnSettings : CommandSettings
 {
     [CommandOption("-i|--inputfile <INPUT_FILE>", true)]
-    [Description("输入的媒体文件")]
+    [Description("Input media file")]
     public required FileInfo InputFile { get; init; } = null!;
 
     [CommandOption("-o|--outputfile <OUTPUT_FILE>")]
-    [Description("输出的ASS字幕文件")]
+    [Description("Output ASS subtitle file")]
     public required FileInfo OutputFile { get; init; } = null!;
 
     [CommandOption("-m|--model <MODEL>")]
-    [Description("Whisper模型：tiny/base/small/medium/large，默认base")]
+    [Description("Whisper model: tiny/base/small/medium/large, default is base")]
     public string ModelName { get; init; } = "base";
 
     [CommandOption("-p|--prompt <PROMPT>")]
-    [Description("Whisper 初始提示词")]
+    [Description("Whisper initial prompt")]
     public string? InitialPrompt { get; init; }
 
     [CommandOption("-l|--lang|--language <LANG>")]
-    [Description("音频识别语言代码，默认 en")]
+    [Description("Audio language code, default en")]
     public string Language { get; init; } = "en";
 
     [CommandOption("--max-length <MAX_LENGTH>")]
-    [Description("分句最大长度（字符数），默认80")]
+    [Description("Maximum characters per subtitle line, default 80")]
     public int MaxLength { get; init; } = 80;
 
     [CommandOption("--target-length <TARGET_LENGTH>")]
-    [Description("目标分句长度（字符数），默认50")]
+    [Description("Target characters per line, default 50")]
     public int TargetLength { get; init; } = 50;
 
     [CommandOption("--spread-range <SPREAD_RANGE>")]
-    [Description("长度分布的扩散范围，默认10")]
+    [Description("Spread range for line length distribution, default 10")]
     public int SpreadRange { get; init; } = 10;
 
     [CommandOption("--num-speakers <NUM>")]
-    [Description("说话人人数（0 表示自动检测），默认 0")]
+    [Description("Number of speakers (0 = auto detect), default 0")]
     public int NumSpeakers { get; init; } = 0;
 
     [CommandOption("-k|--karaoke")]
-    [Description("生成带卡拉OK特效的ASS字幕（\\K标签）")]
+    [Description("Generate ASS subtitles with karaoke effects (\\K tags)")]
     public bool Karaoke { get; init; }
 
-    [CommandOption("--mfa")]
-    [Description("使用 MFA（Montreal Forced Aligner）进行高精度强制对齐")]
-    public bool UseMfa { get; init; }
+    [CommandOption("--align")]
+    [Description("(Currently disabled) Forced alignment is unavailable and will be ignored")]
+    public bool Align { get; init; }
 }
 
 public sealed class SpawnCommand(SubtitleGeneratorOperator generator)
@@ -69,10 +69,14 @@ public sealed class SpawnCommand(SubtitleGeneratorOperator generator)
             var inputPath = settings.InputFile.FullName;
             var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
 
-            // 验证输入是否为媒体文件
             var ext = Path.GetExtension(inputPath).ToLowerInvariant();
             if (!MediaFileExtensions.Contains(ext))
                 throw new ArgumentException($"Unsupported media file type: {ext}");
+
+            if (settings.Align)
+            {
+                ConsoleServices.Output?.WriteLine("[yellow]Warning: --align option is currently disabled and will be ignored.[/]");
+            }
 
             var payload = new MediaGenerationRequest
             {
@@ -85,11 +89,10 @@ public sealed class SpawnCommand(SubtitleGeneratorOperator generator)
                 SpreadRange = settings.SpreadRange,
                 NumSpeakers = settings.NumSpeakers,
                 Karaoke = settings.Karaoke,
-                UseMfa = settings.UseMfa
+                Align = false  // force disable alignment
             };
 
             var request = new OperatorsRequest<MediaGenerationRequest> { Payload = payload };
-            // 使用强类型 ProcessAsync（无需泛型参数）
             var result = await generator.ProcessAsync(request, ct);
 
             await File.WriteAllTextAsync(outputPath, result.Document.ToString(), ct);

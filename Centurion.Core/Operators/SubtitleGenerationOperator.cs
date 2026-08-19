@@ -13,14 +13,13 @@ namespace Centurion.Core.Operators;
 /// <summary>
 /// 字幕生成算子：从媒体文件生成 ASS 字幕。
 /// 流程：FFmpeg转换 → Whisper转录（使用 FasterWhisper.NET 纯 .NET 实现）→ Catalyst分句 → 说话人分割 →
-///       (可选) 说话人感知MFA对齐 → ASS构建。
+///       (可选) sherpa-onnx 强制对齐 → ASS构建。
 /// </summary>
 public class SubtitleGeneratorOperator(
     CatalystSplitOperator catalystOperator,
     FFmpegConvertOperator ffmpegConvert,
     IServiceProvider serviceProvider,
     DiarizationOperator diarizationOperator,
-    SpeakerMfaAlignmentOperator speakerMfaAlignment,
     ITempDirectoryManager tempManager)
     : IOperator<MediaGenerationRequest, SubtitleGenerationResponse>, IAsyncDisposable
 {
@@ -28,7 +27,6 @@ public class SubtitleGeneratorOperator(
     private readonly FFmpegConvertOperator _ffmpegConvert = ffmpegConvert ?? throw new ArgumentNullException(nameof(ffmpegConvert));
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly DiarizationOperator _diarizationOperator = diarizationOperator ?? throw new ArgumentNullException(nameof(diarizationOperator));
-    private readonly SpeakerMfaAlignmentOperator _speakerMfaAlignment = speakerMfaAlignment ?? throw new ArgumentNullException(nameof(speakerMfaAlignment));
     private readonly ITempDirectoryManager _tempManager = tempManager ?? throw new ArgumentNullException(nameof(tempManager));
 
     private bool _disposed;
@@ -90,7 +88,7 @@ public class SubtitleGeneratorOperator(
         if (sentenceRaw == null || sentenceRaw.Words.Count == 0)
             throw new InvalidOperationException("Whisper returned no words");
 
-        sentenceRaw.Words = sentenceRaw.Words.Where(w => !string.IsNullOrWhiteSpace(w.Text)).ToList();
+        sentenceRaw.Words = [.. sentenceRaw.Words.Where(w => !string.IsNullOrWhiteSpace(w.Text))];
         if (sentenceRaw.Words.Count == 0)
             throw new InvalidOperationException("No valid word timings after filtering");
 
@@ -126,16 +124,28 @@ public class SubtitleGeneratorOperator(
         var diarizationResult = await _diarizationOperator.ProcessAsync(diarizationRequest, ct);
         sentences = diarizationResult.Sentences;
 
-        // 5. MFA 对齐（若启用）
-        if (payload.UseMfa)
+        // 5. 强制对齐（使用 sherpa-onnx，若启用）
+        if (payload.Align)
         {
-            ConsoleServices.Output?.WriteLine("Starting speaker-aware MFA alignment...");
+            ConsoleServices.Output?.WriteLine("Starting speaker-aware forced alignment (sherpa-onnx)...");
+            // 从请求中获取对齐模型名称，若未指定则使用默认
+            var alignmentModelName = payload.AlignmentModelName ?? "wav2vec2-base-960h";
+
+            // 动态创建 TimeStampAlignmentOperator
+            await using var aligner = ActivatorUtilities.CreateInstance<TimeStampAlignmentOperator>(
+                _serviceProvider,
+                _tempManager,
+                alignmentModelName,
+                "alignment"); // categoryFolder 固定为 "alignment"
+            await aligner.EnsureTargetAvailableAsync();
+
             var mfaRequest = new OperatorsRequest<SpeakerMfaRequest>
             {
                 Payload = new SpeakerMfaRequest { AudioFilePath = tempWav, Sentences = sentences }
             };
-            var mfaResult = await _speakerMfaAlignment.ProcessAsync(mfaRequest, ct);
+            var mfaResult = await aligner.ProcessAsync(mfaRequest, ct);
             sentences = mfaResult.Sentences;
+            // aligner 会在 await using 结束时自动释放
         }
 
         // 6. 构建 ASS 字幕
@@ -146,6 +156,7 @@ public class SubtitleGeneratorOperator(
         {
             var startMs = (long)group.Start;
             var endMs = (long)group.End;
+            var name = group.Words[0].Speaker;
             var text = payload.Karaoke ? BuildKaraokeFromWords(group) : SubTools.NormalizeSpaces(group.Text);
 
             var dialogue = new AssSubLineBuilder()
@@ -154,7 +165,7 @@ public class SubtitleGeneratorOperator(
                 .WithStart(startMs)
                 .WithEnd(endMs)
                 .WithStyle("Default")
-                .WithName("")
+                .WithName(name)
                 .WithMarginL(0)
                 .WithMarginR(0)
                 .WithMarginV(0)

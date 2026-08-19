@@ -92,8 +92,8 @@ public class WhisperFasterOperator : IOperator<WhisperTranscribeRequest, Whisper
             .Select(w => new Word
             {
                 Text = w.Word,
-                Start = w.Start,
-                End = w.End,
+                Start = w.Start * 1000,
+                End = w.End * 1000,
                 Speaker = "UNKNOWN"
             })
             .ToList();

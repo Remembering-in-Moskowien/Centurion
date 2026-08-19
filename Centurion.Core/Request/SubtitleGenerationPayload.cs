@@ -25,5 +25,6 @@ public class MediaGenerationRequest
     public bool Karaoke { get; init; } = false;
 
     // ---------- 强制对齐 ----------
-    public bool UseMfa { get; init; } = false;
+    public bool Align { get; init; } = false;
+    public string? AlignmentModelName { get; set; } = "wav2vec2-base-960h";
 }

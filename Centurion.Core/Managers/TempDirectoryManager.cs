@@ -8,7 +8,7 @@ namespace Centurion.Core.Tools;
 public class TempDirectoryManager(string? basePath = null, bool autoDelete = true) : ITempDirectoryManager
 {
     private readonly string _basePath = basePath ?? Path.GetTempPath();
-    private readonly List<TempDirectoryHandle> _handles = new();
+    private readonly List<TempDirectoryHandle> _handles = [];
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public async Task<TempDirectoryHandle> CreateTempDirectoryAsync(string? prefix = null)

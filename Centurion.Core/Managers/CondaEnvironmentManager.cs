@@ -323,7 +323,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
     private async Task<HashSet<string>> GetCondaPackageListAsync(string condaExe, string envPath, CancellationToken ct)
     {
         var output = await RunCommandAsync(condaExe, $"list -p \"{envPath}\" --json", ct);
-        if (string.IsNullOrEmpty(output)) return new HashSet<string>();
+        if (string.IsNullOrEmpty(output)) return [];
 
         using var doc = JsonDocument.Parse(output);
         var packages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -340,7 +340,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
     private async Task<HashSet<string>> GetPipPackageListAsync(string condaExe, string envPath, CancellationToken ct)
     {
         var output = await RunCommandAsync(condaExe, $"run -p \"{envPath}\" pip list --format=json", ct);
-        if (string.IsNullOrEmpty(output)) return new HashSet<string>();
+        if (string.IsNullOrEmpty(output)) return [];
 
         using var doc = JsonDocument.Parse(output);
         var packages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

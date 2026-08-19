@@ -100,7 +100,7 @@ public class DiarizationOperator(IOptions<DiarizationOptions> options, IServiceP
 
         var sentences = payload.Sentences;
         if (sentences == null || sentences.Count == 0)
-            return new DiarizationResponse { Sentences = new List<Sentence>() };
+            return new DiarizationResponse { Sentences = [] };
 
         // 1. 读取整个音频文件的 PCM 数据（float 数组）
         var audioSamples = await LoadAudioSamplesAsync(payload.AudioFilePath, cancellationToken);
@@ -150,7 +150,7 @@ public class DiarizationOperator(IOptions<DiarizationOptions> options, IServiceP
         }
 
         if (validSentences.Count == 0)
-            return new DiarizationResponse { Sentences = new List<Sentence>() };
+            return new DiarizationResponse { Sentences = [] };
 
         // 3. 聚类
         var labels = ClusterEmbeddings(embeddings, _options.ClusterThreshold ?? 0.55);
@@ -230,7 +230,7 @@ public class DiarizationOperator(IOptions<DiarizationOptions> options, IServiceP
     /// </summary>
     private List<int> ClusterEmbeddings(List<float[]> embeddings, double threshold)
     {
-        if (embeddings.Count == 0) return new List<int>();
+        if (embeddings.Count == 0) return [];
 
         var labels = new List<int> { 0 };
         var clusterCenters = new List<float[]> { embeddings[0] };
