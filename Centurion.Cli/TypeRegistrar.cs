@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
+using System.Diagnostics.CodeAnalysis; // 新增
 
 namespace Centurion.Cli;
 
@@ -10,7 +11,9 @@ public sealed class TypeRegistrar(IServiceCollection services) : ITypeRegistrar
         return new TypeResolver(services.BuildServiceProvider());
     }
 
-    public void Register(Type service, Type implementation)
+    public void Register(Type service,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        Type implementation)
     {
         services.AddSingleton(service, implementation);
     }

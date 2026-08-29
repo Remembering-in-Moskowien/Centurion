@@ -1,9 +1,8 @@
 ﻿using Centurion.Core.Abstractions;
 using Centurion.Core.Exceptions;
-using Centurion.Core.Metadata;
+using Centurion.Core.Models.Metadata;
 using Centurion.Core.Operators;
-using Centurion.Core.Request;
-using Centurion.Core.Tools;
+using Centurion.Core.Operators.Request;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Managers;
@@ -71,7 +70,7 @@ public class ModelManager : IDisposable
         }
     }
 
-    public async Task EnsureModelAvailableAsync()
+    public async Task CheckHealthAsync()
     {
         if (!ManagementEnabled) return;
 
@@ -107,7 +106,7 @@ public class ModelManager : IDisposable
 
         Directory.CreateDirectory(ModelFolder);
 
-        using var aria = _serviceProvider.GetRequiredService<AriaOperator>();
+        using var aria = _serviceProvider.GetRequiredService<Operators.Downloader>();
 
         // 下载所有文件
         var tasks = _targetMeta.Files.Select(async fileName =>
@@ -119,7 +118,7 @@ public class ModelManager : IDisposable
                 Payload = new AriaDownloadRequest
                 {
                     Url = fileUrl,
-                    FullSavePath = savePath,
+                    FullSavePath = savePath
                     // 不再传递哈希
                 }
             };
@@ -138,7 +137,7 @@ public class ModelManager : IDisposable
         if (!await ConsoleServices.Confirm.ConfirmAsync("Continue with installation?"))
             throw new OperationCanceledException("User cancelled model download.");
 
-        using var aria = _serviceProvider.GetRequiredService<AriaOperator>();
+        using var aria = _serviceProvider.GetRequiredService<Operators.Downloader>();
         var request = new OperatorsRequest<AriaDownloadRequest>
         {
             Payload = new AriaDownloadRequest

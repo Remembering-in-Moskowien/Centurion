@@ -8,7 +8,7 @@ public interface IOperator<TRequest, TResponse> : IDisposable
     /// <summary>
     /// 校验底层执行程序是否可用
     /// </summary>
-    Task EnsureTargetAvailableAsync();
+    Task CheckHealthAsync();
 
     /// <summary>
     /// 发送算子请求，全异步支持取消

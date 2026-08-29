@@ -1,6 +1,6 @@
 ﻿using Centurion.Core.Abstractions;
 
-namespace Centurion.Core.Tools;
+namespace Centurion.Core.Managers;
 
 /// <summary>
 /// 临时目录管理器实现
@@ -43,10 +43,7 @@ public class TempDirectoryManager(string? basePath = null, bool autoDelete = tru
         await _lock.WaitAsync();
         try
         {
-            foreach (var handle in _handles)
-            {
-                await handle.DisposeAsync();
-            }
+            foreach (var handle in _handles) await handle.DisposeAsync();
             _handles.Clear();
         }
         finally

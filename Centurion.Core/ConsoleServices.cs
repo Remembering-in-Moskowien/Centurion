@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Console;
 
 namespace Centurion.Core;
 
