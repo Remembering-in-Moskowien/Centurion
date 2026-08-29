@@ -2,8 +2,7 @@
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Operators;
-using Centurion.Core.Request;
-using Centurion.Core.Response;
+using Centurion.Core.Operators.Request;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -24,7 +23,7 @@ public sealed class ConvertSettings : CommandSettings
     public string? Format { get; init; }
 }
 
-public sealed class ConvertCommand(SubtitleConverterOperator converter)
+public sealed class ConvertCommand(SubtitleConverter converter)
     : AsyncCommand<ConvertSettings>
 {
     protected override async Task<int> ExecuteAsync(

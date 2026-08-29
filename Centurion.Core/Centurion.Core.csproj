@@ -7,15 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Catalyst" Version="26.7.2845"/>
-        <PackageReference Include="Catalyst.Models.English" Version="1.0.30952"/>
-        <PackageReference Include="FasterWhisper.NET" Version="1.0.6" />
+        <PackageReference Include="Downloader" Version="5.9.5"/>
+        <PackageReference Include="FasterWhisper.NET" Version="1.0.7"/>
+        <PackageReference Include="FFMpegCore" Version="5.4.0"/>
+        <PackageReference Include="FFMpegCore.Extensions.Downloader" Version="5.0.0"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11"/>
         <PackageReference Include="NAudio" Version="3.0.1" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
-        <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.5" />
+        <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.5"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -26,6 +26,14 @@
             <Generator>PublicResXFileCodeGenerator</Generator>
             <DependentUpon>Localization.cs</DependentUpon>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <MavenReference Include="edu.stanford.nlp:stanford-corenlp" Version="4.5.6"/>
+        <MavenReference Include="edu.stanford.nlp:stanford-corenlp" Version="4.5.6" Classifier="models"/>
+
+        <MavenReference Include="org.slf4j:slf4j-api" Version="2.0.9"/>
+        <MavenReference Include="org.slf4j:slf4j-simple" Version="2.0.9"/>
     </ItemGroup>
 
 </Project>

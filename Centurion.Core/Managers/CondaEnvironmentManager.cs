@@ -87,15 +87,16 @@ public class CondaEnvironmentManager(string? envPrefix = null)
         // 尝试从 PATH 中查找
         var candidates = OperatingSystem.IsWindows() ? new[] { "conda.exe", "conda" } : new[] { "conda" };
         foreach (var name in candidates)
-        {
             try
             {
                 var found = LocateBinary(name);
                 if (File.Exists(found))
                     return found;
             }
-            catch { /* 忽略 */ }
-        }
+            catch
+            {
+                /* 忽略 */
+            }
 
         // 常见安装路径
         if (OperatingSystem.IsWindows())
@@ -138,6 +139,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
             if (File.Exists(fullPath))
                 return fullPath;
         }
+
         throw new FileNotFoundException($"Binary '{name}' not found in PATH.");
     }
 
@@ -205,7 +207,10 @@ public class CondaEnvironmentManager(string? envPrefix = null)
                 // 这里可以选择使用系统 mamba 或继续安装环境版本，为了统一，我们安装环境版
             }
         }
-        catch { /* 忽略 */ }
+        catch
+        {
+            /* 忽略 */
+        }
 
         ConsoleServices.Output?.WriteLine("mamba not found in environment. Installing mamba via conda...");
         // 使用 conda 安装 mamba 到目标环境
@@ -278,8 +283,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
         var installer = _mambaInstalled && !string.IsNullOrEmpty(_mambaExePath) ? _mambaExePath : condaExe;
         var isMamba = installer != condaExe;
 
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
+        for (var attempt = 0; attempt < maxRetries; attempt++)
             try
             {
                 // mamba 与 conda 的参数基本相同
@@ -288,10 +292,11 @@ public class CondaEnvironmentManager(string? envPrefix = null)
             }
             catch (Exception ex) when (attempt < maxRetries - 1)
             {
-                ConsoleServices.Output?.WriteLine($"安装 {package} 失败 (尝试 {attempt + 1}/{maxRetries})，重试中... 错误: {ex.Message}");
+                ConsoleServices.Output?.WriteLine(
+                    $"安装 {package} 失败 (尝试 {attempt + 1}/{maxRetries})，重试中... 错误: {ex.Message}");
                 await Task.Delay(5000 * (attempt + 1), ct);
             }
-        }
+
         // 最后一次尝试
         await RunCommandAsync(installer!, $"install -p \"{envPath}\" -c conda-forge {package} -y", ct);
     }
@@ -299,8 +304,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
     private async Task InstallPipPackageWithRetry(string condaExe, string envPath, string package,
         CancellationToken ct, int maxRetries = 2)
     {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
+        for (var attempt = 0; attempt < maxRetries; attempt++)
             try
             {
                 var args = $"run -p \"{envPath}\" pip install --default-timeout=1000 {package}";
@@ -312,10 +316,11 @@ public class CondaEnvironmentManager(string? envPrefix = null)
             }
             catch (Exception ex) when (attempt < maxRetries - 1)
             {
-                ConsoleServices.Output?.WriteLine($"安装 {package} 失败 (尝试 {attempt + 1}/{maxRetries})，重试中... 错误: {ex.Message}");
+                ConsoleServices.Output?.WriteLine(
+                    $"安装 {package} 失败 (尝试 {attempt + 1}/{maxRetries})，重试中... 错误: {ex.Message}");
                 await Task.Delay(5000 * (attempt + 1), ct);
             }
-        }
+
         // 最后一次尝试
         await RunCommandAsync(condaExe, $"run -p \"{envPath}\" pip install {package}", ct);
     }
@@ -334,6 +339,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
                 if (!string.IsNullOrEmpty(name))
                     packages.Add(name);
             }
+
         return packages;
     }
 
@@ -351,6 +357,7 @@ public class CondaEnvironmentManager(string? envPrefix = null)
                 if (!string.IsNullOrEmpty(name))
                     packages.Add(name);
             }
+
         return packages;
     }
 
@@ -383,7 +390,10 @@ public class CondaEnvironmentManager(string? envPrefix = null)
         var outputBuilder = new StringBuilder();
         var errorBuilder = new StringBuilder();
 
-        process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
+        process.OutputDataReceived += (s, e) =>
+        {
+            if (e.Data != null) outputBuilder.AppendLine(e.Data);
+        };
         process.ErrorDataReceived += (s, e) =>
         {
             if (e.Data != null)

@@ -1,6 +1,7 @@
 ﻿// Centurion.Cli.Console/SpectreConsoleOutput.cs
 
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Console;
 using Spectre.Console;
 
 namespace Centurion.Cli.Console;
@@ -24,7 +25,7 @@ public class SpectreConsoleOutput : IConsoleOutput
 
     public void WriteWarning(string message)
     {
-        AnsiConsole.MarkupLine($"[yellow]{message.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"[Gold1]{message.EscapeMarkup()}[/]");
     }
 
     public void WriteSuccess(string message)

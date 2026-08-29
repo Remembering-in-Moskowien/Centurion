@@ -1,0 +1,103 @@
+﻿
+
+// 引用 WhisperTranscriptJSON
+
+namespace Centurion.Core.Models;
+
+/// <summary>
+/// 字幕生成工作流的全量上下文（Pipeline 唯一传递对象）
+/// 设计为纯数据容器，可序列化以支持检查点/断点续传。
+/// </summary>
+public class SubtitleWorkflowContext
+{
+    /// <summary>不可变的用户配置（源自 CLI SubCommand）</summary>
+    public WorkflowConfig Config { get; init; }
+
+    /// <summary>可变的工作流状态（由各 Operator 逐步填充）</summary>
+    public WorkflowState State { get; set; }
+
+    public SubtitleWorkflowContext(WorkflowConfig config)
+    {
+        Config = config;
+        State = new WorkflowState();
+    }
+}
+
+// ============================================================
+// 1. 配置部分（不可变，合并了 MediaGenerationRequest + SplitOptions + 各 Payload 参数）
+// ============================================================
+public class WorkflowConfig
+{
+    // ---------- 输入/输出 ----------
+    public string InputFilePath { get; init; } = string.Empty;
+    public string? OutputFilePath { get; init; }
+
+    // ---------- 转录模块 ----------
+    public string TranscriberEngine { get; init; } = "whisper";   // whisper, qwen, api
+    public string? TranscriberModel { get; init; } = "large";     // e.g., base, large
+    public string Language { get; init; } = "en";
+    public string? InitialPrompt { get; init; }
+
+    // ---------- 分句模块 ----------
+    public string SplitStrategy { get; init; } = "rule";    // llm, rule
+    public int MaxSentenceLength { get; init; } = 80;
+    public int TargetSentenceLength { get; init; } = 50;
+    public int SpreadRange { get; init; } = 10;
+    public double MergeGapSeconds { get; init; } = 1.5;
+    public bool EnablePunctuationRewrite { get; init; } = true;
+    public string? SplitterModel { get; init; }                 // 用于LLM
+    public string? SplitterApiKey { get; init; }                // 用于LLM
+
+    // ---------- 对齐模块 ----------
+    public string? AlignerEngine { get; init; }                 // null 表示禁用
+    public string? AlignerModel { get; init; }
+
+    // ---------- 说话人分割（保留，但可后续独立） ----------
+    public string DiarizationModel { get; init; } = "voxceleb_resnet293_LM";
+    public int NumSpeakers { get; init; } = 0;
+
+    // ---------- 输出风格 ----------
+    public bool KaraokeMode { get; init; } = false;
+
+    // ---------- 其他 ----------
+    public string CacheDirectory { get; init; } = "./cache";
+}
+
+// ============================================================
+// 2. 状态部分（可变，合并了所有 Response 的数据字段）
+// ============================================================
+public class WorkflowState
+{
+    // ---------- 原始音频路径（由 Config.InputFilePath 派生，但保留以便存储转换后的路径） ----------
+    public string? PipelineTempDirectory { get; set; } 
+    public string? ConvertedAudioPath { get; set; } // FFmpeg 重采样/转换后的临时文件路径
+
+    // ---------- 各阶段处理后的句子列表 ----------
+    // 注意：Sentence 中的 Word 对象会逐步被下游算子补充 Speaker 和精确时间戳。
+    public List<Sentence> WhisperSentences { get; set; } = new(); // 刚转录完，无说话人信息
+    public List<Sentence> SplitSentences { get; set; } = new(); // 分句后（合并/切分），无说话人信息
+    public List<Sentence> DiarizedSentences { get; set; } = new(); // 说话人标注后（每个 Word 带 Speaker）
+    public List<Sentence> AlignedSentences { get; set; } = new(); // 强制对齐后（词级时间戳修正）
+    public List<Sentence>? CoarseSentences { get; set; }
+
+    // ---------- 翻译结果（可选） ----------
+    public List<Sentence>? TranslatedSentences { get; set; }
+
+    // ---------- 阶段完成标志（用于检查点恢复） ----------
+    public bool IsAudioConverted { get; set; }
+    public bool IsTranscribed { get; set; }
+    public bool IsSplit { get; set; }
+    public bool IsDiarized { get; set; }
+    public bool IsAligned { get; set; }
+    
+    public bool IsTranslated { get; set; }
+    
+    public bool IsFinalized { get; set; }
+
+    // ---------- 运行时诊断信息 ----------
+    public List<string> Errors { get; set; } = new();
+    public List<string> Warnings { get; set; } = new();
+
+    // ---------- 扩展数据槽（用于算子间临时传递非常规数据，避免改上下文结构） ----------
+    public Dictionary<string, object> Extensions { get; set; } = new();
+}

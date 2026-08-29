@@ -5,6 +5,11 @@
 /// </summary>
 public class DiarizationException : Exception
 {
-    public DiarizationException(string message) : base(message) { }
-    public DiarizationException(string message, Exception inner) : base(message, inner) { }
+    public DiarizationException(string message) : base(message)
+    {
+    }
+
+    public DiarizationException(string message, Exception inner) : base(message, inner)
+    {
+    }
 }
