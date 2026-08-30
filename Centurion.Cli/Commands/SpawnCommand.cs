@@ -1,25 +1,25 @@
-﻿using Centurion.Cli.Commands.Settings;
+﻿// File: Centurion.Cli/Commands/SpawnCommand.cs
+using Centurion.Cli.Commands.Settings;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
 using Centurion.Core.PipeLine;
-using Microsoft.Extensions.DependencyInjection;
-using Spectre.Console;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Core.Operators;
 
 namespace Centurion.Cli.Commands;
 
-public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
+public sealed class SpawnCommand(
+    ITempDirectoryManager tempManager,
+    FFmpegConvertOperator ffmpegOp,
+    TranscribeOp transcribeOp,
+    SentenceSplitOperator splitOp,
+    AlignmentOp alignmentOp,
+    PipelineExecutor pipelineExecutor,
+    ILogger<SpawnCommand> logger)
+    : AsyncCommand<SpawnSettings>
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ITempDirectoryManager _tempManager;
-
-    public SpawnCommand(IServiceProvider serviceProvider, ITempDirectoryManager tempManager)
-    {
-        _serviceProvider = serviceProvider;
-        _tempManager = tempManager;
-    }
-
     protected override async Task<int> ExecuteAsync(CommandContext context, SpawnSettings settings, CancellationToken ct)
     {
         try
@@ -27,11 +27,11 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
             var inputPath = settings.InputFile.FullName;
             var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
 
-            // 验证媒体文件扩展名
+            // Validate media file extension
             if (!MediaFileExtensions.Contains(Path.GetExtension(inputPath).ToLowerInvariant()))
                 throw new ArgumentException($"Unsupported media file type: {Path.GetExtension(inputPath)}");
 
-            // 1. 构建工作流配置（从命令行参数映射）
+            // Build workflow configuration
             var config = new WorkflowConfig
             {
                 InputFilePath = inputPath,
@@ -41,64 +41,52 @@ public sealed class SpawnCommand : AsyncCommand<SpawnSettings>
                 KaraokeMode = settings.Karaoke,
                 CacheDirectory = "./cache",
 
-                // 转录模块
                 TranscriberEngine = settings.Transcriber,
                 TranscriberModel = settings.TranscriberModel,
                 InitialPrompt = settings.InitialPrompt,
 
-                // 分句模块
                 SplitStrategy = settings.Splitter,
                 MaxSentenceLength = settings.MaxLength,
                 TargetSentenceLength = settings.TargetLength,
                 SpreadRange = settings.SpreadRange,
-                MergeGapSeconds = 1.5, // 可暴露为参数，暂固定
+                MergeGapSeconds = 1.5,
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
                 SplitterApiKey = settings.SplitterApiKey,
-
-                // 对齐模块
-                AlignerEngine = settings.Aligner,
-                AlignerModel = settings.AlignerModel
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // 2. 创建管道临时目录
-            await using var tempDir = await _tempManager.CreateTempDirectoryAsync("pipeline_");
+            // Create pipeline temp directory
+            await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            // 3. 从 DI 获取算子实例（每个算子内部使用策略工厂）
-            var ffmpegOp = _serviceProvider.GetRequiredService<FFmpegConvertOperator>();
-            var transcribeOp = _serviceProvider.GetRequiredService<TranscribeOperator>();
-            var splitOp = _serviceProvider.GetRequiredService<SentenceSplitOperator>();
-            var alignOp = _serviceProvider.GetRequiredService<AlignmentOperator>();
-
-            // 4. 构建管道（固定顺序）
-            var pipeline = new List<IPipelineOperator> { ffmpegOp, transcribeOp, splitOp };
-            if (!string.IsNullOrEmpty(config.AlignerEngine))
-                pipeline.Add(alignOp);
-
-            // 5. 依次执行
-            foreach (var op in pipeline)
+            // ─── Dynamically build the operator pipeline ───
+            var operators = new List<IPipelineOperator>
             {
-                if (op is IHealthCheckableOperator healthy)
-                    await healthy.CheckHealthAsync(ct);
+                ffmpegOp,
+                transcribeOp,
+                splitOp,
+                alignmentOp
+            };
 
-                await op.ExecuteAsync(workflowContext, ct);
-            }
+            // Execute the dynamic pipeline
+            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
-            // 6. 生成 ASS 字幕
+            // Generate ASS subtitle file
+            ConsoleServices.Output.WriteMarkupLine("[grey]Generating ASS subtitle file...[/]");
             var assBuilder = AssSubBuilder.FromWorkflow(workflowContext);
             var assDoc = assBuilder.Build();
 
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
 
-            AnsiConsole.MarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
+            ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
             return 0;
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+            ConsoleServices.Output.WriteError(ex.Message);
+            logger.LogError(ex, "Pipeline execution failed.");
             return 1;
         }
     }

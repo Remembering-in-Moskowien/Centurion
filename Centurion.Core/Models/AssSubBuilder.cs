@@ -712,8 +712,8 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             sentences = context.State.DiarizedSentences;
         else if (context.State?.SplitSentences is { Count: > 0 })
             sentences = context.State.SplitSentences;
-        else if (context.State?.WhisperSentences is { Count: > 0 })
-            sentences = context.State.WhisperSentences;
+        else if (context.State?.TranscribeSentences is { Count: > 0 })
+            sentences = context.State.TranscribeSentences;
 
         if (sentences == null || sentences.Count == 0)
             // No sentences – return builder with empty line list

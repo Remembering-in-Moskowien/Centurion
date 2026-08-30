@@ -1,8 +1,5 @@
 ﻿using Centurion.Core.Abstractions;
 using FFMpegCore;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Centurion.Core.Managers;
 
@@ -10,19 +7,14 @@ namespace Centurion.Core.Managers;
 /// 管理 FFmpeg 二进制可用性，并配置 FFMpegCore 全局选项，
 /// 其中临时目录由 ITempDirectoryManager 统一管理。
 /// </summary>
-public class FFmpegManager : IAsyncDisposable
+public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager tempDirManager)
+    : IAsyncDisposable
 {
-    private readonly IBinaryLocator _binaryLocator;
-    private readonly ITempDirectoryManager _tempDirManager;
+    private readonly IBinaryLocator _binaryLocator = binaryLocator ?? throw new ArgumentNullException(nameof(binaryLocator));
+    private readonly ITempDirectoryManager _tempDirManager = tempDirManager ?? throw new ArgumentNullException(nameof(tempDirManager));
     private TempDirectoryHandle? _tempDirHandle;
     private bool _isInitialized;
     private bool _disposed;
-
-    public FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager tempDirManager)
-    {
-        _binaryLocator = binaryLocator ?? throw new ArgumentNullException(nameof(binaryLocator));
-        _tempDirManager = tempDirManager ?? throw new ArgumentNullException(nameof(tempDirManager));
-    }
 
     /// <summary>
     /// 确保 FFmpeg 可用，并配置全局选项（包括临时目录）

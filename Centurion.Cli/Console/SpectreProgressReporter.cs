@@ -1,6 +1,5 @@
 ﻿// Centurion.Cli.Console/SpectreProgressReporter.cs
 
-using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Console;
 using Spectre.Console;
 

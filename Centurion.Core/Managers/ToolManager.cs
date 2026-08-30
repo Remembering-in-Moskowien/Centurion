@@ -1,0 +1,208 @@
+﻿// Centurion.Core/Managers/ToolManager.cs
+
+using Centurion.Core.Abstractions;
+using Centurion.Core.Operators.Request;
+using Centurion.Core.Models.Metadata;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SharpCompress.Archives;
+
+namespace Centurion.Core.Managers;
+
+/// <summary>
+/// 管理外部工具（ASR引擎）的下载、解压和路径
+/// </summary>
+public class ToolManager : IDisposable
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<ToolManager> _logger;
+    private readonly string _toolsRoot;
+    private readonly ToolMeta _toolMeta;
+
+    public string ToolDirectory { get; private set; }
+    public string ExecutablePath { get; private set; }
+
+    public ToolManager(string toolName, IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _logger = serviceProvider.GetRequiredService<ILogger<ToolManager>>();
+        _toolsRoot = Path.Combine(AppContext.BaseDirectory, "tools", "asr");
+        Directory.CreateDirectory(_toolsRoot);
+
+        if (!ToolRegistry.Tools.TryGetValue(toolName, out var meta))
+            throw new ArgumentException($"Unsupported tool: {toolName}", nameof(toolName));
+        _toolMeta = meta;
+
+        ToolDirectory = Path.Combine(_toolsRoot, toolName);
+        ExecutablePath = Path.Combine(ToolDirectory, meta.ExecutableRelativePath);
+    }
+
+    /// <summary>
+    /// 确保工具已下载并解压，若不存在则自动下载
+    /// </summary>
+    public async Task EnsureToolAsync(CancellationToken cancellationToken = default)
+    {
+        if (File.Exists(ExecutablePath))
+        {
+            _logger.LogInformation("Tool '{ToolName}' already exists at {Path}", _toolMeta.ToolName, ExecutablePath);
+            return;
+        }
+
+        _logger.LogInformation("Tool '{ToolName}' not found. Downloading...", _toolMeta.ToolName);
+        await DownloadAndExtractAsync(cancellationToken);
+
+        // 解压后可能因为嵌套目录导致 ExecutablePath 不存在，进行扁平化处理
+        await NormalizeToolDirectoryAsync(cancellationToken);
+    }
+
+    private async Task DownloadAndExtractAsync(CancellationToken cancellationToken)
+    {
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            // 1. 下载
+            using var downloader = _serviceProvider.GetRequiredService<Operators.Downloader>();
+            var request = new OperatorsRequest<AriaDownloadRequest>
+            {
+                Payload = new AriaDownloadRequest
+                {
+                    Url = _toolMeta.DownloadUrl,
+                    FullSavePath = tempFile,
+                    SplitThread = 8,
+                    ServerConnection = 8,
+                    MaxRetry = 5,
+                    ProgressRefreshMs = 200
+                }
+            };
+            await downloader.ProcessAsync(request, cancellationToken);
+
+            // 2. 解压
+            Directory.CreateDirectory(ToolDirectory);
+            _logger.LogInformation("Extracting {ArchiveType} archive to {ToolDirectory}", _toolMeta.ArchiveType, ToolDirectory);
+
+            if (_toolMeta.ArchiveType.Equals("zip", StringComparison.OrdinalIgnoreCase))
+            {
+                System.IO.Compression.ZipFile.ExtractToDirectory(tempFile, ToolDirectory, true);
+            }
+            else if (_toolMeta.ArchiveType.Equals("tar.gz", StringComparison.OrdinalIgnoreCase) ||
+                     _toolMeta.ArchiveType.Equals("tgz", StringComparison.OrdinalIgnoreCase))
+            {
+                using var stream = File.OpenRead(tempFile);
+                using var reader = ArchiveFactory.OpenArchive(stream);
+                foreach (var entry in reader.Entries)
+                {
+                    if (entry.IsDirectory)
+                        continue;
+                    if (entry.Key == null) continue;
+                    var fullPath = Path.Combine(ToolDirectory, entry.Key);
+                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
+                    using var entryStream = entry.OpenEntryStream();
+                    using var fileStream = File.Create(fullPath);
+                    await entryStream.CopyToAsync(fileStream, cancellationToken);
+                }
+            }
+            else
+            {
+                throw new NotSupportedException($"Archive type '{_toolMeta.ArchiveType}' is not supported.");
+            }
+
+            _logger.LogInformation("Tool '{ToolName}' installed successfully at {ExecutablePath}", _toolMeta.ToolName, ExecutablePath);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    /// 扁平化工具目录：如果 ExecutablePath 不存在，则在子目录中查找可执行文件，
+    /// 并将其所在目录的所有内容移至根目录，删除空目录。
+    /// </summary>
+    private async Task NormalizeToolDirectoryAsync(CancellationToken cancellationToken)
+    {
+        if (File.Exists(ExecutablePath))
+            return;
+
+        var exeName = Path.GetFileName(ExecutablePath);
+        _logger.LogWarning("Executable '{ExeName}' not found at expected path. Searching in subdirectories...", exeName);
+
+        // 递归查找与可执行文件同名的文件
+        var foundFiles = Directory.GetFiles(ToolDirectory, exeName, SearchOption.AllDirectories);
+        if (foundFiles.Length == 0)
+        {
+            _logger.LogError("Executable '{ExeName}' not found anywhere in {ToolDirectory}. Tool may be broken.", exeName, ToolDirectory);
+            return;
+        }
+
+        var firstMatch = foundFiles[0];
+        var sourceDir = Path.GetDirectoryName(firstMatch)!;
+        if (string.Equals(sourceDir, ToolDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            // 已在根目录，但路径可能大小写不同，更新路径
+            ExecutablePath = firstMatch;
+            _logger.LogInformation("Executable found at {Path}", ExecutablePath);
+            return;
+        }
+
+        // 将 sourceDir 下的所有内容移动到 ToolDirectory 根目录
+        _logger.LogInformation("Flattening directory: moving contents from {SourceDir} to {ToolDirectory}", sourceDir, ToolDirectory);
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var dest = Path.Combine(ToolDirectory, Path.GetFileName(file));
+            if (File.Exists(dest))
+                File.Delete(dest);
+            File.Move(file, dest);
+        }
+        foreach (var dir in Directory.GetDirectories(sourceDir))
+        {
+            var dest = Path.Combine(ToolDirectory, Path.GetFileName(dir));
+            if (Directory.Exists(dest))
+                Directory.Delete(dest, true);
+            Directory.Move(dir, dest);
+        }
+
+        // 删除原空目录（及其可能的空父目录，但只删到根目录）
+        DeleteEmptySubdirectories(ToolDirectory);
+
+        // 更新 ExecutablePath
+        var newExePath = Path.Combine(ToolDirectory, exeName);
+        if (File.Exists(newExePath))
+            ExecutablePath = newExePath;
+        else
+        {
+            // 再次查找（可能被移动到其他位置，但理论上已在根目录）
+            var newFound = Directory.GetFiles(ToolDirectory, exeName, SearchOption.TopDirectoryOnly);
+            if (newFound.Length > 0)
+                ExecutablePath = newFound[0];
+        }
+
+        _logger.LogInformation("Normalized executable path to {ExecutablePath}", ExecutablePath);
+        await Task.CompletedTask; // 保持异步签名一致
+    }
+
+    /// <summary>
+    /// 递归删除所有空子目录（不删除根目录）。
+    /// </summary>
+    private void DeleteEmptySubdirectories(string root)
+    {
+        foreach (var dir in Directory.GetDirectories(root))
+        {
+            DeleteEmptySubdirectories(dir);
+            if (!Directory.EnumerateFileSystemEntries(dir).Any())
+            {
+                try
+                {
+                    Directory.Delete(dir, false);
+                    _logger.LogDebug("Deleted empty directory: {Dir}", dir);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not delete empty directory {Dir}", dir);
+                }
+            }
+        }
+    }
+
+    public void Dispose() { }
+}

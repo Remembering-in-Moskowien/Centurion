@@ -8,20 +8,14 @@ namespace Centurion.Core.PipeLine;
 /// <summary>
 /// 分句算子，通过工厂动态选择分句策略（启发式/规则/LLM 等）。
 /// </summary>
-public class SentenceSplitOperator : PipelineOperatorBase
+public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : PipelineOperatorBase
 {
-    private readonly ISentenceSplitStrategyFactory _factory;
+    private readonly ISentenceSplitStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
     public override string Name => "Sentence Splitting";
 
-    public SentenceSplitOperator(ISentenceSplitStrategyFactory factory)
-    {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-    }
-
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
-        // 检查点
         if (context.State.IsSplit)
         {
             LogInfo("Split results already exist, skipping.");
@@ -30,12 +24,11 @@ public class SentenceSplitOperator : PipelineOperatorBase
 
         var config = context.Config;
 
-        // 输入：优先使用说话人分割后的结果，否则使用粗分句或原始转录结果
         var inputSentences = context.State.DiarizedSentences?.Count > 0
             ? context.State.DiarizedSentences
             : context.State.CoarseSentences?.Count > 0
                 ? context.State.CoarseSentences
-                : context.State.WhisperSentences;
+                : context.State.TranscribeSentences;
 
         if (inputSentences == null || inputSentences.Count == 0)
         {
@@ -45,7 +38,6 @@ public class SentenceSplitOperator : PipelineOperatorBase
             return;
         }
 
-        // 构建分句选项
         var options = new SplitOptions
         {
             MaxLength = config.MaxSentenceLength,
@@ -57,8 +49,14 @@ public class SentenceSplitOperator : PipelineOperatorBase
             ModelCachePath = config.CacheDirectory
         };
 
-        // 通过工厂创建分句策略
-        var strategy = _factory.Create(config.SplitStrategy, options);
+        // 通过工厂创建分句策略，传递模型和 API Key（仅 LLM 策略需要）
+        var strategy = _factory.Create(
+            config.SplitStrategy,
+            options,
+            config.SplitterModel,
+            config.SplitterApiKey
+        );
+
         LogInfo($"Using split strategy: {strategy.GetType().Name}");
 
         var allSplit = new List<Sentence>();

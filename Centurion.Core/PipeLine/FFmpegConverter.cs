@@ -8,19 +8,14 @@ namespace Centurion.Core.PipeLine;
 /// Pipeline operator for audio conversion via FFmpeg.
 /// Converts input audio to 16kHz mono WAV (PCM s16le) for downstream processing.
 /// </summary>
-public class FFmpegConvertOperator : PipelineOperatorBase
+public class FFmpegConvertOperator(ITempDirectoryManager tempManager) : PipelineOperatorBase
 {
-    private readonly ITempDirectoryManager _tempManager;
+    private readonly ITempDirectoryManager _tempManager = tempManager ?? throw new ArgumentNullException(nameof(tempManager));
     private const int TargetSampleRate = 16000;
     private const int TargetChannels = 1;
     private const string TargetCodec = "pcm_s16le";
 
     public override string Name => "Audio Conversion (FFmpeg)";
-
-    public FFmpegConvertOperator(ITempDirectoryManager tempManager)
-    {
-        _tempManager = tempManager ?? throw new ArgumentNullException(nameof(tempManager));
-    }
 
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
