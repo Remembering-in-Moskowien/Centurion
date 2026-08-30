@@ -2,25 +2,21 @@
 
 // 引用 WhisperTranscriptJSON
 
+using SubtitlesParserV2.Models;
+
 namespace Centurion.Core.Models;
 
 /// <summary>
 /// 字幕生成工作流的全量上下文（Pipeline 唯一传递对象）
 /// 设计为纯数据容器，可序列化以支持检查点/断点续传。
 /// </summary>
-public class SubtitleWorkflowContext
+public class SubtitleWorkflowContext(WorkflowConfig config)
 {
     /// <summary>不可变的用户配置（源自 CLI SubCommand）</summary>
-    public WorkflowConfig Config { get; init; }
+    public WorkflowConfig Config { get; init; } = config;
 
     /// <summary>可变的工作流状态（由各 Operator 逐步填充）</summary>
-    public WorkflowState State { get; set; }
-
-    public SubtitleWorkflowContext(WorkflowConfig config)
-    {
-        Config = config;
-        State = new WorkflowState();
-    }
+    public WorkflowState State { get; set; } = new();
 }
 
 // ============================================================
@@ -48,10 +44,6 @@ public class WorkflowConfig
     public string? SplitterModel { get; init; }                 // 用于LLM
     public string? SplitterApiKey { get; init; }                // 用于LLM
 
-    // ---------- 对齐模块 ----------
-    public string? AlignerEngine { get; init; }                 // null 表示禁用
-    public string? AlignerModel { get; init; }
-
     // ---------- 说话人分割（保留，但可后续独立） ----------
     public string DiarizationModel { get; init; } = "voxceleb_resnet293_LM";
     public int NumSpeakers { get; init; } = 0;
@@ -61,6 +53,8 @@ public class WorkflowConfig
 
     // ---------- 其他 ----------
     public string CacheDirectory { get; init; } = "./cache";
+    public bool EnableAlignment { get; init; } = true;
+    public string? AlignmentModel { get; init; }
 }
 
 // ============================================================
@@ -74,11 +68,17 @@ public class WorkflowState
 
     // ---------- 各阶段处理后的句子列表 ----------
     // 注意：Sentence 中的 Word 对象会逐步被下游算子补充 Speaker 和精确时间戳。
-    public List<Sentence> WhisperSentences { get; set; } = new(); // 刚转录完，无说话人信息
+    public List<Sentence> TranscribeSentences { get; set; } = new(); // 刚转录完，无说话人信息
     public List<Sentence> SplitSentences { get; set; } = new(); // 分句后（合并/切分），无说话人信息
     public List<Sentence> DiarizedSentences { get; set; } = new(); // 说话人标注后（每个 Word 带 Speaker）
     public List<Sentence> AlignedSentences { get; set; } = new(); // 强制对齐后（词级时间戳修正）
     public List<Sentence>? CoarseSentences { get; set; }
+    
+    // ---------- 转换专用数据槽 ----------
+    /// <summary>
+    /// 由 SubtitlesParserV2 解析后的原始字幕对象（用于 convert 管道）
+    /// </summary>
+    public List<SubtitleModel>? ParsedSubtitle { get; set; }
 
     // ---------- 翻译结果（可选） ----------
     public List<Sentence>? TranslatedSentences { get; set; }

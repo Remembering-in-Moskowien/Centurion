@@ -1,5 +1,4 @@
 ﻿using Centurion.Core.Abstractions.Strategy;
-using Centurion.Core.Models;
 
 namespace Centurion.Core.Abstractions.Factories;
 
@@ -22,15 +21,7 @@ public interface ISentenceSplitStrategyFactory
 {
     /// <param name="strategy">策略名称（如 heuristic, llm, rule）</param>
     /// <param name="options">分句配置参数</param>
-    ISentenceSplitStrategy Create(string strategy, SplitOptions options);
-}
-
-/// <summary>
-/// 对齐策略工厂
-/// </summary>
-public interface IAlignmentStrategyFactory
-{
-    /// <param name="engine">引擎名称（如 qwen, gentle）</param>
-    /// <param name="model">模型名称（可选）</param>
-    IAlignmentStrategy Create(string engine, string? model);
+    /// <param name="model"></param>
+    /// <param name="apiKey"></param>
+    ISentenceSplitStrategy Create(string strategy, SplitOptions options, string? model = null, string? apiKey = null);
 }

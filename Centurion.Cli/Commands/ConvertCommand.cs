@@ -1,54 +1,45 @@
-﻿using System.ComponentModel;
+﻿// File: Centurion.Cli/Commands/ConvertCommand.cs
+using System.ComponentModel;
+using Centurion.Cli.Commands.Settings;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
-using Centurion.Core.Operators;
-using Centurion.Core.Operators.Request;
+using Centurion.Core.Models;
+using Centurion.Core.PipeLine;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
-public sealed class ConvertSettings : CommandSettings
+public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 {
-    [CommandOption("-i|--inputfile <INPUT_FILE>", true)]
-    [Description("输入的SRT字幕文件")]
-    public required FileInfo InputFile { get; init; } = null!;
+    private readonly PipelineExecutor _executor;
+    private readonly Func<IEnumerable<IPipelineOperator>> _convertOperatorsFactory;
 
-    [CommandOption("-o|--outputfile <OUTPUT_FILE>")]
-    [Description("输出的ASS字幕文件")]
-    public required FileInfo OutputFile { get; init; } = null!;
+    public ConvertCommand(
+        PipelineExecutor executor,
+        Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory)
+    {
+        _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+        _convertOperatorsFactory = convertOperatorsFactory ?? throw new ArgumentNullException(nameof(convertOperatorsFactory));
+    }
 
-    [CommandOption("-f|--format <FORMAT>")]
-    [Description("输入字幕格式（默认根据扩展名自动识别，可指定 srt/vtt/lrc 等）")]
-    public string? Format { get; init; }
-}
-
-public sealed class ConvertCommand(SubtitleConverter converter)
-    : AsyncCommand<ConvertSettings>
-{
-    protected override async Task<int> ExecuteAsync(
-        CommandContext context,
-        ConvertSettings settings,
-        CancellationToken ct)
+    protected override async Task<int> ExecuteAsync(CommandContext context, ConvertSettings settings, CancellationToken cancellationToken)
     {
         try
         {
-            var inputPath = settings.InputFile.FullName;
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
-
-            var payload = new SubtitleConvertRequest
+            var config = new WorkflowConfig
             {
-                FilePath = inputPath,
-                Format = settings.Format
+                InputFilePath = settings.InputFile.FullName,
+                OutputFilePath = settings.OutputFile?.FullName
+                    ?? Path.ChangeExtension(settings.InputFile.FullName, ".ass")
             };
-            var request = new OperatorsRequest<SubtitleConvertRequest> { Payload = payload };
 
-            // 使用强类型 ProcessAsync（无需泛型参数）
-            var result = await converter.ProcessAsync(request, ct);
+            var workflowContext = new SubtitleWorkflowContext(config);
 
-            await File.WriteAllTextAsync(outputPath, result.Document.ToString(), ct);
+            var operators = _convertOperatorsFactory();
+            await _executor.ExecuteAsync(operators, workflowContext, cancellationToken);
 
-            AnsiConsole.MarkupLine($"[green]Conversion succeeded:[/]{outputPath}");
+            AnsiConsole.MarkupLine($"[green]Conversion succeeded: {config.OutputFilePath}[/]");
             return 0;
         }
         catch (Exception ex)

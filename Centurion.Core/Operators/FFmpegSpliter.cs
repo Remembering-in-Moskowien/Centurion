@@ -1,5 +1,4 @@
 ﻿using Centurion.Core.Abstractions;
-using Centurion.Core.Exceptions;
 using Centurion.Core.Managers;
 using Centurion.Core.Operators.Request;
 using Centurion.Core.Operators.Response;
@@ -10,19 +9,13 @@ namespace Centurion.Core.Operators;
 /// <summary>
 /// FFmpeg 音频分割算子（按时间段切割，自动在前后添加 100ms 静音）
 /// </summary>
-public class FFmpegSpliter : IOperator<FFmpegSplitRequest, FFmpegSplitResponse>
+public class FFmpegSpliter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplitRequest, FFmpegSplitResponse>
 {
-    private readonly FFmpegManager _ffmpegManager;
     private const int SilencePaddingMs = 100;
-
-    public FFmpegSpliter(FFmpegManager ffmpegManager)
-    {
-        _ffmpegManager = ffmpegManager;
-    }
 
     public async Task CheckHealthAsync()
     {
-        await _ffmpegManager.CheckHealthAsync();
+        await ffmpegManager.CheckHealthAsync();
     }
 
     public async Task<FFmpegSplitResponse> ProcessAsync(

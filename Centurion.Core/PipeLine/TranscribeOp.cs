@@ -8,16 +8,11 @@ namespace Centurion.Core.PipeLine;
 /// <summary>
 /// 转录算子，通过工厂动态选择转录策略（Whisper/Qwen/API 等）。
 /// </summary>
-public class TranscribeOperator : PipelineOperatorBase
+public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOperatorBase
 {
-    private readonly ITranscriptionStrategyFactory _factory;
+    private readonly ITranscriptionStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
     public override string Name => "Transcription";
-
-    public TranscribeOperator(ITranscriptionStrategyFactory factory)
-    {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-    }
 
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
@@ -67,10 +62,10 @@ public class TranscribeOperator : PipelineOperatorBase
                 Words = words
             };
 
-            context.State.WhisperSentences = new List<Sentence> { sentence };
+            context.State.TranscribeSentences = new List<Sentence> { sentence };
             context.State.IsTranscribed = true;
 
-            LogInfo($"Transcription completed. {words.Count} words, duration {sentence.End - sentence.Start:F2}s");
+            LogInfo($"Transcription completed. {words.Count} words, duration {(sentence.End - sentence.Start)/1000:F2}s");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

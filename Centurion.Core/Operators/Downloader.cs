@@ -1,5 +1,4 @@
 using Centurion.Core.Abstractions;
-using Centurion.Core.Exceptions;
 using Centurion.Core.Operators.Request;
 using Centurion.Core.Operators.Response;
 using Centurion.Core.Utils;

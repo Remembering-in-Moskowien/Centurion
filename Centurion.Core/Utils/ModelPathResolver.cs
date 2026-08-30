@@ -1,64 +1,66 @@
-﻿using Centurion.Core.Abstractions;
+﻿// Centurion.Core/Utils/ModelPathResolver.cs
+using Centurion.Core.Abstractions;
 using Centurion.Core.Managers;
 using Centurion.Core.Models.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Utils;
 
-/// <summary>
-/// Implementation of <see cref="IModelPathResolver"/> that uses <see cref="ModelManager"/>
-/// to resolve and ensure model files are available locally.
-/// </summary>
-public class ModelPathResolver : IModelPathResolver
+public class ModelPathResolver(IServiceProvider serviceProvider) : IModelPathResolver
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ModelPathResolver"/> class.
-    /// </summary>
-    /// <param name="serviceProvider">Service provider used to instantiate <see cref="ModelManager"/>.</param>
-    public ModelPathResolver(IServiceProvider serviceProvider)
+    // 私有工厂方法，用于创建 ModelManager 实例
+    private ModelManager CreateManager(
+        string modelName,
+        IReadOnlyDictionary<string, ModelMeta> modelDict,
+        string categoryFolder)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        return ActivatorUtilities.CreateInstance<ModelManager>(
+            _serviceProvider,
+            modelName,
+            modelDict,
+            categoryFolder);
     }
 
-    /// <inheritdoc />
     public async Task<string> GetWhisperModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
-        // Whisper models are directory-based (FasterWhisper)
-        var manager = new ModelManager(
-            modelName,
-            ModelRegistry.FasterWhisperModels,
-            _serviceProvider,
-            categoryFolder: "whisper");
-
+        var manager = CreateManager(modelName, ModelRegistry.WhisperModels, "whispercpp");
         await manager.CheckHealthAsync();
         return manager.ModelFilePath;
     }
 
-    /// <inheritdoc />
+    public async Task<string> GetFasterWhisperModelPathAsync(string modelName, CancellationToken cancellationToken = default)
+    {
+        var manager = CreateManager(modelName, ModelRegistry.FasterWhisperModels, "fasterwhisper");
+        await manager.CheckHealthAsync();
+        return manager.ModelFilePath;
+    }
+
+    public async Task<string> GetQwen3AsrModelPathAsync(string modelName, CancellationToken cancellationToken = default)
+    {
+        var manager = CreateManager(modelName, ModelRegistry.Qwen3AsrModels, "qwen3asr");
+        await manager.CheckHealthAsync();
+        return manager.ModelFilePath;
+    }
+
     public async Task<string> GetDiarizationModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
-        // Diarization models are single-file ONNX
-        var manager = new ModelManager(
-            modelName,
-            ModelRegistry.DiarizationModels,
-            _serviceProvider,
-            categoryFolder: "diarization");
-
+        var manager = CreateManager(modelName, ModelRegistry.DiarizationModels, "diarization");
         await manager.CheckHealthAsync();
         return manager.ModelFilePath;
     }
 
-    /// <inheritdoc />
     public async Task<string> GetAlignmentModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
-        // Alignment models are directory-based (containing model.onnx and tokens.txt)
-        var manager = new ModelManager(
-            modelName,
-            ModelRegistry.Wav2Vec2Models,
-            _serviceProvider,
-            categoryFolder: "alignment");
-
+        var manager = CreateManager(modelName, ModelRegistry.Wav2Vec2Models, "alignment");
+        await manager.CheckHealthAsync();
+        return manager.ModelFilePath;
+    }
+    
+    public async Task<string> GetQwen3ForcedAlignerPathAsync(string modelName, CancellationToken cancellationToken = default)
+    {
+        var manager = CreateManager(modelName, ModelRegistry.Qwen3ForcedAlignerModels, "qwen3aligner");
         await manager.CheckHealthAsync();
         return manager.ModelFilePath;
     }
