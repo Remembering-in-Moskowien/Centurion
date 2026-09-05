@@ -12,14 +12,7 @@ public class SpectreProgressReporter : IProgressReporter
         AnsiConsole.Progress()
             .AutoClear(false)
             .HideCompleted(false)
-            .Columns(new ProgressColumn[]
-            {
-                new TaskDescriptionColumn(),
-                new ProgressBarColumn(),
-                new PercentageColumn(),
-                new TransferSpeedColumn(),
-                new RemainingTimeColumn()
-            })
+            .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn())
             .Start(ctx =>
             {
                 var wrapper = new SpectreProgressContext(ctx);

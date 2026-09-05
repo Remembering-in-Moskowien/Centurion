@@ -1,5 +1,5 @@
+﻿// File: Centurion.Core/Models/SubtitleWorkflowContext.cs
 ﻿
-
 // 引用 WhisperTranscriptJSON
 
 using SubtitlesParserV2.Models;
@@ -55,6 +55,13 @@ public class WorkflowConfig
     public string CacheDirectory { get; init; } = "./cache";
     public bool EnableAlignment { get; init; } = true;
     public string? AlignmentModel { get; init; }
+
+    // ---------- 对齐前文本清洗 ----------
+    public bool EnableTextCleaning { get; init; } = true;
+    public bool RemovePunctuation { get; init; } = false;
+    public bool ExpandNumbers { get; init; } = true;
+    public bool ExpandAbbreviations { get; init; } = false;
+    public string? CustomDictPath { get; init; }
 }
 
 // ============================================================
@@ -74,11 +81,8 @@ public class WorkflowState
     public List<Sentence> AlignedSentences { get; set; } = new(); // 强制对齐后（词级时间戳修正）
     public List<Sentence>? CoarseSentences { get; set; }
     
-    // ---------- 转换专用数据槽 ----------
-    /// <summary>
-    /// 由 SubtitlesParserV2 解析后的原始字幕对象（用于 convert 管道）
-    /// </summary>
-    public List<SubtitleModel>? ParsedSubtitle { get; set; }
+    // ---------- 转换专用数据槽：已移除 SubtitlesParserV2 模型，统一使用 Sentence ----------
+    // （转换后的原始字幕将存入 TranscribeSentences，与转录结果同构）
 
     // ---------- 翻译结果（可选） ----------
     public List<Sentence>? TranslatedSentences { get; set; }

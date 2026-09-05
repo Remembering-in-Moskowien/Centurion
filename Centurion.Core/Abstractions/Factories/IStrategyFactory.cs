@@ -25,3 +25,16 @@ public interface ISentenceSplitStrategyFactory
     /// <param name="apiKey"></param>
     ISentenceSplitStrategy Create(string strategy, SplitOptions options, string? model = null, string? apiKey = null);
 }
+
+/// <summary>
+/// Factory for creating alignment strategy instances based on model name.
+/// </summary>
+public interface IAlignmentStrategyFactory
+{
+    /// <summary>
+    /// Creates an alignment strategy for the specified model.
+    /// </summary>
+    /// <param name="modelName">Name of the alignment model (e.g., wav2vec2-base-960h).</param>
+    /// <returns>An instance of IAlignmentStrategy.</returns>
+    IAlignmentStrategy Create(string modelName);
+}

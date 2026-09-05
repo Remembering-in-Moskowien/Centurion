@@ -15,6 +15,7 @@ public sealed class SpawnCommand(
     FFmpegConvertOperator ffmpegOp,
     TranscribeOp transcribeOp,
     SentenceSplitOperator splitOp,
+    TextPreprocessingOp textCleaningOp,
     AlignmentOp alignmentOp,
     PipelineExecutor pipelineExecutor,
     ILogger<SpawnCommand> logger)
@@ -53,6 +54,9 @@ public sealed class SpawnCommand(
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
                 SplitterApiKey = settings.SplitterApiKey,
+                
+                EnableAlignment = true,
+                AlignmentModel = "qwen3-forced-aligner-0.6b-f16"
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
@@ -67,6 +71,7 @@ public sealed class SpawnCommand(
                 ffmpegOp,
                 transcribeOp,
                 splitOp,
+                textCleaningOp,
                 alignmentOp
             };
 

@@ -29,12 +29,12 @@ public sealed class SpawnSettings : CommandSettings
 
     // ----- 转录模块 (Transcriber) -----
     [CommandOption("-t|--transcriber <ENGINE>")]
-    [Description("Transcription engine: whisper, qwen, api")]
+    [Description("Transcription engine: whisper, crisp")]
     public string Transcriber { get; init; } = "whisper";
 
     [CommandOption("--tm|--transcriber-model <MODEL>")]
     [Description("Model name for the transcriber (e.g., base, large, qwen-asr-1.0)")]
-    public string? TranscriberModel { get; init; } = "large-v3";
+    public string? TranscriberModel { get; init; } = "large";
 
     [CommandOption("--tp|--transcriber-prompt <PROMPT>")]
     [Description("Initial prompt for transcription")]

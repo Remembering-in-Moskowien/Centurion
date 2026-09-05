@@ -56,8 +56,8 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     protected virtual string BuildArguments(string audioPath, string language, string modelPath, string? alignerPath, string? initialPrompt)
     {
         // Determine output JSON path (same base as audio)
-        string jsonOutputPath = Path.ChangeExtension(audioPath, ".json");
-        string jsonBasePath = Path.Combine(
+        var jsonOutputPath = Path.ChangeExtension(audioPath, ".json");
+        var jsonBasePath = Path.Combine(
             Path.GetDirectoryName(jsonOutputPath) ?? string.Empty,
             Path.GetFileNameWithoutExtension(jsonOutputPath));
 
@@ -82,12 +82,12 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         await _toolManager.EnsureToolAsync(cancellationToken);
 
         // 2. Get model path
-        string modelPath = await GetModelPathAsync(modelName, cancellationToken);
+        var modelPath = await GetModelPathAsync(modelName, cancellationToken);
         if (!File.Exists(modelPath))
             throw new FileNotFoundException($"Model file not found: {modelPath}");
 
         // 3. Get aligner if available
-        string? alignerPath = await GetAlignerPathAsync(cancellationToken);
+        var alignerPath = await GetAlignerPathAsync(cancellationToken);
         if (alignerPath != null && !File.Exists(alignerPath))
         {
             _logger.LogWarning("Aligner model not found at {Path}. Alignment will be skipped.", alignerPath);
@@ -95,18 +95,18 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         }
 
         // 4. Build arguments
-        string args = BuildArguments(audioPath, language, modelPath, alignerPath, initialPrompt);
+        var args = BuildArguments(audioPath, language, modelPath, alignerPath, initialPrompt);
         _logger.LogDebug("Executing CrispASR: {Exe} {Args}", _toolManager.ExecutablePath, args);
 
         // 5. Execute process
         await _processManager.ExecuteAsync(_toolManager.ExecutablePath, args, cancellationToken: cancellationToken);
 
         // 6. Read generated JSON
-        string jsonOutputPath = Path.ChangeExtension(audioPath, ".json");
+        var jsonOutputPath = Path.ChangeExtension(audioPath, ".json");
         if (!File.Exists(jsonOutputPath))
             throw new FileNotFoundException($"CrispASR output JSON not found at: {jsonOutputPath}");
 
-        string json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
+        var json = await File.ReadAllTextAsync(jsonOutputPath, cancellationToken);
 
         // 7. Parse
         return ParseJsonOutput(json);
@@ -131,13 +131,13 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
             foreach (var wordElement in wordArray.EnumerateArray())
             {
-                string text = wordElement.GetProperty("text").GetString() ?? string.Empty;
+                var text = wordElement.GetProperty("text").GetString() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(text))
                     continue;
 
                 var offsets = wordElement.GetProperty("offsets");
-                long fromMs = offsets.GetProperty("from").GetInt64();
-                long toMs = offsets.GetProperty("to").GetInt64();
+                var fromMs = offsets.GetProperty("from").GetInt64();
+                var toMs = offsets.GetProperty("to").GetInt64();
 
                 words.Add(new Word
                 {

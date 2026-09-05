@@ -36,8 +36,14 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            var operators = _convertOperatorsFactory();
+            // 执行管道（仅包含解析算子）
+            var operators = _convertOperatorsFactory(); // 返回 [ConvertParseOp]
             await _executor.ExecuteAsync(operators, workflowContext, cancellationToken);
+
+            // 使用 AssSubBuilder 从上下文构建 ASS 字幕
+            var assBuilder = AssSubBuilder.FromWorkflow(workflowContext);
+            var assDoc = assBuilder.Build();
+            await File.WriteAllTextAsync(config.OutputFilePath, assDoc.ToString(), cancellationToken);
 
             AnsiConsole.MarkupLine($"[green]Conversion succeeded: {config.OutputFilePath}[/]");
             return 0;

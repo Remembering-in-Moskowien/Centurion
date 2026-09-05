@@ -274,6 +274,7 @@ public class AssSub(
     private readonly List<AssSubLine> _lines = lines ?? [];
 
     /// <summary>完整输出标准ASS文件文本</summary>
+    // File: Centurion.Core/Models/AssSub.cs (修改部分)
     public override string ToString()
     {
         StringBuilder sb = new();
@@ -286,11 +287,20 @@ public class AssSub(
         sb.AppendLine($"PlayResY: {_playResY}");
         sb.AppendLine($"Timer: {_timer}");
         sb.AppendLine();
+
         sb.AppendLine("[V4+ Styles]");
-        foreach (var style in _styles) sb.AppendLine(style.ToString());
+        // 添加 Style 格式行
+        sb.AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
+        foreach (var style in _styles)
+            sb.AppendLine(style.ToString());
         sb.AppendLine();
+
         sb.AppendLine("[Events]");
-        foreach (var line in _lines) sb.AppendLine(line.ToString());
+        // 添加 Event 格式行
+        sb.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
+        foreach (var line in _lines)
+            sb.AppendLine(line.ToString());
+
         return sb.ToString();
     }
 }

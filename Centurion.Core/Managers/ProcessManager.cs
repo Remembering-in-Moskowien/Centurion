@@ -1,5 +1,4 @@
-﻿// Centurion.Core/Managers/ProcessManager.cs
-
+﻿// File: Centurion.Core/Managers/ProcessManager.cs
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -7,12 +6,13 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Managers;
 
 /// <summary>
-/// 进程执行器，返回原始标准输出，由调用方解析
+/// 进程执行器，返回原始标准输出，由调用方解析。
+/// 支持超时、取消，并在进程退出前强制终止。
 /// </summary>
 public class ProcessManager(ILogger logger)
 {
     /// <summary>
-    /// 执行外部程序，返回标准输出字符串
+    /// 执行外部程序，返回标准输出字符串。
     /// </summary>
     /// <param name="executablePath">可执行文件完整路径</param>
     /// <param name="arguments">命令行参数</param>
@@ -49,7 +49,6 @@ public class ProcessManager(ILogger logger)
         process.OutputDataReceived += (_, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
 
-        var tcs = new TaskCompletionSource<bool>();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeoutMs);
 
@@ -57,16 +56,27 @@ public class ProcessManager(ILogger logger)
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        // 等待进程退出或超时
-        try
-        {
-            await process.WaitForExitAsync(cts.Token);
-        }
-        catch (OperationCanceledException)
+        // 注册取消回调，强制终止进程
+        using (cts.Token.Register(() =>
         {
             if (!process.HasExited)
             {
-                process.Kill();
+                try { process.Kill(); }
+                catch (Exception ex) { logger.LogWarning(ex, "Failed to kill process during cancellation."); }
+            }
+        }))
+        {
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                    await process.WaitForExitAsync(); // 确保进程完全退出
+                }
                 throw new TimeoutException($"Process '{executablePath}' timed out after {timeoutMs} ms.");
             }
         }
@@ -74,7 +84,7 @@ public class ProcessManager(ILogger logger)
         if (process.ExitCode != 0)
         {
             var error = errorBuilder.ToString();
-            logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}", 
+            logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
                 executablePath, process.ExitCode, error);
             throw new InvalidOperationException($"Process failed with exit code {process.ExitCode}. Details: {error}");
         }
