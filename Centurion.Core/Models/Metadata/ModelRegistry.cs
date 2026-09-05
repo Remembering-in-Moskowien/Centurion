@@ -41,27 +41,27 @@ public static class ModelRegistry
             {
                 "tiny",
                 new ModelMeta("ggml-tiny.bin",
-                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin")
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin")
             },
             {
                 "base",
                 new ModelMeta("ggml-base.bin",
-                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin")
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-base.bin")
             },
             {
                 "small",
                 new ModelMeta("ggml-small.bin",
-                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin")
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-small.bin")
             },
             {
                 "medium",
                 new ModelMeta("ggml-medium.bin",
-                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin")
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin")
             },
             {
                 "large",
                 new ModelMeta("ggml-large-v3.bin",
-                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin")
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin")
             }
         };
 
@@ -152,17 +152,6 @@ public static class ModelRegistry
             {
                 "voxceleb_resnet293_LM", new ModelMeta("voxceleb_resnet293_LM.onnx",
                     "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet293_LM.onnx")
-            }
-        };
-
-    // ---------- Wav2Vec2 CTC 对齐模型（目录） ----------
-    public static IReadOnlyDictionary<string, ModelMeta> Wav2Vec2Models { get; } =
-        new Dictionary<string, ModelMeta>(StringComparer.OrdinalIgnoreCase)
-        {
-            {
-                "wav2vec2-base-960h", new ModelMeta(
-                    "https://hf-mirror.com/onnx-community/wav2vec2-base-960h-ONNX/resolve/main/onnx",
-                    ["model.onnx"])
             }
         };
 }

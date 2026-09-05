@@ -1,5 +1,6 @@
 ﻿using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
+using Centurion.Core.Strategy.Alignment;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
 using Microsoft.Extensions.AI;
@@ -109,5 +110,15 @@ public class SentenceSplitStrategyFactory(
             logger.LogError(ex, "Failed to create Ollama client for model {Model}", model);
             throw new InvalidOperationException($"Failed to initialize Ollama client: {ex.Message}", ex);
         }
+    }
+}
+
+public class AlignmentStrategyFactory(IServiceProvider serviceProvider) : IAlignmentStrategyFactory
+{
+    public IAlignmentStrategy Create(string modelName)
+    {
+        // Use ActivatorUtilities to resolve the strategy with runtime modelName
+        return ActivatorUtilities.CreateInstance<CrispAsrAlignmentStrategy>(
+            serviceProvider, modelName);
     }
 }

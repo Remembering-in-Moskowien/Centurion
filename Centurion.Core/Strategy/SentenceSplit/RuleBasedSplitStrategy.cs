@@ -1,5 +1,6 @@
 ﻿using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 
 namespace Centurion.Core.Strategy.SentenceSplit;
 
@@ -111,7 +112,7 @@ public class RuleBasedSplitStrategy : BaseSplitStrategy
             var text = string.Join(" ", slice.Select(w => w.Text));
             var sentence = new Sentence
             {
-                Text = text,
+                Text = SubTools.NormalizeSpaces(text),
                 Start = slice.First().Start,
                 End = slice.Last().End,
                 Words = slice

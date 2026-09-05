@@ -682,76 +682,54 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     }
 
     /// <summary>
-    /// Creates an ASS subtitle builder from a workflow context.
-    /// Uses aligned/diarized sentences with word-level timings to generate dialogue lines.
-    /// If KaraokeMode is enabled, each word is wrapped with \k tags (centiseconds).
-    /// </summary>
-    /// <param name="context">The workflow context containing sentence data and configuration.</param>
-    /// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
-    public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context)
+/// Creates an ASS subtitle builder from a workflow context.
+/// Uses aligned/diarized sentences with word-level timings to generate dialogue lines.
+/// If KaraokeMode is enabled, each word is wrapped with \k tags (centiseconds).
+/// </summary>
+/// <param name="context">The workflow context containing sentence data and configuration.</param>
+/// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
+public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context)
+{
+    if (context == null)
+        throw new ArgumentNullException(nameof(context));
+
+    var builder = new AssSubBuilder().WithDefaultValues();
+
+    if (!string.IsNullOrEmpty(context.Config?.InputFilePath))
     {
-        if (context == null)
-            throw new ArgumentNullException(nameof(context));
+        var title = Path.GetFileNameWithoutExtension(context.Config.InputFilePath);
+        builder = builder.WithTitle(title);
+    }
 
-        // Start with default values (includes a default style)
-        var builder = new AssSubBuilder().WithDefaultValues();
+    // Determine which sentences to use (priority: Aligned > Diarized > Split > Whisper)
+    List<Sentence>? sentences = null;
+    if (context.State?.AlignedSentences is { Count: > 0 })
+        sentences = context.State.AlignedSentences;
+    else if (context.State?.DiarizedSentences is { Count: > 0 })
+        sentences = context.State.DiarizedSentences;
+    else if (context.State?.SplitSentences is { Count: > 0 })
+        sentences = context.State.SplitSentences;
+    else if (context.State?.TranscribeSentences is { Count: > 0 })
+        sentences = context.State.TranscribeSentences;
 
-        // Set title from input file name
-        if (!string.IsNullOrEmpty(context.Config?.InputFilePath))
+    if (sentences == null || sentences.Count == 0)
+        return builder.WithLines(new List<AssSubLine>());
+
+    var karaoke = context.Config?.KaraokeMode ?? false;
+    var lines = new List<AssSubLine>();
+
+    // Optional logger – you can inject ILogger if needed, but here we use ConsoleServices for demo.
+    // For production, pass ILogger via constructor or use static logger.
+
+    foreach (var sentence in sentences)
+    {
+        // If Words is empty, fallback to using the raw text (no karaoke)
+        if (sentence.Words == null || sentence.Words.Count == 0)
         {
-            var title = Path.GetFileNameWithoutExtension(context.Config.InputFilePath);
-            builder = builder.WithTitle(title);
-        }
-
-        // Determine which sentences to use (priority: Aligned > Diarized > Split > Whisper)
-        // Explicitly check for non-null and non-empty to avoid falling back to an empty list.
-        List<Sentence>? sentences = null;
-        if (context.State?.AlignedSentences is { Count: > 0 })
-            sentences = context.State.AlignedSentences;
-        else if (context.State?.DiarizedSentences is { Count: > 0 })
-            sentences = context.State.DiarizedSentences;
-        else if (context.State?.SplitSentences is { Count: > 0 })
-            sentences = context.State.SplitSentences;
-        else if (context.State?.TranscribeSentences is { Count: > 0 })
-            sentences = context.State.TranscribeSentences;
-
-        if (sentences == null || sentences.Count == 0)
-            // No sentences – return builder with empty line list
-            return builder.WithLines(new List<AssSubLine>());
-
-        var karaoke = context.Config?.KaraokeMode ?? false;
-        var lines = new List<AssSubLine>();
-
-        foreach (var sentence in sentences)
-        {
-            if (sentence.Words.Count == 0)
-                continue;
-
-            // Build the dialogue text
-            string dialogueText;
-            if (karaoke)
-            {
-                // Karaoke mode: each word gets a \k tag with its duration in centiseconds
-                var parts = new List<string>();
-                foreach (var word in sentence.Words)
-                {
-                    var durationMs = (long)(word.End - word.Start);
-                    if (durationMs < 0) durationMs = 0;
-                    var centiseconds = (int)(durationMs / 10); // 1 cs = 10 ms
-                    parts.Add($"{{\\K{centiseconds}}}{word.Text}");
-                }
-
-                dialogueText = string.Join(" ", parts);
-            }
-            else
-            {
-                // Normal mode: concatenate all words with spaces
-                dialogueText = string.Join(" ", sentence.Words.Select(w => w.Text));
-            }
-
-            // Create a subtitle line for this sentence
-            var line = new AssSubLineBuilder()
-                .WithComment(false) // Dialogue line
+            // Log warning (using ConsoleServices for demonstration)
+            ConsoleServices.Output.WriteWarning($"Sentence has no words, using raw text: {sentence.Text}");
+            lines.Add(new AssSubLineBuilder()
+                .WithComment(false)
                 .WithLayer(0)
                 .WithStart((long)sentence.Start)
                 .WithEnd((long)sentence.End)
@@ -761,18 +739,56 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                 .WithMarginR(0)
                 .WithMarginV(0)
                 .WithEffect(string.Empty)
-                .WithText(dialogueText)
-                .Build();
-
-            lines.Add(line);
+                .WithText(sentence.Text)
+                .Build());
+            continue;
         }
 
-        // Sort lines chronologically
-        lines = lines.OrderBy(l => l.GetStart()).ToList();
-        builder = builder.WithLines(lines);
+        // Build the dialogue text **exclusively** from Words
+        string dialogueText;
+        if (karaoke)
+        {
+            var parts = new List<string>();
+            foreach (var word in sentence.Words)
+            {
+                // Guard against negative durations
+                var durationMs = (long)(word.End - word.Start);
+                if (durationMs < 0) durationMs = 0;
+                var centiseconds = (int)(durationMs / 10);
+                parts.Add($"{{\\K{centiseconds}}}{word.Text}");
+            }
+            dialogueText = string.Join(" ", parts);
+        }
+        else
+        {
+            // Non-karaoke: just join the word texts
+            dialogueText = string.Join(" ", sentence.Words.Select(w => w.Text));
+        }
 
-        return builder;
+        // Create a subtitle line for this sentence
+        var line = new AssSubLineBuilder()
+            .WithComment(false)
+            .WithLayer(0)
+            .WithStart((long)sentence.Start)
+            .WithEnd((long)sentence.End)
+            .WithStyle("Default")
+            .WithName(string.Empty)
+            .WithMarginL(0)
+            .WithMarginR(0)
+            .WithMarginV(0)
+            .WithEffect(string.Empty)
+            .WithText(dialogueText)
+            .Build();
+
+        lines.Add(line);
     }
+
+    // Sort lines chronologically
+    lines = lines.OrderBy(l => l.GetStart()).ToList();
+    builder = builder.WithLines(lines);
+
+    return builder;
+}
 
     /// <summary>组装所有配置，生成完整AssSub字幕文档</summary>
     public override AssSub Build()

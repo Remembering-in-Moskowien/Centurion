@@ -41,7 +41,7 @@ public class BinaryLocator() : IBinaryLocator
         // 3. 读取 PATH 环境变量
         var pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrWhiteSpace(pathEnv))
-            throw new BinaryNotFoundException(string.Format("Binary '{0}' not found.", binaryName), binaryName);
+            throw new BinaryNotFoundException($"Binary '{binaryName}' not found.", binaryName);
 
         var separator = OperatingSystem.IsWindows() ? ';' : ':';
         var envDirs = pathEnv.Split(separator)
@@ -57,7 +57,7 @@ public class BinaryLocator() : IBinaryLocator
         }
 
         throw new BinaryNotFoundException(
-            string.Format("Binary '{0}' not found.", binaryName), binaryName);
+            $"Binary '{binaryName}' not found.", binaryName);
     }
 
     public void ClearCache()

@@ -32,8 +32,7 @@ namespace Centurion.Core.PipeLine
         /// <param name="context">Workflow context containing configuration and state.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dictionary mapping operator names to their execution duration.</returns>
-        public async Task<Dictionary<string, TimeSpan>> ExecuteAsync(
-            IEnumerable<IPipelineOperator> operators,
+        public async Task ExecuteAsync(IEnumerable<IPipelineOperator> operators,
             SubtitleWorkflowContext context,
             CancellationToken cancellationToken)
         {
@@ -76,8 +75,6 @@ namespace Centurion.Core.PipeLine
             var totalElapsed = totalStopwatch.Elapsed;
             _logger.LogInformation("Total pipeline execution time: {Total:mm\\:ss\\.fff}", totalElapsed);
             ConsoleServices.Output.WriteMarkupLine($"[green]Total pipeline time: [bold]{totalElapsed:mm\\:ss\\.fff}[/][/]");
-
-            return stepTimings;
         }
     }
 }

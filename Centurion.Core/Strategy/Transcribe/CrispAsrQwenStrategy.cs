@@ -28,7 +28,7 @@ public class CrispAsrQwenStrategy : CrispAsrBaseStrategy
     {
         try
         {
-            string alignerPath = await _modelResolver.GetQwen3ForcedAlignerPathAsync(DefaultAlignerModel, cancellationToken);
+            var alignerPath = await _modelResolver.GetQwen3ForcedAlignerPathAsync(DefaultAlignerModel, cancellationToken);
             return alignerPath;
         }
         catch (System.Exception ex)

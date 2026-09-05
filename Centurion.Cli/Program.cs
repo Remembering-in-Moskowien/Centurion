@@ -5,13 +5,11 @@ using Centurion.Cli.Commands;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Factories;
 using Centurion.Core.Managers;
 using Centurion.Core.Operators;
 using Centurion.Core.PipeLine;
 using Centurion.Core.Strategy.Alignment;
-using Centurion.Core.Strategy.Parsers;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
 using Centurion.Core.Utils;
@@ -61,6 +59,7 @@ services.AddTransient<ProcessManager>();
 // ============================================================
 services.AddSingleton<ITranscriptionStrategyFactory, TranscriptionStrategyFactory>();
 services.AddSingleton<ISentenceSplitStrategyFactory, SentenceSplitStrategyFactory>();
+services.AddSingleton<IAlignmentStrategyFactory, AlignmentStrategyFactory>();
 
 // ============================================================
 // 4. Transcription strategies (concrete implementations)
@@ -80,23 +79,19 @@ services.AddTransient<RuleBasedSplitStrategy>();
 services.AddTransient<FFmpegConvertOperator>();
 services.AddTransient<TranscribeOp>();
 services.AddTransient<SentenceSplitOperator>();
+services.AddTransient<TextPreprocessingOp>();
 services.AddTransient<AlignmentOp>();
 
 // ---------- 转换管道专用算子（使用 SubtitlesParserV2） ----------
 services.AddTransient<ConvertParseOp>();
-services.AddTransient<ConvertSerializeOp>();
 
 // ============================================================
-// 7. Alignment strategy (default implementation)
+// 7. Alignment strategy (no singleton registration - factory handles creation)
 // ============================================================
-services.AddSingleton<IAlignmentStrategy, CrispAsrAlignmentStrategy>();
 
 // ============================================================
 // 8. Other helper services
 // ============================================================
-// 移除旧的 ISubtitleParser / SrtParser / SubtitleConverter
-// services.AddSingleton<ISubtitleParser, SrtParser>();   // 已废弃
-// services.AddSingleton<SubtitleConverter>();            // 已废弃
 services.AddSingleton<FFmpegManager>();
 
 // ============================================================
@@ -106,18 +101,14 @@ services.AddSingleton<PipelineExecutor>();
 
 // ---------- 转换管道算子序列工厂 ----------
 services.AddTransient<Func<IEnumerable<IPipelineOperator>>>(sp => () =>
-{
-    return new IPipelineOperator[]
-    {
-        sp.GetRequiredService<ConvertParseOp>(),
-        sp.GetRequiredService<ConvertSerializeOp>()
-    };
-});
+[
+    sp.GetRequiredService<ConvertParseOp>()
+]);
 
 // ============================================================
 // 10. Build service provider
 // ============================================================
-var serviceProvider = services.BuildServiceProvider();
+_ = services.BuildServiceProvider();
 
 // ============================================================
 // 11. Configure Spectre.Cli

@@ -50,13 +50,6 @@ public class ModelPathResolver(IServiceProvider serviceProvider) : IModelPathRes
         await manager.CheckHealthAsync();
         return manager.ModelFilePath;
     }
-
-    public async Task<string> GetAlignmentModelPathAsync(string modelName, CancellationToken cancellationToken = default)
-    {
-        var manager = CreateManager(modelName, ModelRegistry.Wav2Vec2Models, "alignment");
-        await manager.CheckHealthAsync();
-        return manager.ModelFilePath;
-    }
     
     public async Task<string> GetQwen3ForcedAlignerPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
