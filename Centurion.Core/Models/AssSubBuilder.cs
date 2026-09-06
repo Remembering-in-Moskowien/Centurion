@@ -690,104 +690,66 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
 /// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
 public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context)
 {
-    if (context == null)
-        throw new ArgumentNullException(nameof(context));
-
+    ArgumentNullException.ThrowIfNull(context);
     var builder = new AssSubBuilder().WithDefaultValues();
+    if (!string.IsNullOrEmpty(context.Config.InputFilePath))
+        builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
 
-    if (!string.IsNullOrEmpty(context.Config?.InputFilePath))
-    {
-        var title = Path.GetFileNameWithoutExtension(context.Config.InputFilePath);
-        builder = builder.WithTitle(title);
-    }
+    var sentences = context.State.AlignedSentences is { Count: > 0 }
+        ? context.State.AlignedSentences
+        : context.State.CoarseSentences;
+    if (sentences is null or { Count: 0 })
+        return builder.WithLines([]);
 
-    // Determine which sentences to use (priority: Aligned > Diarized > Split > Whisper)
-    List<Sentence>? sentences = null;
-    if (context.State?.AlignedSentences is { Count: > 0 })
-        sentences = context.State.AlignedSentences;
-    else if (context.State?.DiarizedSentences is { Count: > 0 })
-        sentences = context.State.DiarizedSentences;
-    else if (context.State?.SplitSentences is { Count: > 0 })
-        sentences = context.State.SplitSentences;
-    else if (context.State?.TranscribeSentences is { Count: > 0 })
-        sentences = context.State.TranscribeSentences;
-
-    if (sentences == null || sentences.Count == 0)
-        return builder.WithLines(new List<AssSubLine>());
-
-    var karaoke = context.Config?.KaraokeMode ?? false;
     var lines = new List<AssSubLine>();
-
-    // Optional logger – you can inject ILogger if needed, but here we use ConsoleServices for demo.
-    // For production, pass ILogger via constructor or use static logger.
-
     foreach (var sentence in sentences)
     {
-        // If Words is empty, fallback to using the raw text (no karaoke)
-        if (sentence.Words == null || sentence.Words.Count == 0)
+        var words = sentence.Words ?? [];
+        var textParts = words.Select(word => word.Status switch
         {
-            // Log warning (using ConsoleServices for demonstration)
-            ConsoleServices.Output.WriteWarning($"Sentence has no words, using raw text: {sentence.Text}");
-            lines.Add(new AssSubLineBuilder()
-                .WithComment(false)
-                .WithLayer(0)
-                .WithStart((long)sentence.Start)
-                .WithEnd((long)sentence.End)
-                .WithStyle("Default")
-                .WithName(string.Empty)
-                .WithMarginL(0)
-                .WithMarginR(0)
-                .WithMarginV(0)
-                .WithEffect(string.Empty)
-                .WithText(sentence.Text)
-                .Build());
-            continue;
-        }
+            MappingStatus.ScriptMissing => context.Config.FillGapWithEllipsis ? "[...]" : string.Empty,
+            MappingStatus.AudioExtra => $"[SPONT]{word.Text}",
+            _ => word.Text
+        }).Where(text => text.Length > 0).ToList();
+        var text = string.Join(" ", textParts);
+        if (string.IsNullOrWhiteSpace(text))
+            text = sentence.Text;
 
-        // Build the dialogue text **exclusively** from Words
-        string dialogueText;
-        if (karaoke)
+        var start = sentence.Start;
+        var end = Math.Max(sentence.End, start + 1);
+        foreach (var segment in SplitForCps(text, start, end, context.Config.MaxCps, context.Config.MaxCharsPerLine))
         {
-            var parts = new List<string>();
-            foreach (var word in sentence.Words)
-            {
-                // Guard against negative durations
-                var durationMs = (long)(word.End - word.Start);
-                if (durationMs < 0) durationMs = 0;
-                var centiseconds = (int)(durationMs / 10);
-                parts.Add($"{{\\K{centiseconds}}}{word.Text}");
-            }
-            dialogueText = string.Join(" ", parts);
+            var dialogue = context.Config.KaraokeMode
+                ? string.Join(" ", words.Select(word => $"{{\\K{Math.Max(0, (int)((word.End - word.Start) / 10))}}}{word.Text}"))
+                : segment.Text;
+            lines.Add(new AssSubLineBuilder().WithComment(false).WithLayer(0)
+                .WithStart((long)segment.Start).WithEnd((long)segment.End).WithStyle("Default")
+                .WithName(string.Empty).WithMarginL(0).WithMarginR(0).WithMarginV(0)
+                .WithEffect(string.Empty).WithText(dialogue).Build());
         }
-        else
-        {
-            // Non-karaoke: just join the word texts
-            dialogueText = string.Join(" ", sentence.Words.Select(w => w.Text));
-        }
-
-        // Create a subtitle line for this sentence
-        var line = new AssSubLineBuilder()
-            .WithComment(false)
-            .WithLayer(0)
-            .WithStart((long)sentence.Start)
-            .WithEnd((long)sentence.End)
-            .WithStyle("Default")
-            .WithName(string.Empty)
-            .WithMarginL(0)
-            .WithMarginR(0)
-            .WithMarginV(0)
-            .WithEffect(string.Empty)
-            .WithText(dialogueText)
-            .Build();
-
-        lines.Add(line);
     }
+    return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
+}
 
-    // Sort lines chronologically
-    lines = lines.OrderBy(l => l.GetStart()).ToList();
-    builder = builder.WithLines(lines);
-
-    return builder;
+private static IEnumerable<(string Text, double Start, double End)> SplitForCps(string text, double start, double end, double maxCps, int maxChars)
+{
+    var duration = Math.Max(0.001, (end - start) / 1000.0);
+    var limit = Math.Max(1, (int)Math.Floor(duration * maxCps));
+    var chunks = text.Length <= limit && text.Length <= maxChars
+        ? [text]
+        : text.Split(['，', '。', '！', '？', '；', ',', '.', '!', '?', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .SelectMany(part => part.Length <= maxChars ? [part] : Enumerable.Range(0, (part.Length + maxChars - 1) / maxChars).Select(index => part.Substring(index * maxChars, Math.Min(maxChars, part.Length - index * maxChars))))
+            .ToList();
+    if (chunks.Count == 0)
+        chunks = [text];
+    var totalLength = Math.Max(1, chunks.Sum(chunk => chunk.Length));
+    var cursor = start;
+    foreach (var chunk in chunks)
+    {
+        var chunkEnd = cursor + (end - start) * chunk.Length / totalLength;
+        yield return (chunk, cursor, chunkEnd);
+        cursor = chunkEnd;
+    }
 }
 
     /// <summary>组装所有配置，生成完整AssSub字幕文档</summary>

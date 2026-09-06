@@ -98,7 +98,7 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
                 if (string.IsNullOrEmpty(segmentText))
                     continue;
 
-                var parts = segmentText.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                var parts = segmentText.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length == 0)
                     continue;
 

@@ -34,20 +34,23 @@ public class AlignmentOp : PipelineOperatorBase, IHealthCheckableOperator
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         // 1. Check if alignment is enabled
+        var sentences = context.State.CoarseSentences is { Count: > 0 }
+            ? context.State.CoarseSentences
+            : context.State.SplitSentences;
+
         if (!context.Config.EnableAlignment)
         {
             LogInfo("Alignment is disabled (EnableAlignment=false). Skipping.");
-            context.State.AlignedSentences = context.State.SplitSentences ?? new List<Sentence>();
+            context.State.AlignedSentences = sentences;
             context.State.IsAligned = true;
             return;
         }
 
         // 2. Validate input
-        var sentences = context.State.SplitSentences;
         if (sentences == null || sentences.Count == 0)
         {
             LogWarning("No sentences to align. Skipping alignment.");
-            context.State.AlignedSentences = new List<Sentence>();
+            context.State.AlignedSentences = [];
             context.State.IsAligned = true;
             return;
         }
@@ -58,14 +61,7 @@ public class AlignmentOp : PipelineOperatorBase, IHealthCheckableOperator
             throw new InvalidOperationException($"Audio file not found or not converted: {audioPath}");
         }
 
-        // 3. Clear any existing word-level data before alignment
-        //    This prevents duplication when the strategy adds new words.
-        foreach (var sentence in sentences)
-        {
-            sentence.Words.Clear();
-        }
-
-        // 4. Report progress
+        // Report progress.
         OnProgress(0, "Preparing alignment...");
 
         // 5. Get model name (fallback to default)

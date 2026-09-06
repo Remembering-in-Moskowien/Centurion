@@ -16,7 +16,6 @@ public class ProcessManager(ILogger logger)
     /// </summary>
     /// <param name="executablePath">可执行文件完整路径</param>
     /// <param name="arguments">命令行参数</param>
-    /// <param name="timeoutMs">超时毫秒数，默认10分钟</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>进程的标准输出内容</returns>
     /// <exception cref="TimeoutException">超时</exception>
@@ -24,7 +23,6 @@ public class ProcessManager(ILogger logger)
     public async Task<string> ExecuteAsync(
         string executablePath,
         string arguments,
-        int timeoutMs = 600000,
         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(executablePath))
@@ -42,7 +40,8 @@ public class ProcessManager(ILogger logger)
             StandardErrorEncoding = Encoding.UTF8
         };
 
-        using var process = new Process { StartInfo = startInfo };
+        using var process = new Process();
+        process.StartInfo = startInfo;
         var outputBuilder = new StringBuilder();
         var errorBuilder = new StringBuilder();
 
@@ -50,21 +49,18 @@ public class ProcessManager(ILogger logger)
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(timeoutMs);
 
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
         // 注册取消回调，强制终止进程
-        using (cts.Token.Register(() =>
-        {
-            if (!process.HasExited)
-            {
-                try { process.Kill(); }
-                catch (Exception ex) { logger.LogWarning(ex, "Failed to kill process during cancellation."); }
-            }
-        }))
+        await using (cts.Token.Register(() =>
+                     {
+                         if (process.HasExited) return;
+                         try { process.Kill(); }
+                         catch (Exception ex) { logger.LogWarning(ex, "Failed to kill process during cancellation."); }
+                     }))
         {
             try
             {
@@ -75,20 +71,17 @@ public class ProcessManager(ILogger logger)
                 if (!process.HasExited)
                 {
                     process.Kill();
-                    await process.WaitForExitAsync(); // 确保进程完全退出
+                    await process.WaitForExitAsync(cancellationToken); // 确保进程完全退出
                 }
-                throw new TimeoutException($"Process '{executablePath}' timed out after {timeoutMs} ms.");
+                throw new TimeoutException($"Process '{executablePath}' timed out.");
             }
         }
 
-        if (process.ExitCode != 0)
-        {
-            var error = errorBuilder.ToString();
-            logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
-                executablePath, process.ExitCode, error);
-            throw new InvalidOperationException($"Process failed with exit code {process.ExitCode}. Details: {error}");
-        }
+        if (process.ExitCode == 0) return outputBuilder.ToString();
+        var error = errorBuilder.ToString();
+        logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
+            executablePath, process.ExitCode, error);
+        throw new InvalidOperationException($"Process failed with exit code {process.ExitCode}. Details: {error}");
 
-        return outputBuilder.ToString();
     }
 }

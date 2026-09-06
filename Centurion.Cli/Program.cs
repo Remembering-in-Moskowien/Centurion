@@ -80,6 +80,8 @@ services.AddTransient<TranscribeOp>();
 services.AddTransient<SentenceSplitOperator>();
 services.AddTransient<TextPreprocessingOp>();
 services.AddTransient<AlignmentOp>();
+services.AddTransient<ScriptLoaderOp>();
+services.AddTransient<ScriptTimelineMapperOp>();
 
 // ---------- 转换管道专用算子（使用 SubtitlesParserV2） ----------
 services.AddTransient<ConvertParseOp>();
@@ -119,6 +121,7 @@ app.Configure(config =>
 {
     config.SetApplicationName("Centurion");
     config.AddCommand<SpawnCommand>("spawn");
+    config.AddCommand<FromScriptCommand>("from-script");
     config.AddCommand<ConvertCommand>("convert");
 });
 

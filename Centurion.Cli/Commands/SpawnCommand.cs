@@ -55,8 +55,8 @@ public sealed class SpawnCommand(
                 SplitterModel = settings.SplitterModel,
                 SplitterApiKey = settings.SplitterApiKey,
                 
-                EnableAlignment = true,
-                AlignmentModel = "qwen3-forced-aligner-0.6b-f16"
+                EnableAlignment = settings.EnableAlignment,
+                AlignmentModel = settings.AlignmentModel
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
@@ -96,10 +96,10 @@ public sealed class SpawnCommand(
         }
     }
 
-    private static readonly HashSet<string> MediaFileExtensions = new()
-    {
+    private static readonly HashSet<string> MediaFileExtensions =
+    [
         ".mp3", ".wma", ".wav", ".flac", ".aac", ".ogg", ".ape", ".m4a", ".mka",
         ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".ts", ".mts", ".webm", ".flv",
         ".m2ts", ".mpeg", ".mpg", ".dv", ".rmvb", ".rm", ".asf", ".vob", ".ogv", ".mxf"
-    };
+    ];
 }

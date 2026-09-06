@@ -13,12 +13,12 @@ namespace Centurion.Core.Strategy.SentenceSplit;
 public class RuleBasedSplitStrategy : BaseSplitStrategy
 {
     // 所有可作为断点的标点符号（包括结束标点和从句标点）
-    private static readonly HashSet<char> BreakPunctuation = new() { '.', '!', '?', ',', ';', ':' };
+    private static readonly HashSet<char> BreakPunctuation = ['.', '!', '?', ',', ';', ':'];
 
     public override async Task<List<Sentence>> Split(List<Word> words, SplitOptions options)
     {
         if (words == null || words.Count == 0)
-            return new List<Sentence>();
+            return [];
 
         // 1. 按时间顺序排列单词
         var wordList = words.OrderBy(w => w.Start).ToList();
