@@ -84,7 +84,7 @@ public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOpera
                 Words = cleanedWords
             };
 
-            context.State.TranscribeSentences = new List<Sentence> { sentence };
+            context.State.TranscribeSentences = [sentence];
             context.State.IsTranscribed = true;
 
             LogInfo($"Transcription completed. {cleanedWords.Count} words, duration {(sentence.End - sentence.Start) / 1000.0:F2}s");

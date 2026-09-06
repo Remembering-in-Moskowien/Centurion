@@ -68,4 +68,13 @@ public sealed class SpawnSettings : CommandSettings
     [CommandOption("--splitter-api-key <KEY>")]
     [Description("API key for LLM splitter")]
     public string? SplitterApiKey { get; init; }
+
+    // ----- 对齐模块 (Alignment) -----
+    [CommandOption("--enable-alignment")]
+    [Description("Enable forced alignment")]
+    public bool EnableAlignment { get; init; } = true;
+
+    [CommandOption("--alignment-model <MODEL>")]
+    [Description("Model for forced alignment")]
+    public string? AlignmentModel { get; init; }
 }

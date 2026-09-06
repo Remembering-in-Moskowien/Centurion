@@ -78,12 +78,10 @@ Centurion.Cli spawn <INPUT_FILE> [options]
 | `--splitter-spread <RANGE>` | Spread range for line length distribution. Default: `10` |
 | `--splitter-model <MODEL>` | Model for LLM‑based splitting (e.g., `gpt-4`) |
 | `--splitter-api-key <KEY>` | API key for LLM splitter |
-| `--aligner <ENGINE>` | Alignment engine: `qwen`, `gentle` (omit to disable) |
-| `--aligner-model <MODEL>` | Model for alignment (e.g., `qwen-align-1.0`) |
+| `--enable-alignment` | Enable forced alignment (enabled by default) |
+| `--alignment-model <MODEL>` | Model for forced alignment |
 | `--num-speakers <NUM>` | Number of speakers (`0` for auto‑detection). Default: `0` |
 | `--karaoke` | Enable karaoke mode (generates `\K` tags) |
-
-> **Note**: The legacy `--align` flag is **currently disabled** and will be ignored. Forced alignment will be reintroduced via the `--aligner` family of options in a future release.
 
 #### Examples
 
@@ -97,9 +95,9 @@ Centurion.Cli spawn <INPUT_FILE> [options]
   Centurion.Cli spawn lecture.mp4 -o subs.ass --language zh --karaoke
   ```
 
-- **Use Qwen‑ASR + LLM splitting + Qwen alignment**:
+- **Use Qwen‑ASR + LLM splitting + forced alignment**:
   ```bash
-  Centurion.Cli spawn audio.wav --transcriber qwen --transcriber-model qwen-asr-1.0 --splitter llm --splitter-model gpt-4 --splitter-api-key sk-xxx --aligner qwen
+  Centurion.Cli spawn audio.wav --transcriber qwen --transcriber-model qwen-asr-1.0 --splitter llm --splitter-model gpt-4 --splitter-api-key sk-xxx --enable-alignment --alignment-model qwen3-forced-aligner-0.6b
   ```
 
 ### `convert` — Auxiliary Conversion Command

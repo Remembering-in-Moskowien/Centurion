@@ -25,6 +25,12 @@ public class WorkflowConfig
     // ---------- 输入/输出 ----------
     public string InputFilePath { get; init; } = string.Empty;
     public string? OutputFilePath { get; init; }
+    public string? ScriptFilePath { get; init; }
+    public string MapperStrategy { get; init; } = "rule";
+    public double CoverageThreshold { get; init; } = 0.92;
+    public double MaxCps { get; init; } = 5.0;
+    public int MaxCharsPerLine { get; init; } = 18;
+    public bool FillGapWithEllipsis { get; init; } = true;
 
     // ---------- 转录模块 ----------
     public string TranscriberEngine { get; init; } = "whisper";   // whisper, qwen, api
@@ -74,11 +80,13 @@ public class WorkflowState
 
     // ---------- 各阶段处理后的句子列表 ----------
     // 注意：Sentence 中的 Word 对象会逐步被下游算子补充 Speaker 和精确时间戳。
-    public List<Sentence> TranscribeSentences { get; set; } = new(); // 刚转录完，无说话人信息
-    public List<Sentence> SplitSentences { get; set; } = new(); // 分句后（合并/切分），无说话人信息
-    public List<Sentence> DiarizedSentences { get; set; } = new(); // 说话人标注后（每个 Word 带 Speaker）
-    public List<Sentence> AlignedSentences { get; set; } = new(); // 强制对齐后（词级时间戳修正）
+    public List<Sentence> TranscribeSentences { get; set; } = []; // 刚转录完，无说话人信息
+    public List<Sentence> SplitSentences { get; set; } = []; // 分句后（合并/切分），无说话人信息
+    public List<Sentence> DiarizedSentences { get; set; } = []; // 说话人标注后（每个 Word 带 Speaker）
+    public List<Sentence> AlignedSentences { get; set; } = []; // 强制对齐后（词级时间戳修正）
     public List<Sentence>? CoarseSentences { get; set; }
+    public List<Sentence> ScriptSentences { get; set; } = [];
+    public double MapperCoverage { get; set; }
     
     // ---------- 转换专用数据槽：已移除 SubtitlesParserV2 模型，统一使用 Sentence ----------
     // （转换后的原始字幕将存入 TranscribeSentences，与转录结果同构）
@@ -98,8 +106,8 @@ public class WorkflowState
     public bool IsFinalized { get; set; }
 
     // ---------- 运行时诊断信息 ----------
-    public List<string> Errors { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
+    public List<string> Errors { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
 
     // ---------- 扩展数据槽（用于算子间临时传递非常规数据，避免改上下文结构） ----------
     public Dictionary<string, object> Extensions { get; set; } = new();

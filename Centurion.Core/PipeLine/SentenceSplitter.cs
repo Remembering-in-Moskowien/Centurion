@@ -34,7 +34,7 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
         if (inputSentences == null || inputSentences.Count == 0)
         {
             LogWarning("No sentences to split.");
-            context.State.SplitSentences = new List<Sentence>();
+            context.State.SplitSentences = [];
             context.State.IsSplit = true;
             return;
         }

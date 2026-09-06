@@ -63,14 +63,14 @@ namespace Centurion.Core.PipeLine
                 var elapsed = stepStopwatch.Elapsed;
                 stepTimings[stepName] = elapsed;
 
-                _logger.LogInformation("Step '{StepName}' completed in {Elapsed:mm\\:ss\\.fff}", stepName, elapsed);
-                ConsoleServices.Output.WriteMarkupLine($"  [grey]Step '{stepName}' took: [yellow]{elapsed:mm\\:ss\\.fff}[/][/]");
+                _logger.LogInformation(@"Step '{StepName}' completed in {Elapsed:mm\:ss\.fff}", stepName, elapsed);
+                ConsoleServices.Output.WriteMarkupLine($@"  [grey]Step '{stepName}' took: [yellow]{elapsed:mm\:ss\.fff}[/][/]");
             }
 
             totalStopwatch.Stop();
             var totalElapsed = totalStopwatch.Elapsed;
-            _logger.LogInformation("Total pipeline execution time: {Total:mm\\:ss\\.fff}", totalElapsed);
-            ConsoleServices.Output.WriteMarkupLine($"[green]Total pipeline time: [bold]{totalElapsed:mm\\:ss\\.fff}[/][/]");
+            _logger.LogInformation(@"Total pipeline execution time: {Total:mm\:ss\.fff}", totalElapsed);
+            ConsoleServices.Output.WriteMarkupLine($@"[green]Total pipeline time: [bold]{totalElapsed:mm\:ss\.fff}[/][/]");
         }
     }
 }

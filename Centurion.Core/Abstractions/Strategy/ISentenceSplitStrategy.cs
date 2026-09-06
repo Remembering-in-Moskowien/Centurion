@@ -49,4 +49,5 @@ public class SplitOptions
     public string ModelCachePath { get; set; } = string.Empty;
     public int SpreadRange { get; set; }
     public float ChunkGranularity { get; set; } = 0.5f;
+    public bool EnableResegmentation { get; set; } = false;
 }

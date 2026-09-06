@@ -40,7 +40,9 @@ public class TextPreprocessingOp(
             return Task.CompletedTask;
         }
 
-        var sentences = context.State.SplitSentences;
+        var sentences = context.State.ScriptSentences.Count > 0
+            ? context.State.ScriptSentences
+            : context.State.SplitSentences;
         if (sentences is null || sentences.Count == 0)
         {
             logger.LogInformation("No sentences available for text cleaning.");
