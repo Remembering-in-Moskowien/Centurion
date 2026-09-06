@@ -1,10 +1,6 @@
 ﻿// Centurion.Core/Strategies/Transcription/CrispAsrBaseStrategy.cs
-using System;
-using System.Collections.Generic;
-using System.IO;
+
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;

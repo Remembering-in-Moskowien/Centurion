@@ -1,7 +1,6 @@
 ﻿// File: Centurion.Core.PipeLine/AlignmentOp.cs
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -86,8 +85,7 @@ public class AlignmentOp : PipelineOperatorBase, IHealthCheckableOperator
         context.State.IsAligned = true;
 
         OnProgress(100, "Alignment completed");
-        if (alignedSentences != null)
-            LogInfo($"Alignment finished. Processed {alignedSentences.Count} sentences.");
+        LogInfo($"Alignment finished. Processed {alignedSentences.Count} sentences.");
     }
 
     public override async Task CheckHealthAsync(CancellationToken cancellationToken = default)

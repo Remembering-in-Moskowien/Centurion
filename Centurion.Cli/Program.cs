@@ -7,9 +7,7 @@ using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Factories;
 using Centurion.Core.Managers;
-using Centurion.Core.Operators;
 using Centurion.Core.PipeLine;
-using Centurion.Core.Strategy.Alignment;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
 using Centurion.Core.Utils;
@@ -72,6 +70,7 @@ services.AddTransient<CrispAsrWhisperStrategy>();
 // 5. Sentence splitting strategies
 // ============================================================
 services.AddTransient<RuleBasedSplitStrategy>();
+services.AddTransient<CatalystSplitStrategy>();
 
 // ============================================================
 // 6. Pipeline operators (transient)

@@ -2,7 +2,6 @@
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
 using SubtitlesParserV2;
-using SubtitlesParserV2.Models;
 
 namespace Centurion.Core.PipeLine;
 

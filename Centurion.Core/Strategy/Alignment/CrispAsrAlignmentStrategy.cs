@@ -4,7 +4,6 @@ using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
 using FFMpegCore;
-using FFMpegCore.Extend;
 using Microsoft.Extensions.Logging;
 using SubtitlesParserV2;
 using System.Text.RegularExpressions;
