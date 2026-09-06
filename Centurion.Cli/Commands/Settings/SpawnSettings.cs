@@ -42,8 +42,12 @@ public sealed class SpawnSettings : CommandSettings
 
     // ----- 分句模块 (Splitter) -----
     [CommandOption("-s|--splitter <STRATEGY>")]
-    [Description("Split strategy: rule, llm")]
+    [Description("Split strategy: rule, nlp (Catalyst), llm")]
     public string Splitter { get; init; } = "rule";
+
+    [CommandOption("--splitter-chunk-granularity <LEVEL>")]
+    [Description("Catalyst/NLP chunk granularity from 0.0 to 1.0, default 0.5")]
+    public float ChunkGranularity { get; init; } = 0.5f;
 
     [CommandOption("--splitter-target-length <CHARS>")]
     [Description("Target characters per line, default 50")]

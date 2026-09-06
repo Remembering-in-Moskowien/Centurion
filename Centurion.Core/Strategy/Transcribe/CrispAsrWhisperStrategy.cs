@@ -1,7 +1,4 @@
 ﻿// Centurion.Core/Strategies/Transcription/CrispAsrWhisperStrategy.cs
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Strategy.Transcribe;
 

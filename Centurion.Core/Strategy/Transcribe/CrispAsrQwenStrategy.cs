@@ -1,7 +1,5 @@
 ﻿// Centurion.Core/Strategies/Transcription/CrispAsrQwenStrategy.cs
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Strategy.Transcribe;
@@ -31,7 +29,7 @@ public class CrispAsrQwenStrategy : CrispAsrBaseStrategy
             var alignerPath = await _modelResolver.GetQwen3ForcedAlignerPathAsync(DefaultAlignerModel, cancellationToken);
             return alignerPath;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to get Qwen3 aligner model. Alignment disabled.");
             return null;

@@ -2,8 +2,6 @@
 ﻿
 // 引用 WhisperTranscriptJSON
 
-using SubtitlesParserV2.Models;
-
 namespace Centurion.Core.Models;
 
 /// <summary>
@@ -35,10 +33,11 @@ public class WorkflowConfig
     public string? InitialPrompt { get; init; }
 
     // ---------- 分句模块 ----------
-    public string SplitStrategy { get; init; } = "rule";    // llm, rule
+    public string SplitStrategy { get; init; } = "rule";    // llm, rule, nlp/catalyst
     public int MaxSentenceLength { get; init; } = 80;
     public int TargetSentenceLength { get; init; } = 50;
     public int SpreadRange { get; init; } = 10;
+    public float ChunkGranularity { get; init; } = 0.5f;
     public double MergeGapSeconds { get; init; } = 1.5;
     public bool EnablePunctuationRewrite { get; init; } = true;
     public string? SplitterModel { get; init; }                 // 用于LLM

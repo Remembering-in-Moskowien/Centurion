@@ -6,14 +6,17 @@ using Centurion.Core.Models;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 
-namespace Centurion.Core.Operators;
+namespace Centurion.Core.PipeLine;
 
 public class TextPreprocessingOp(
     ILogger<TextPreprocessingOp> logger) : PipelineOperatorBase
 {
-    private static readonly Regex NumberPattern = new(@"\b\d+\b", RegexOptions.Compiled);
     private static readonly Regex PunctuationPattern = new(@"[\p{P}\p{S}]", RegexOptions.Compiled);
     private static readonly Regex WhitespacePattern = new(@"\s+", RegexOptions.Compiled);
+    private static readonly Regex NumberPattern = new(
+        @"\b(?:\d{1,3}(?:,\d{3})+|\d+)\b",
+        RegexOptions.Compiled);
+
     private static readonly Dictionary<string, string> BuiltInAbbreviations = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Dr."] = "Doctor",
@@ -114,10 +117,13 @@ public class TextPreprocessingOp(
 
         if (config.ExpandNumbers)
         {
+            // 匹配带千位分隔符的整数（如 500,000）或普通整数（如 123）
             result = NumberPattern.Replace(result, match =>
             {
-                if (!long.TryParse(match.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-                    return match.Value;
+                // 移除逗号，得到纯数字字符串
+                var raw = match.Value.Replace(",", "");
+                if (!long.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+                    return match.Value; // 解析失败则保留原文
 
                 return number.ToWords(CultureInfo.GetCultureInfo("en-US"));
             });

@@ -48,4 +48,5 @@ public class SplitOptions
     public string Language { get; set; } = "en";
     public string ModelCachePath { get; set; } = string.Empty;
     public int SpreadRange { get; set; }
+    public float ChunkGranularity { get; set; } = 0.5f;
 }

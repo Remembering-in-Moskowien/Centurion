@@ -6,7 +6,6 @@ using Centurion.Core.Models;
 using Centurion.Core.PipeLine;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
-using Centurion.Core.Operators;
 
 namespace Centurion.Cli.Commands;
 
@@ -50,6 +49,7 @@ public sealed class SpawnCommand(
                 MaxSentenceLength = settings.MaxLength,
                 TargetSentenceLength = settings.TargetLength,
                 SpreadRange = settings.SpreadRange,
+                ChunkGranularity = settings.ChunkGranularity,
                 MergeGapSeconds = 1.5,
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,

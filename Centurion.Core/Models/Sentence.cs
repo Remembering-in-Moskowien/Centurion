@@ -15,4 +15,5 @@ public class Word
     public double Start { get; set; }
     public double End { get; set; }
     public required string Speaker { get; set; }
+    public string? PosTag { get; set; }
 }

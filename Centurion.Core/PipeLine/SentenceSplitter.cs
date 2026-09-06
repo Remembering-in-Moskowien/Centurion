@@ -2,6 +2,7 @@
 using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
+using Centurion.Core.Strategy.SentenceSplit;
 
 namespace Centurion.Core.PipeLine;
 
@@ -46,7 +47,8 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
             MergeGap = config.MergeGapSeconds,
             EnablePunctuationRewrite = config.EnablePunctuationRewrite,
             Language = config.Language,
-            ModelCachePath = config.CacheDirectory
+            ModelCachePath = config.CacheDirectory,
+            ChunkGranularity = Math.Clamp(config.ChunkGranularity, 0f, 1f)
         };
 
         // 通过工厂创建分句策略，传递模型和 API Key（仅 LLM 策略需要）
@@ -58,6 +60,15 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
         );
 
         LogInfo($"Using split strategy: {strategy.GetType().Name}");
+
+        if (config.SplitStrategy.Equals("nlp", StringComparison.OrdinalIgnoreCase) ||
+            config.SplitStrategy.Equals("catalyst", StringComparison.OrdinalIgnoreCase))
+        {
+            context.State.SplitSentences = await ((CatalystSplitStrategy)strategy).Split(inputSentences, options);
+            context.State.IsSplit = true;
+            LogInfo($"Split into {context.State.SplitSentences.Count} sentences.");
+            return;
+        }
 
         var allSplit = new List<Sentence>();
         foreach (var sentence in inputSentences)
