@@ -23,7 +23,7 @@ public sealed class SpawnSettings : CommandSettings
     [Description("Number of speakers (0 = auto detect), default 0")]
     public int NumSpeakers { get; init; } = 0;
 
-    [CommandOption("--karaoke")]
+    [CommandOption("-k|--karaoke")]
     [Description("Generate ASS subtitles with karaoke effects (\\K tags)")]
     public bool Karaoke { get; init; } = false;
 
@@ -42,11 +42,11 @@ public sealed class SpawnSettings : CommandSettings
 
     // ----- 分句模块 (Splitter) -----
     [CommandOption("-s|--splitter <STRATEGY>")]
-    [Description("Split strategy: rule, nlp (Catalyst), llm")]
+    [Description("Split strategy: rule, nlp (Encoderfile NER), llm")]
     public string Splitter { get; init; } = "rule";
 
     [CommandOption("--splitter-chunk-granularity <LEVEL>")]
-    [Description("Catalyst/NLP chunk granularity from 0.0 to 1.0, default 0.5")]
+    [Description("NLP chunk granularity from 0.0 to 1.0, default 0.5")]
     public float ChunkGranularity { get; init; } = 0.5f;
 
     [CommandOption("--splitter-target-length <CHARS>")]
@@ -70,11 +70,11 @@ public sealed class SpawnSettings : CommandSettings
     public string? SplitterApiKey { get; init; }
 
     // ----- 对齐模块 (Alignment) -----
-    [CommandOption("--enable-alignment")]
+    [CommandOption("-a|--enable-alignment")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
 
-    [CommandOption("--alignment-model <MODEL>")]
+    [CommandOption("--am|--alignment-model <MODEL>")]
     [Description("Model for forced alignment")]
-    public string? AlignmentModel { get; init; }
+    public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 }

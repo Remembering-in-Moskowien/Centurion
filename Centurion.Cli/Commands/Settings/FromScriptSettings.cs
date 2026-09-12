@@ -29,9 +29,13 @@ public sealed class FromScriptSettings : CommandSettings
     [Description("Transcription model")]
     public string? TranscriberModel { get; init; } = "base";
 
-    [CommandOption("--enable-alignment")]
+    [CommandOption("-a|--enable-alignment")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
+    
+    [CommandOption("--am|--alignment-model <MODEL>")]
+    [Description("Model for forced alignment")]
+    public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 
     [CommandOption("--max-cps <CPS>")]
     [Description("Maximum displayed characters per second")]

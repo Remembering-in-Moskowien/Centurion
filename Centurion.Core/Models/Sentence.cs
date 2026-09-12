@@ -6,6 +6,7 @@ public class Sentence
     public string? CleanedText { get; set; }
     public double Start { get; set; }
     public double End { get; set; }
+    public bool SkipRender { get; set; }
     public List<Word> Words { get; set; } = [];
     public List<Word> Extensions { get; set; } = [];
 }

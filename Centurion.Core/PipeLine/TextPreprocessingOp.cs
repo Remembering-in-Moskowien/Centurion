@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.PipeLine;
 
 public class TextPreprocessingOp(
-    ILogger<TextPreprocessingOp> logger) : PipelineOperatorBase
+    ILogger<TextPreprocessingOp> logger) : PipelineOperatorBase(logger)
 {
     private static readonly Regex PunctuationPattern = new(@"[\p{P}\p{S}]", RegexOptions.Compiled);
     private static readonly Regex WhitespacePattern = new(@"\s+", RegexOptions.Compiled);
@@ -40,14 +40,13 @@ public class TextPreprocessingOp(
             return Task.CompletedTask;
         }
 
-        var sentences = context.State.ScriptSentences.Count > 0
-            ? context.State.ScriptSentences
-            : context.State.SplitSentences;
-        if (sentences is null || sentences.Count == 0)
+        var sentences = context.State.CurrentSentences;
+        if (sentences.Count == 0)
         {
-            logger.LogInformation("No sentences available for text cleaning.");
-            context.State.Extensions["TextCleaned"] = false;
-            return Task.CompletedTask;
+            const string message = "No current sentences are available for text cleaning.";
+            context.State.Errors.Add(message);
+            logger.LogError(message);
+            throw new InvalidOperationException(message);
         }
 
         var abbreviations = LoadAbbreviations(context);

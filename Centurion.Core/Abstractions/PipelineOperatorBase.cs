@@ -1,4 +1,5 @@
 ﻿using Centurion.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Abstractions;
 
@@ -9,6 +10,13 @@ namespace Centurion.Core.Abstractions;
 /// </summary>
 public abstract class PipelineOperatorBase : IPipelineOperator, IProgressReportableOperator
 {
+    protected PipelineOperatorBase(ILogger logger)
+    {
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    protected ILogger Logger { get; }
+
     // ---------- 核心抽象 ----------
     public abstract string Name { get; }
     public abstract Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken);
@@ -31,20 +39,19 @@ public abstract class PipelineOperatorBase : IPipelineOperator, IProgressReporta
         // ConsoleServices.Output?.WriteLine($"[{Name}] {percentage}% - {message}");
     }
 
-    // ---------- 日志辅助（利用现有的 ConsoleServices） ----------
     protected void LogInfo(string message)
     {
-        ConsoleServices.Output.WriteLine($"[{Name}] {message}");
+        Logger.LogInformation("[{Operator}] {Message}", Name, message);
     }
 
     protected void LogWarning(string message)
     {
-        ConsoleServices.Output.WriteWarning($"[{Name}] {message}");
+        Logger.LogWarning("[{Operator}] {Message}", Name, message);
     }
 
     protected void LogError(string message)
     {
-        ConsoleServices.Output.WriteError($"[{Name}] {message}");
+        Logger.LogError("[{Operator}] {Message}", Name, message);
     }
 
     // ---------- 健康检查（可选重写） ----------

@@ -4,13 +4,16 @@ using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.PipeLine;
 
 /// <summary>
 /// 转录算子，通过工厂动态选择转录策略（Whisper/Qwen/API 等）。
 /// </summary>
-public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOperatorBase
+public class TranscribeOp(
+    ITranscriptionStrategyFactory factory,
+    ILogger<TranscribeOp> logger) : PipelineOperatorBase(logger)
 {
     private readonly ITranscriptionStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
@@ -22,6 +25,14 @@ public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOpera
         if (context.State.IsTranscribed)
         {
             LogInfo("Transcription already exists, skipping.");
+            if (context.State.TranscribeSentences.Count == 0)
+            {
+                const string message = "Transcription is marked complete but contains no sentences.";
+                context.State.Errors.Add(message);
+                throw new InvalidOperationException(message);
+            }
+
+            context.State.CurrentSentences = context.State.TranscribeSentences;
             return;
         }
 
@@ -85,6 +96,7 @@ public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOpera
             };
 
             context.State.TranscribeSentences = [sentence];
+            context.State.CurrentSentences = context.State.TranscribeSentences;
             context.State.IsTranscribed = true;
 
             LogInfo($"Transcription completed. {cleanedWords.Count} words, duration {(sentence.End - sentence.Start) / 1000.0:F2}s");
@@ -110,7 +122,7 @@ public class TranscribeOp(ITranscriptionStrategyFactory factory) : PipelineOpera
         // 注意：这些字符可能因模型不同而变化，我们采用更通用的方式。
         // 移除所有控制字符、格式字符、其他符号（除常见标点外）
         var sb = new StringBuilder();
-        foreach (char c in input)
+        foreach (var c in input)
         {
             var cat = char.GetUnicodeCategory(c);
             // 保留字母、数字、空格、常见标点（. , ! ? ; : 等）和中文字符（归类为其他字母）

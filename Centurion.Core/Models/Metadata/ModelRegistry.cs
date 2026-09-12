@@ -5,7 +5,8 @@ namespace Centurion.Core.Models.Metadata;
 public enum ModelDownloadType
 {
     SingleFile,
-    Directory
+    Directory,
+    OnnxModelDirectory
 }
 
 public record ModelMeta
@@ -14,6 +15,7 @@ public record ModelMeta
     public string? DownloadUrl { get; init; }
     public ModelDownloadType DownloadType { get; init; } = ModelDownloadType.SingleFile;
     public List<string>? Files { get; init; }
+    public string? OnnxModelType { get; init; }
     public string? Subdirectory { get; init; }
 
     public ModelMeta(string fileName, string downloadUrl)
@@ -29,6 +31,15 @@ public record ModelMeta
         Files = files;
         Subdirectory = subdirectory;
         DownloadType = ModelDownloadType.Directory;
+    }
+
+    public ModelMeta(string downloadUrl, List<string> files, string onnxModelType, string? subdirectory = null)
+    {
+        DownloadUrl = downloadUrl;
+        Files = files;
+        OnnxModelType = onnxModelType;
+        Subdirectory = subdirectory;
+        DownloadType = ModelDownloadType.OnnxModelDirectory;
     }
 }
 
@@ -153,5 +164,18 @@ public static class ModelRegistry
                 "voxceleb_resnet293_LM", new ModelMeta("voxceleb_resnet293_LM.onnx",
                     "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet293_LM.onnx")
             }
+        };
+
+    public static IReadOnlyDictionary<string, ModelMeta> BertOnnxModels { get; } =
+        new Dictionary<string, ModelMeta>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["bert-base-ner"] = new ModelMeta(
+                "https://hf-mirror.com/optimum/bert-base-NER/resolve/main",
+                ["model.onnx", "config.json", "tokenizer.json", "vocab.txt"],
+                "token_classification"),
+            ["all-minilm-l6-v2"] = new ModelMeta(
+                "https://hf-mirror.com/Xenova/all-MiniLM-L6-v2/resolve/main",
+                ["onnx/model.onnx", "config.json", "tokenizer.json", "vocab.txt"],
+                "embedding")
         };
 }
