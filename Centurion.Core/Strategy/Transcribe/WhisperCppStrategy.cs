@@ -13,7 +13,7 @@ namespace Centurion.Core.Strategy.Transcribe;
 public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscriptionStrategy
 {
     private readonly ToolManager _toolManager = new("whispercpp", serviceProvider);
-    private readonly ProcessManager _processManager = new(serviceProvider.GetRequiredService<ILogger<WhisperCppStrategy>>());
+    private readonly ProcessManager _processManager = new(serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
     private readonly IModelPathResolver _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
     private readonly ILogger<WhisperCppStrategy> _logger = serviceProvider.GetRequiredService<ILogger<WhisperCppStrategy>>();
 

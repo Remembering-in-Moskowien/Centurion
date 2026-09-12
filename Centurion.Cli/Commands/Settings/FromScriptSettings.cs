@@ -29,9 +29,34 @@ public sealed class FromScriptSettings : CommandSettings
     [Description("Transcription model")]
     public string? TranscriberModel { get; init; } = "base";
 
-    [CommandOption("--enable-alignment")]
+    // ----- 音频预处理模块 -----
+    [CommandOption("--audio-noise-reduction")]
+    [Description("Enable conditional FFmpeg noise reduction")]
+    public bool EnableAudioNoiseReduction { get; init; } = false;
+
+    [CommandOption("--audio-snr-threshold <DB>")]
+    [Description("Enable noise reduction below this SNR threshold, default 15 dB")]
+    public double AudioSnrThresholdDb { get; init; } = 15.0;
+
+    [CommandOption("--disable-audio-resampling")]
+    [Description("Disable audio resampling (output is still forced to 16 kHz)")]
+    public bool DisableAudioResampling { get; init; }
+
+    [CommandOption("--disable-audio-highpass")]
+    [Description("Disable the 100 Hz high-pass filter")]
+    public bool DisableAudioHighPass { get; init; }
+
+    [CommandOption("--disable-audio-loudness")]
+    [Description("Disable EBU R128 loudness normalization")]
+    public bool DisableAudioLoudness { get; init; }
+
+    [CommandOption("-a|--enable-alignment")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
+    
+    [CommandOption("--am|--alignment-model <MODEL>")]
+    [Description("Model for forced alignment")]
+    public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 
     [CommandOption("--max-cps <CPS>")]
     [Description("Maximum displayed characters per second")]

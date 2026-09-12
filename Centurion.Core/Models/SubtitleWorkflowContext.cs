@@ -32,9 +32,12 @@ public class WorkflowConfig
     public int MaxCharsPerLine { get; init; } = 18;
     public bool FillGapWithEllipsis { get; init; } = true;
 
+    // ---------- 音频预处理 ----------
+    public AudioPreprocessConfig AudioPreprocess { get; init; } = new();
+
     // ---------- 转录模块 ----------
-    public string TranscriberEngine { get; init; } = "whisper";   // whisper, qwen, api
-    public string? TranscriberModel { get; init; } = "large";     // e.g., base, large
+    public string TranscriberEngine { get; init; } = "crispasr";   // whisper, qwen, api
+    public string? TranscriberModel { get; init; } = "qwen3-asr-1.7b";     // e.g., base, large
     public string Language { get; init; } = "en";
     public string? InitialPrompt { get; init; }
 
@@ -77,7 +80,11 @@ public class WorkflowState
     // ---------- 原始音频路径（由 Config.InputFilePath 派生，但保留以便存储转换后的路径） ----------
     public string? PipelineTempDirectory { get; set; } 
     public string? ConvertedAudioPath { get; set; } // FFmpeg 重采样/转换后的临时文件路径
-
+    public string? PreprocessedAudioPath { get; set; }
+    public AudioProbeInfo? SourceAudioInfo { get; set; }
+    public AudioProbeInfo? PreprocessedAudioInfo { get; set; }
+    public double? EstimatedSnrDb { get; set; }
+    public bool NoiseReductionApplied { get; set; }
     // ---------- 各阶段处理后的句子列表 ----------
     // 注意：Sentence 中的 Word 对象会逐步被下游算子补充 Speaker 和精确时间戳。
     public List<Sentence> TranscribeSentences { get; set; } = []; // 刚转录完，无说话人信息
@@ -86,6 +93,7 @@ public class WorkflowState
     public List<Sentence> AlignedSentences { get; set; } = []; // 强制对齐后（词级时间戳修正）
     public List<Sentence>? CoarseSentences { get; set; }
     public List<Sentence> ScriptSentences { get; set; } = [];
+    public List<Sentence> CurrentSentences { get; set; } = [];
     public double MapperCoverage { get; set; }
     
     // ---------- 转换专用数据槽：已移除 SubtitlesParserV2 模型，统一使用 Sentence ----------
@@ -112,3 +120,23 @@ public class WorkflowState
     // ---------- 扩展数据槽（用于算子间临时传递非常规数据，避免改上下文结构） ----------
     public Dictionary<string, object> Extensions { get; set; } = new();
 }
+
+
+public enum AudioNoiseReductionBackend
+{
+    BuiltInFfmpeg,
+    ExternalCli
+}
+
+public record AudioPreprocessConfig
+{
+    public bool EnableResampling { get; init; } = true;
+    public bool EnableDownmixing { get; init; } = true;
+    public bool EnableHighPass { get; init; } = true;
+    public bool EnableLoudnessNormalization { get; init; } = true;
+    public bool EnableNoiseReduction { get; init; } = false;
+    public double SnrThresholdDb { get; init; } = 15.0;
+    public AudioNoiseReductionBackend NoiseReductionBackend { get; init; } = AudioNoiseReductionBackend.BuiltInFfmpeg;
+}
+
+public record AudioProbeInfo(int SampleRate, int Channels, string Codec, string Format);

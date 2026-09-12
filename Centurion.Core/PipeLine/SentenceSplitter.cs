@@ -3,13 +3,16 @@ using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
 using Centurion.Core.Strategy.SentenceSplit;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.PipeLine;
 
 /// <summary>
 /// 分句算子，通过工厂动态选择分句策略（启发式/规则/LLM 等）。
 /// </summary>
-public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : PipelineOperatorBase
+public class SentenceSplitOperator(
+    ISentenceSplitStrategyFactory factory,
+    ILogger<SentenceSplitOperator> logger) : PipelineOperatorBase<SentenceSplitOperator>(logger)
 {
     private readonly ISentenceSplitStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
@@ -20,6 +23,7 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
         if (context.State.IsSplit)
         {
             LogInfo("Split results already exist, skipping.");
+            context.State.CurrentSentences = context.State.SplitSentences;
             return;
         }
 
@@ -33,10 +37,12 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
 
         if (inputSentences == null || inputSentences.Count == 0)
         {
-            LogWarning("No sentences to split.");
+            const string message = "No current sentences are available for splitting.";
+            context.State.Errors.Add(message);
+            LogError(message);
             context.State.SplitSentences = [];
-            context.State.IsSplit = true;
-            return;
+            context.State.CurrentSentences = context.State.SplitSentences;
+            throw new InvalidOperationException(message);
         }
 
         var options = new SplitOptions
@@ -61,15 +67,6 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
 
         LogInfo($"Using split strategy: {strategy.GetType().Name}");
 
-        if (config.SplitStrategy.Equals("nlp", StringComparison.OrdinalIgnoreCase) ||
-            config.SplitStrategy.Equals("catalyst", StringComparison.OrdinalIgnoreCase))
-        {
-            context.State.SplitSentences = await ((CatalystSplitStrategy)strategy).Split(inputSentences, options);
-            context.State.IsSplit = true;
-            LogInfo($"Split into {context.State.SplitSentences.Count} sentences.");
-            return;
-        }
-
         var allSplit = new List<Sentence>();
         foreach (var sentence in inputSentences)
         {
@@ -82,6 +79,7 @@ public class SentenceSplitOperator(ISentenceSplitStrategyFactory factory) : Pipe
         }
 
         context.State.SplitSentences = allSplit;
+        context.State.CurrentSentences = context.State.SplitSentences;
         context.State.IsSplit = true;
         LogInfo($"Split into {allSplit.Count} sentences.");
     }

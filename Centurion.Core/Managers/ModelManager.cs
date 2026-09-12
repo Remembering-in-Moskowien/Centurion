@@ -54,7 +54,7 @@ public class ModelManager : IDisposable
         _targetMeta = tempMeta;
 
         // 根据下载类型确定路径
-        if (_targetMeta.DownloadType == ModelDownloadType.Directory)
+        if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
         {
             // 目录模型：子目录为 models/categoryFolder/modelName/
             ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder, _modelName);
@@ -68,22 +68,22 @@ public class ModelManager : IDisposable
         }
     }
 
-    public async Task CheckHealthAsync()
+    public async Task CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
 
-        if (_targetMeta.DownloadType == ModelDownloadType.Directory)
+        if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
         {
-            await EnsureDirectoryModelAsync();
+            await EnsureDirectoryModelAsync(cancellationToken);
         }
         else
         {
-            if (!File.Exists(ModelFilePath)) await DownloadModelAsync();
+            if (!File.Exists(ModelFilePath)) await DownloadModelAsync(cancellationToken);
             // 不再进行任何哈希校验
         }
     }
 
-    private async Task EnsureDirectoryModelAsync()
+    private async Task EnsureDirectoryModelAsync(CancellationToken cancellationToken = default)
     {
         var dir = ModelFolder;
         Directory.CreateDirectory(dir);
@@ -93,11 +93,11 @@ public class ModelManager : IDisposable
         if (!allFilesExist)
         {
             ConsoleServices.Output.WriteLine($"Model directory '{_modelName}' is incomplete. Downloading...");
-            await DownloadDirectoryModelAsync();
+            await DownloadDirectoryModelAsync(cancellationToken);
         }
     }
 
-    private async Task DownloadDirectoryModelAsync()
+    private async Task DownloadDirectoryModelAsync(CancellationToken cancellationToken = default)
     {
         if (_targetMeta.Files == null || _targetMeta.Files.Count == 0)
             throw new InvalidOperationException("No files specified for directory model.");
@@ -120,18 +120,19 @@ public class ModelManager : IDisposable
                     // 不再传递哈希
                 }
             };
-            await aria.ProcessAsync(request);
+            await aria.ProcessAsync(request, cancellationToken);
         });
 
         await Task.WhenAll(tasks);
         ConsoleServices.Output.WriteLine($"Model '{_modelName}' downloaded successfully.");
     }
 
-    private async Task DownloadModelAsync()
+    private async Task DownloadModelAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
         Directory.CreateDirectory(ModelFolder);
         ConsoleServices.Output.WriteLine($"Model '{_modelName}' not found.");
+        cancellationToken.ThrowIfCancellationRequested();
         if (!await ConsoleServices.Confirm.ConfirmAsync("Continue with installation?"))
             throw new OperationCanceledException("User cancelled model download.");
 
@@ -150,7 +151,7 @@ public class ModelManager : IDisposable
             }
         };
 
-        await aria.ProcessAsync(request);
+        await aria.ProcessAsync(request, cancellationToken);
         ConsoleServices.Output.WriteLine($"Model '{_modelName}' downloaded successfully.");
     }
 

@@ -11,6 +11,7 @@ namespace Centurion.Cli.Commands;
 public sealed class FromScriptCommand(
     ITempDirectoryManager tempManager,
     FFmpegConvertOperator ffmpegOp,
+    AudioPreprocessOperator audioPreprocessOp,
     TranscribeOp transcribeOp,
     ScriptLoaderOp scriptLoaderOp,
     TextPreprocessingOp textCleaningOp,
@@ -36,11 +37,20 @@ public sealed class FromScriptCommand(
                 OutputFilePath = outputPath,
                 ScriptFilePath = settings.ScriptFile.FullName,
                 MapperStrategy = "rule",
-                SplitStrategy = "none",
+                SplitStrategy = "nlp",
                 Language = settings.Language,
                 TranscriberEngine = settings.Transcriber,
                 TranscriberModel = settings.TranscriberModel,
+                AudioPreprocess = new AudioPreprocessConfig
+                {
+                    EnableResampling = !settings.DisableAudioResampling,
+                    EnableHighPass = !settings.DisableAudioHighPass,
+                    EnableLoudnessNormalization = !settings.DisableAudioLoudness,
+                    EnableNoiseReduction = settings.EnableAudioNoiseReduction,
+                    SnrThresholdDb = settings.AudioSnrThresholdDb
+                },
                 EnableAlignment = settings.EnableAlignment,
+                AlignmentModel = settings.AlignmentModel,
                 MaxCps = settings.MaxCps,
                 MaxCharsPerLine = settings.MaxCharsPerLine,
                 CoverageThreshold = settings.CoverageThreshold,
@@ -55,6 +65,7 @@ public sealed class FromScriptCommand(
             var operators = new List<IPipelineOperator>
             {
                 ffmpegOp,
+                audioPreprocessOp,
                 transcribeOp,
                 scriptLoaderOp,
                 textCleaningOp,

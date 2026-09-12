@@ -60,7 +60,7 @@ public class SentenceSplitStrategyFactory(
         return strategy.ToLowerInvariant() switch
         {
             "rule" => serviceProvider.GetRequiredService<RuleBasedSplitStrategy>(),
-            "catalyst" or "nlp" => serviceProvider.GetRequiredService<CatalystSplitStrategy>(),
+            "catalyst" or "nlp" => serviceProvider.GetRequiredService<RuleBasedSplitStrategy>(),
             "llm" => CreateLLMStrategy(options, model, apiKey),
             _ => throw new NotSupportedException($"Split strategy '{strategy}' is not supported.")
         };

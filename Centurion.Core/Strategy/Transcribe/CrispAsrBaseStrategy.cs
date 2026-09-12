@@ -18,14 +18,14 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     protected readonly ToolManager _toolManager;
     protected readonly ProcessManager _processManager;
     protected readonly IModelPathResolver _modelResolver;
-    protected readonly ILogger _logger;
+    protected readonly ILogger<CrispAsrBaseStrategy> _logger;
 
     public abstract string StrategyName { get; }
 
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)
     {
         _toolManager = new ToolManager("crispasr", serviceProvider);
-        _processManager = new ProcessManager(serviceProvider.GetRequiredService<ILogger<CrispAsrBaseStrategy>>());
+        _processManager = new ProcessManager(serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
         _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
         _logger = serviceProvider.GetRequiredService<ILogger<CrispAsrBaseStrategy>>();
     }

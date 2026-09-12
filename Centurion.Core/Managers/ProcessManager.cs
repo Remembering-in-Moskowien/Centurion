@@ -9,7 +9,7 @@ namespace Centurion.Core.Managers;
 /// 进程执行器，返回原始标准输出，由调用方解析。
 /// 支持超时、取消，并在进程退出前强制终止。
 /// </summary>
-public class ProcessManager(ILogger logger)
+public class ProcessManager(ILogger<ProcessManager> logger)
 {
     /// <summary>
     /// 执行外部程序，返回标准输出字符串。
