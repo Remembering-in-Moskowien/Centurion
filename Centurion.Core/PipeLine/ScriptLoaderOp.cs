@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.PipeLine;
 
-public sealed class ScriptLoaderOp(ILogger<ScriptLoaderOp> logger) : PipelineOperatorBase
+public sealed class ScriptLoaderOp(ILogger<ScriptLoaderOp> logger) : PipelineOperatorBase(logger)
 {
     public override string Name => "Script Loading";
 
@@ -25,8 +25,16 @@ public sealed class ScriptLoaderOp(ILogger<ScriptLoaderOp> logger) : PipelineOpe
             .Select(line => new Sentence { Text = line })
             .ToList();
 
+        if (sentences.Count == 0)
+        {
+            const string message = "The script file does not contain any non-empty lines.";
+            context.State.Errors.Add(message);
+            logger.LogError(message);
+            throw new InvalidOperationException(message);
+        }
+
         context.State.ScriptSentences = sentences;
-        context.State.SplitSentences = sentences;
+        context.State.CurrentSentences = sentences;
         logger.LogInformation("Loaded {Count} script lines from {Path}.", sentences.Count, path);
         OnProgress(100, $"Loaded {sentences.Count} script lines.");
     }

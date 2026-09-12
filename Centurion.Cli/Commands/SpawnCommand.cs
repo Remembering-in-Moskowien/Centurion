@@ -3,6 +3,7 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
+using Centurion.Core.Operators;
 using Centurion.Core.PipeLine;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
@@ -15,6 +16,7 @@ public sealed class SpawnCommand(
     TranscribeOp transcribeOp,
     SentenceSplitOperator splitOp,
     TextPreprocessingOp textCleaningOp,
+    EncoderfileNerOperator encoderfileNerOp,
     AlignmentOp alignmentOp,
     PipelineExecutor pipelineExecutor,
     ILogger<SpawnCommand> logger)
@@ -74,6 +76,10 @@ public sealed class SpawnCommand(
                 textCleaningOp,
                 alignmentOp
             };
+
+            if (settings.Splitter.Equals("nlp", StringComparison.OrdinalIgnoreCase) ||
+                settings.Splitter.Equals("catalyst", StringComparison.OrdinalIgnoreCase))
+                operators.Insert(operators.Count - 1, encoderfileNerOp);
 
             // Execute the dynamic pipeline
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);

@@ -86,6 +86,7 @@ public class WorkflowState
     public List<Sentence> AlignedSentences { get; set; } = []; // 强制对齐后（词级时间戳修正）
     public List<Sentence>? CoarseSentences { get; set; }
     public List<Sentence> ScriptSentences { get; set; } = [];
+    public List<Sentence> CurrentSentences { get; set; } = [];
     public double MapperCoverage { get; set; }
     
     // ---------- 转换专用数据槽：已移除 SubtitlesParserV2 模型，统一使用 Sentence ----------

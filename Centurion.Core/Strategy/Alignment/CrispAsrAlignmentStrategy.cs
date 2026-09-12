@@ -1,5 +1,6 @@
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
+using Centurion.Core.Exceptions;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
 using FFMpegCore;
@@ -18,6 +19,8 @@ public sealed class CrispAsrAlignmentStrategy(
     {
         if (sentences.Count == 0)
             return sentences;
+
+        var expectedSentenceCount = sentences.Count;
 
         var toolManager = new ToolManager("crispasr", serviceProvider);
         await toolManager.EnsureToolAsync(cancellationToken);
@@ -62,6 +65,13 @@ public sealed class CrispAsrAlignmentStrategy(
         {
             try { Directory.Delete(tempDir, true); }
             catch { }
+        }
+
+        if (sentences.Count != expectedSentenceCount)
+        {
+            var message = $"Alignment changed the sentence count from {expectedSentenceCount} to {sentences.Count}.";
+            logger.LogError(message);
+            throw new AlignmentException(message);
         }
 
         return sentences;

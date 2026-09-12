@@ -1,6 +1,7 @@
 ﻿using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
 using FFMpegCore;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.PipeLine;
 
@@ -8,7 +9,9 @@ namespace Centurion.Core.PipeLine;
 /// Pipeline operator for audio conversion via FFmpeg.
 /// Converts input audio to 16kHz mono WAV (PCM s16le) for downstream processing.
 /// </summary>
-public class FFmpegConvertOperator(ITempDirectoryManager tempManager) : PipelineOperatorBase
+public class FFmpegConvertOperator(
+    ITempDirectoryManager tempManager,
+    ILogger<FFmpegConvertOperator> logger) : PipelineOperatorBase(logger)
 {
     private readonly ITempDirectoryManager _tempManager = tempManager ?? throw new ArgumentNullException(nameof(tempManager));
     private const int TargetSampleRate = 16000;
