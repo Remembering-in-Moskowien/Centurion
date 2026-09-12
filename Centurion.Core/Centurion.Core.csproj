@@ -10,17 +10,15 @@
         <PackageReference Include="Downloader" Version="5.9.6" />
         <PackageReference Include="FFMpegCore" Version="5.4.0"/>
         <PackageReference Include="Humanizer" Version="3.0.10" />
-        <PackageReference Include="Microsoft.Extensions.AI" Version="10.9.0" />
-        <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
+        <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
+        <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
         <PackageReference Include="OllamaSharp" Version="5.4.30" />
-        <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.5"/>
         <PackageReference Include="SharpCompress" Version="0.50.4" />
+        <PackageReference Include="Soenneker.Utils.String.NeedlemanWunsch" Version="4.0.1000" />
         <PackageReference Include="SubtitlesParserV2" Version="2.4.0" />
-        <PackageReference Include="Catalyst" Version="26.7.2845" />
-        <PackageReference Include="Catalyst.Models.English" Version="1.0.30952" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,9 +1,9 @@
-﻿using Centurion.Core.Abstractions.Strategy;
+﻿using System.Text.Json;
+using System.Text.RegularExpressions;
+using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Centurion.Core.Strategy.SentenceSplit;
 
@@ -146,7 +146,7 @@ Output (JSON array only):
         var wordList = words.OrderBy(w => w.Start).ToList();
 
         // 策略1：直接按单词数量映射（如果总数一致）
-        int totalLlmWords = sentenceTexts.Sum(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+        var totalLlmWords = sentenceTexts.Sum(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
         if (totalLlmWords == wordList.Count)
         {
             _logger?.LogDebug("LLM word count matches original, using direct mapping.");
@@ -173,13 +173,13 @@ Output (JSON array only):
     private List<Sentence> BuildSentencesByCount(List<Word> wordList, List<string> sentenceTexts)
     {
         var result = new List<Sentence>();
-        int wordIndex = 0;
+        var wordIndex = 0;
 
-        for (int idx = 0; idx < sentenceTexts.Count; idx++)
+        for (var idx = 0; idx < sentenceTexts.Count; idx++)
         {
             var sentenceText = sentenceTexts[idx];
             var targetWords = sentenceText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            int count = targetWords.Length;
+            var count = targetWords.Length;
             if (count == 0)
                 continue;
 
@@ -221,7 +221,7 @@ Output (JSON array only):
     private List<Sentence>? TryFuzzyAlignment(List<Word> wordList, List<string> sentenceTexts)
     {
         var result = new List<Sentence>();
-        int wordIndex = 0;
+        var wordIndex = 0;
 
         var llmWordSequences = sentenceTexts
             .Select(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -235,27 +235,27 @@ Output (JSON array only):
 
         foreach (var llmSeq in llmWordSequences)
         {
-            int remaining = wordList.Count - wordIndex;
+            var remaining = wordList.Count - wordIndex;
             if (remaining == 0)
                 break;
 
-            int bestStart = -1;
+            var bestStart = -1;
             double bestScore = -1;
 
-            int maxStart = Math.Min(wordIndex + llmSeq.Count * 2, wordList.Count);
-            for (int start = wordIndex; start < maxStart; start++)
+            var maxStart = Math.Min(wordIndex + llmSeq.Count * 2, wordList.Count);
+            for (var start = wordIndex; start < maxStart; start++)
             {
-                int windowLen = Math.Min(llmSeq.Count, wordList.Count - start);
+                var windowLen = Math.Min(llmSeq.Count, wordList.Count - start);
                 if (windowLen == 0) break;
 
-                int matches = 0;
-                for (int i = 0; i < windowLen && i < llmSeq.Count; i++)
+                var matches = 0;
+                for (var i = 0; i < windowLen && i < llmSeq.Count; i++)
                 {
                     var origNorm = NormalizeWord(wordList[start + i].Text);
                     if (origNorm == llmSeq[i])
                         matches++;
                 }
-                double score = (double)matches / llmSeq.Count;
+                var score = (double)matches / llmSeq.Count;
 
                 if (score > bestScore)
                 {
@@ -273,7 +273,7 @@ Output (JSON array only):
                 return null;
             }
 
-            int takeCount = Math.Min(llmSeq.Count, wordList.Count - bestStart);
+            var takeCount = Math.Min(llmSeq.Count, wordList.Count - bestStart);
             // 合并从 wordIndex 到 bestStart+takeCount 的所有单词，保证不丢词
             var allWords = wordList.Skip(wordIndex).Take(bestStart + takeCount - wordIndex).ToList();
 
@@ -317,13 +317,13 @@ Output (JSON array only):
     {
         var result = new List<Sentence>();
         var wordList = words.OrderBy(w => w.Start).ToList();
-        int start = 0;
-        int currentLen = 0;
+        var start = 0;
+        var currentLen = 0;
 
-        for (int i = 0; i < wordList.Count; i++)
+        for (var i = 0; i < wordList.Count; i++)
         {
             var w = wordList[i];
-            int wordLen = w.Text.Length + (i > start ? 1 : 0);
+            var wordLen = w.Text.Length + (i > start ? 1 : 0);
             if (currentLen + wordLen > options.TargetLength && i > start)
             {
                 var slice = wordList.Skip(start).Take(i - start).ToList();

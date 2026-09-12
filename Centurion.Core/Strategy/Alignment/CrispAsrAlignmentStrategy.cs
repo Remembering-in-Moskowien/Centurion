@@ -1,8 +1,10 @@
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
+using Centurion.Core.Exceptions;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
 using FFMpegCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SubtitlesParserV2;
 
@@ -18,6 +20,8 @@ public sealed class CrispAsrAlignmentStrategy(
     {
         if (sentences.Count == 0)
             return sentences;
+
+        var expectedSentenceCount = sentences.Count;
 
         var toolManager = new ToolManager("crispasr", serviceProvider);
         await toolManager.EnsureToolAsync(cancellationToken);
@@ -64,6 +68,13 @@ public sealed class CrispAsrAlignmentStrategy(
             catch { }
         }
 
+        if (sentences.Count != expectedSentenceCount)
+        {
+            var message = $"Alignment changed the sentence count from {expectedSentenceCount} to {sentences.Count}.";
+            logger.LogError(message);
+            throw new AlignmentException(message);
+        }
+
         return sentences;
     }
 
@@ -75,7 +86,8 @@ public sealed class CrispAsrAlignmentStrategy(
         {
             var reference = sentence.Text.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var arguments = $"--align-only -am \"{modelPath}\" -f \"{audioPath}\" --ref-text \"{reference}\" --align-format srt --align-output \"{outputPath}\"";
-            var processManager = new ProcessManager(logger);
+            var processManager = new ProcessManager(
+                serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
             await processManager.ExecuteAsync(toolManager.ExecutablePath, arguments, cancellationToken);
             if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
                 return [];

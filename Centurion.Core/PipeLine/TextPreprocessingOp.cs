@@ -8,9 +8,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.PipeLine;
 
-public class TextPreprocessingOp(
-    ILogger<TextPreprocessingOp> logger) : PipelineOperatorBase
+public class TextPreprocessingOp : PipelineOperatorBase<TextPreprocessingOp>
 {
+    private readonly ILogger<TextPreprocessingOp> _logger;
+
+    public TextPreprocessingOp(ILogger<TextPreprocessingOp> logger) : base(logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly Regex PunctuationPattern = new(@"[\p{P}\p{S}]", RegexOptions.Compiled);
     private static readonly Regex WhitespacePattern = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex NumberPattern = new(
@@ -35,19 +41,18 @@ public class TextPreprocessingOp(
 
         if (!context.Config.EnableTextCleaning)
         {
-            logger.LogInformation("Text cleaning is disabled.");
+            _logger.LogInformation("Text cleaning is disabled.");
             context.State.Extensions["TextCleaned"] = false;
             return Task.CompletedTask;
         }
 
-        var sentences = context.State.ScriptSentences.Count > 0
-            ? context.State.ScriptSentences
-            : context.State.SplitSentences;
-        if (sentences is null || sentences.Count == 0)
+        var sentences = context.State.CurrentSentences;
+        if (sentences.Count == 0)
         {
-            logger.LogInformation("No sentences available for text cleaning.");
-            context.State.Extensions["TextCleaned"] = false;
-            return Task.CompletedTask;
+            const string message = "No current sentences are available for text cleaning.";
+            context.State.Errors.Add(message);
+            _logger.LogError(message);
+            throw new InvalidOperationException(message);
         }
 
         var abbreviations = LoadAbbreviations(context);
@@ -60,14 +65,14 @@ public class TextPreprocessingOp(
 
             try
             {
-                logger.LogDebug("Cleaning sentence {Index}/{Total}.", index + 1, sentences.Count);
+                _logger.LogDebug("Cleaning sentence {Index}/{Total}.", index + 1, sentences.Count);
                 sentence.CleanedText = CleanText(sentence.Text, context.Config, abbreviations);
             }
             catch (Exception ex)
             {
                 sentence.CleanedText = null;
                 var message = $"Failed to clean sentence {index + 1}: {ex.Message}";
-                logger.LogWarning(ex, "{Message}", message);
+                _logger.LogWarning(ex, "{Message}", message);
                 context.State.Warnings.Add(message);
                 context.State.Errors.Add(message);
             }
@@ -76,7 +81,7 @@ public class TextPreprocessingOp(
         }
 
         context.State.Extensions["TextCleaned"] = true;
-        logger.LogInformation("Text cleaning completed for {Count} sentences.", sentences.Count);
+        _logger.LogInformation("Text cleaning completed for {Count} sentences.", sentences.Count);
         return Task.CompletedTask;
     }
 
@@ -99,7 +104,7 @@ public class TextPreprocessingOp(
         catch (Exception ex)
         {
             var message = $"Failed to load custom abbreviation dictionary '{path}': {ex.Message}";
-            logger.LogWarning(ex, "{Message}", message);
+            _logger.LogWarning(ex, "{Message}", message);
             context.State.Warnings.Add(message);
             context.State.Errors.Add(message);
         }

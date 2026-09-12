@@ -3,6 +3,7 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
+using Centurion.Core.Operators;
 using Centurion.Core.PipeLine;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
@@ -12,6 +13,7 @@ namespace Centurion.Cli.Commands;
 public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
     FFmpegConvertOperator ffmpegOp,
+    AudioPreprocessOperator audioPreprocessOp,
     TranscribeOp transcribeOp,
     SentenceSplitOperator splitOp,
     TextPreprocessingOp textCleaningOp,
@@ -44,6 +46,14 @@ public sealed class SpawnCommand(
                 TranscriberEngine = settings.Transcriber,
                 TranscriberModel = settings.TranscriberModel,
                 InitialPrompt = settings.InitialPrompt,
+                AudioPreprocess = new AudioPreprocessConfig
+                {
+                    EnableResampling = !settings.DisableAudioResampling,
+                    EnableHighPass = !settings.DisableAudioHighPass,
+                    EnableLoudnessNormalization = !settings.DisableAudioLoudness,
+                    EnableNoiseReduction = settings.EnableAudioNoiseReduction,
+                    SnrThresholdDb = settings.AudioSnrThresholdDb
+                },
 
                 SplitStrategy = settings.Splitter,
                 MaxSentenceLength = settings.MaxLength,
@@ -69,6 +79,7 @@ public sealed class SpawnCommand(
             var operators = new List<IPipelineOperator>
             {
                 ffmpegOp,
+                audioPreprocessOp,
                 transcribeOp,
                 splitOp,
                 textCleaningOp,

@@ -682,75 +682,133 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     }
 
     /// <summary>
-/// Creates an ASS subtitle builder from a workflow context.
-/// Uses aligned/diarized sentences with word-level timings to generate dialogue lines.
-/// If KaraokeMode is enabled, each word is wrapped with \k tags (centiseconds).
-/// </summary>
-/// <param name="context">The workflow context containing sentence data and configuration.</param>
-/// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
-public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context)
-{
-    ArgumentNullException.ThrowIfNull(context);
-    var builder = new AssSubBuilder().WithDefaultValues();
-    if (!string.IsNullOrEmpty(context.Config.InputFilePath))
-        builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
-
-    var sentences = context.State.AlignedSentences is { Count: > 0 }
-        ? context.State.AlignedSentences
-        : context.State.CoarseSentences;
-    if (sentences is null or { Count: 0 })
-        return builder.WithLines([]);
-
-    var lines = new List<AssSubLine>();
-    foreach (var sentence in sentences)
+    /// Creates an ASS subtitle builder from a workflow context.
+    /// Uses aligned/diarized sentences with word-level timings to generate dialogue lines.
+    /// If KaraokeMode is enabled, each word is wrapped with \k tags (centiseconds).
+    /// </summary>
+    /// <param name="context">The workflow context containing sentence data and configuration.</param>
+    /// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
+    public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context)
     {
-        var words = sentence.Words ?? [];
-        var textParts = words.Select(word => word.Status switch
-        {
-            MappingStatus.ScriptMissing => context.Config.FillGapWithEllipsis ? "[...]" : string.Empty,
-            MappingStatus.AudioExtra => $"[SPONT]{word.Text}",
-            _ => word.Text
-        }).Where(text => text.Length > 0).ToList();
-        var text = string.Join(" ", textParts);
-        if (string.IsNullOrWhiteSpace(text))
-            text = sentence.Text;
+        ArgumentNullException.ThrowIfNull(context);
+        var builder = new AssSubBuilder().WithDefaultValues();
+        if (!string.IsNullOrEmpty(context.Config.InputFilePath))
+            builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
 
-        var start = sentence.Start;
-        var end = Math.Max(sentence.End, start + 1);
-        foreach (var segment in SplitForCps(text, start, end, context.Config.MaxCps, context.Config.MaxCharsPerLine))
+        var sentences = context.State.CurrentSentences is { Count: > 0 }
+            ? context.State.CurrentSentences
+            : context.State.AlignedSentences is { Count: > 0 }
+                ? context.State.AlignedSentences
+                : context.State.CoarseSentences;
+        if (sentences is null or { Count: 0 })
+            return builder.WithLines([]);
+
+        if (context.State.ScriptSentences.Count > 1 && sentences.Count == 1)
         {
-            var dialogue = context.Config.KaraokeMode
-                ? string.Join(" ", words.Select(word => $"{{\\K{Math.Max(0, (int)((word.End - word.Start) / 10))}}}{word.Text}"))
-                : segment.Text;
-            lines.Add(new AssSubLineBuilder().WithComment(false).WithLayer(0)
-                .WithStart((long)segment.Start).WithEnd((long)segment.End).WithStyle("Default")
-                .WithName(string.Empty).WithMarginL(0).WithMarginR(0).WithMarginV(0)
-                .WithEffect(string.Empty).WithText(dialogue).Build());
+            var warning = $"The workflow has {context.State.ScriptSentences.Count} script lines but only one sentence reached subtitle generation; check the alignment operator for an unintended merge.";
+            context.State.Warnings.Add(warning);
+            ConsoleServices.Output.WriteWarning(warning);
         }
-    }
-    return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
-}
 
-private static IEnumerable<(string Text, double Start, double End)> SplitForCps(string text, double start, double end, double maxCps, int maxChars)
-{
-    var duration = Math.Max(0.001, (end - start) / 1000.0);
-    var limit = Math.Max(1, (int)Math.Floor(duration * maxCps));
-    var chunks = text.Length <= limit && text.Length <= maxChars
-        ? [text]
-        : text.Split(['，', '。', '！', '？', '；', ',', '.', '!', '?', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .SelectMany(part => part.Length <= maxChars ? [part] : Enumerable.Range(0, (part.Length + maxChars - 1) / maxChars).Select(index => part.Substring(index * maxChars, Math.Min(maxChars, part.Length - index * maxChars))))
-            .ToList();
-    if (chunks.Count == 0)
-        chunks = [text];
-    var totalLength = Math.Max(1, chunks.Sum(chunk => chunk.Length));
-    var cursor = start;
-    foreach (var chunk in chunks)
-    {
-        var chunkEnd = cursor + (end - start) * chunk.Length / totalLength;
-        yield return (chunk, cursor, chunkEnd);
-        cursor = chunkEnd;
+        var lines = new List<AssSubLine>();
+        foreach (var sentence in sentences)
+        {
+            if (sentence.SkipRender || sentence.End <= sentence.Start)
+                continue;
+
+            var words = sentence.Words ?? [];
+            var useRawSentence = words.Count == 0 || words.All(word => word.Status == MappingStatus.ScriptMissing);
+            var tokens = useRawSentence
+                ? [new DisplayToken(sentence.Text, [])]
+                : BuildDisplayTokens(sentence, context.Config.FillGapWithEllipsis);
+            if (useRawSentence)
+            {
+                ConsoleServices.Output.WriteWarning($"Sentence has no words, using raw text: {sentence.Text}");
+            }
+
+            if (tokens.Count == 0)
+                tokens = [new DisplayToken(sentence.Text, [])];
+
+            var dialogue = context.Config.KaraokeMode
+                ? string.Join(" ", tokens.Select(FormatKaraokeToken))
+                : string.Join(" ", tokens.Select(token => token.Text));
+            lines.Add(new AssSubLineBuilder().WithComment(false)
+                .WithLayer(0)
+                .WithStart((long)sentence.Start)
+                .WithEnd((long)sentence.End)
+                .WithStyle("Default")
+                .WithName(string.Empty)
+                .WithMarginL(0)
+                .WithMarginR(0)
+                .WithMarginV(0)
+                .WithEffect(string.Empty)
+                .WithText(dialogue)
+                .Build());
+        }
+
+        return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
     }
-}
+
+    private sealed record DisplayToken(string Text, IReadOnlyList<Word> Words);
+
+    private static List<DisplayToken> BuildDisplayTokens(Sentence sentence, bool fillGapWithEllipsis)
+    {
+        var result = new List<DisplayToken>();
+        var words = sentence.Words ?? [];
+        var spontPrefixAdded = false;
+        for (var index = 0; index < words.Count; index++)
+        {
+            var word = words[index];
+            if (word.Status == MappingStatus.ScriptMissing)
+            {
+                if (fillGapWithEllipsis)
+                    result.Add(new DisplayToken("[...]", [word]));
+                continue;
+            }
+
+            if (word.Status != MappingStatus.AudioExtra)
+            {
+                result.Add(new DisplayToken(word.Text, [word]));
+                continue;
+            }
+
+            var extraTexts = new List<string>();
+            var extraWords = new List<Word>();
+            while (index < words.Count && words[index].Status == MappingStatus.AudioExtra)
+            {
+                extraWords.Add(words[index]);
+                var extraText = words[index].Text;
+                if (extraText.StartsWith("[SPONT]", StringComparison.OrdinalIgnoreCase))
+                    extraText = extraText["[SPONT]".Length..].TrimStart();
+                if (!string.IsNullOrWhiteSpace(extraText))
+                    extraTexts.Add(extraText);
+                index++;
+            }
+
+            index--;
+            if (extraTexts.Count > 0)
+            {
+                var prefix = spontPrefixAdded ? string.Empty : "[SPONT] ";
+                result.Add(new DisplayToken(prefix + string.Join(" ", extraTexts), extraWords));
+                spontPrefixAdded = true;
+            }
+        }
+
+        return result;
+    }
+
+    private static string FormatKaraokeToken(DisplayToken token)
+    {
+        if (token.Words.Count == 0 || token.Words.All(word => word.Status == MappingStatus.ScriptMissing))
+            return token.Text;
+        var prefix = token.Text.StartsWith("[SPONT] ", StringComparison.Ordinal) ? "[SPONT] " : string.Empty;
+        var words = token.Words.Select(word =>
+        {
+            var durationMs = Math.Max(0, word.End - word.Start);
+            return $"{{\\K{(int)(durationMs / 10)}}}{word.Text}";
+        });
+        return prefix + string.Join(" ", words);
+    }
 
     /// <summary>组装所有配置，生成完整AssSub字幕文档</summary>
     public override AssSub Build()

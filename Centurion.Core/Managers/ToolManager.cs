@@ -1,8 +1,8 @@
 ﻿// Centurion.Core/Managers/ToolManager.cs
 
 using Centurion.Core.Abstractions;
-using Centurion.Core.Operators.Request;
 using Centurion.Core.Models.Metadata;
+using Centurion.Core.Operators.Request;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;

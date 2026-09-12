@@ -1,135 +1,228 @@
 # Centurion
 
-**Automated Subtitle Generation Tool**
+Centurion is a .NET 10 CLI tool for generating ASS subtitles from audio/video files. It supports a complete workflow covering speech recognition, sentence splitting, script alignment, and subtitle export.
 
-Centurion is a .NET 10 command-line tool designed to generate ASS subtitles with precise word-level timestamps from media files. Built with a modular **"everything is an operator"** pipeline architecture, it integrates transcription, intelligent sentence splitting, speaker diarization, and forced alignment into a flexible, extensible workflow.
-
----
-
-## 🚧 Current Status
-
-- **Version**: Pre‑release (unstable). Pre‑release packages are available on [GitHub Releases](https://github.com/2128611819qqcom/Centurion/releases).
-- **GPU Support**: Not yet supported — all inference runs on CPU.
-- **Primary Command**: `spawn` — the core subtitle generation workflow.
-- **Helper Command**: `convert` — format conversion utilities.
-- **Forced Alignment**: Previously planned `--align` flag is currently **disabled** and will be ignored. This feature will be re‑evaluated and restored in a future release.
+The project uses an operator pipeline architecture, where transcription, sentence splitting, text cleanup, and alignment are separated into independent modules to make the system extensible and easier to replace with different strategies.
 
 ---
 
-## ✨ Features
+## Project Status
 
-- **End‑to‑End Subtitle Generation** – Input any audio or video file, output ASS subtitles with a single command.
-- **High‑Performance CPU Transcription** – Powered by FasterWhisper.NET, delivering acceptable speed without GPU acceleration.
-- **Intelligent Sentence Splitting** – Semantic segmentation via NLP (Catalyst / rule‑based / LLM‑pluggable) for improved readability.
-- **Speaker Diarization** – Identifies and labels speakers per subtitle line using sherpa‑onnx.
-- **Karaoke Mode** – Generates ASS subtitles with `\K` tags for word‑by‑word highlighting in compatible players.
-- **Pluggable Architecture** – Transcription, splitting, and alignment engines are fully swappable via strategy factories — extendable with new backends (Qwen‑ASR, LLM‑based splitters, Gentle aligner, etc.) without modifying core operators.
+- This project is still in an early development / pre-release stage, and commands and parameters may change as the project evolves.
+- Primary output target: ASS subtitle files.
+- Runtime environment: CPU-based inference; GPU acceleration is currently not supported.
+- Dependencies: FFmpeg, .NET 10 SDK.
 
 ---
 
-## 📦 Installation
+## Feature Overview
 
-### Download Pre‑release Package
-
-- Ensure that [FFMpeg](https://ffmpeg.org/download.html) is installed on your machine.
-- Visit the [Releases](https://github.com/2128611819qqcom/Centurion/releases) page and download the archive for your platform:
-  - `win-x64.zip`
-  - (Other platforms as available)
-- Extract the archive to any directory.
-- Add the executable path to your `PATH` environment variable, or run it directly using the full path.
-
-> Pre‑release builds include bleeding‑edge features and may contain rough edges. Feedback is welcome!
-
-### Build from Source (Development Only)
-
-- Ensure [.NET 10 SDK](https://dotnet.microsoft.com/download) is installed, then:
-
-  ```bash
-  git clone https://github.com/2128611819qqcom/Centurion.git
-  cd Centurion
-  dotnet build -c Release
-  ```
-
-- Build outputs are located under `Centurion.Cli/bin/Release/net10.0/`.
+- Generate ASS subtitles from audio/video files
+- Support transcription engines such as Whisper and Crisp
+- Support rule-based sentence splitting, Catalyst/NLP splitting, and LLM-based splitting strategies
+- Support text cleaning and script-based alignment
+- Support forced alignment
+- Support karaoke mode to generate timing with `\K` markers
+- Support subtitle generation from plain-text script files
+- Support subtitle conversion across different formats
 
 ---
 
-## 🚀 Usage
+## Requirements
 
-### `spawn` — Main Subtitle Generation Command
+### 1. Install .NET 10 SDK
+
+Make sure the .NET 10 SDK is installed:
+
+- https://dotnet.microsoft.com/download
+
+### 2. Install FFmpeg
+
+Centurion depends on FFmpeg for audio/video processing.
+
+- https://ffmpeg.org/download.html
+- On Windows, it is recommended to add the FFmpeg `bin` directory to `PATH`
+
+---
+
+## Build the Project
+
+Run this at the repository root:
+
+```bash
+dotnet build -c Release
+```
+
+The build output will be generated under:
+
+```text
+Centurion.Cli/bin/Release/net10.0/
+```
+
+If you want to run the executable directly, use:
+
+```bash
+./Centurion.Cli/bin/Release/net10.0/Centurion.Cli
+```
+
+---
+
+## Command List
+
+The current CLI includes three main commands:
+
+- `spawn`: core subtitle generation command
+- `from-script`: generate subtitles from a script file plus media input
+- `convert`: subtitle format conversion helper command
+
+---
+
+## 1. `spawn` Command
+
+Used to generate ASS subtitles directly from an input media file.
 
 ```bash
 Centurion.Cli spawn <INPUT_FILE> [options]
 ```
 
-#### Options
+### Common Options
 
-| Option | Description |
-| :----- | :---------- |
-| `<INPUT_FILE>` | Input media file path (**required**) |
-| `-o, --output <OUTPUT_FILE>` | Output ASS subtitle file path (default: input filename + `.ass`) |
-| `--language <LANG>` | Audio language code (e.g., `en`, `zh`, `ja`). Default: `en` |
-| `--transcriber <ENGINE>` | Transcription engine: `whisper`, `qwen`, `api`. Default: `whisper` |
-| `--transcriber-model <MODEL>` | Model name (e.g., `base`, `large`, `qwen-asr-1.0`) |
-| `--transcriber-prompt <PROMPT>` | Initial prompt for transcription |
-| `--splitter <STRATEGY>` | Split strategy: `heuristic`, `rule`, `llm`. Default: `heuristic` |
-| `--splitter-target-length <CHARS>` | Target characters per line. Default: `50` |
-| `--splitter-max-length <CHARS>` | Maximum characters per line. Default: `80` |
-| `--splitter-spread <RANGE>` | Spread range for line length distribution. Default: `10` |
-| `--splitter-model <MODEL>` | Model for LLM‑based splitting (e.g., `gpt-4`) |
-| `--splitter-api-key <KEY>` | API key for LLM splitter |
-| `--enable-alignment` | Enable forced alignment (enabled by default) |
-| `--alignment-model <MODEL>` | Model for forced alignment |
-| `--num-speakers <NUM>` | Number of speakers (`0` for auto‑detection). Default: `0` |
-| `--karaoke` | Enable karaoke mode (generates `\K` tags) |
+- `<INPUT_FILE>`: input audio/video file, required
+- `-o|--output <OUTPUT_FILE>`: output ASS file path; if omitted, it defaults to the input filename with a `.ass` extension
+- `-l|--language <LANG>`: audio language, default `en`
+- `--num-speakers <NUM>`: number of speakers, default `0` (auto-detect)
+- `-k|--karaoke`: enable karaoke mode and generate `\K` markers
+- `-t|--transcriber <ENGINE>`: transcription engine, default `whisper`
+- `--tm|--transcriber-model <MODEL>`: transcriber model name
+- `--tp|--transcriber-prompt <PROMPT>`: initial transcription prompt
+- `-s|--splitter <STRATEGY>`: sentence splitting strategy, supports `rule`, `nlp`, and `llm`
+- `--splitter-chunk-granularity <LEVEL>`: Catalyst/NLP chunk granularity, default `0.5`
+- `--splitter-target-length <CHARS>`: target characters per line, default `50`
+- `--splitter-max-length <CHARS>`: maximum characters per line, default `80`
+- `--splitter-spread <RANGE>`: line-length spread range, default `10`
+- `--splitter-model <MODEL>`: LLM-based splitting model
+- `--splitter-api-key <KEY>`: API key for LLM splitting
+- `-a|--enable-alignment`: enable forced alignment, enabled by default
+- `--am|--alignment-model <MODEL>`: alignment model
 
-#### Examples
+### Examples
 
-- **Basic English subtitle generation**:
-  ```bash
-  Centurion.Cli spawn video.mp4 --language en
-  ```
-
-- **Chinese subtitles with karaoke mode**:
-  ```bash
-  Centurion.Cli spawn lecture.mp4 -o subs.ass --language zh --karaoke
-  ```
-
-- **Use Qwen‑ASR + LLM splitting + forced alignment**:
-  ```bash
-  Centurion.Cli spawn audio.wav --transcriber qwen --transcriber-model qwen-asr-1.0 --splitter llm --splitter-model gpt-4 --splitter-api-key sk-xxx --enable-alignment --alignment-model qwen3-forced-aligner-0.6b
-  ```
-
-### `convert` — Auxiliary Conversion Command
-
-A helper command for subtitle format conversion or content adjustment. Currently limited in scope — refer to:
+#### Basic generation
 
 ```bash
-Centurion.Cli convert --help
+Centurion.Cli spawn demo.mp4 --language en
 ```
 
-> `convert` is a secondary utility; the primary functionality is provided by `spawn`.
+#### Specify output file
+
+```bash
+Centurion.Cli spawn lecture.wav -o lecture.ass --language zh
+```
+
+#### Enable karaoke
+
+```bash
+Centurion.Cli spawn meeting.mp4 -o meeting.ass --language en --karaoke
+```
 
 ---
 
-## ⚠️ Important Notes
+## 2. `from-script` Command
 
-- **Development Stage**: Commands and options are subject to change. Refer to the actual runtime help output for the most up‑to‑date behavior.
-- **CPU‑Only**: All inference runs on CPU. Processing long audio files may be CPU‑intensive — a capable machine is recommended.
-- **Forced Alignment Disabled**: The `--align` flag is currently non‑functional and ignored. This feature will be re‑evaluated in future versions.
+This command is suitable for a scenario where you already have a script text file and a media file. It aligns the script with the audio and generates subtitles.
+
+```bash
+Centurion.Cli from-script <INPUT_FILE> <SCRIPT_FILE> [options]
+```
+
+### Common Options
+
+- `<INPUT_FILE>`: input media file
+- `<SCRIPT_FILE>`: script text file
+- `-o|--output <OUTPUT_FILE>`: output ASS file
+- `-l|--language <LANG>`: audio language, default `en`
+- `-t|--transcriber <ENGINE>`: transcription engine
+- `--tm|--transcriber-model <MODEL>`: transcriber model
+- `-a|--enable-alignment`: enable forced alignment, enabled by default
+- `--am|--alignment-model <MODEL>`: alignment model
+- `--max-cps <CPS>`: maximum displayed characters per second, default `5.0`
+- `--max-chars-per-line <CHARS>`: maximum characters per subtitle line, default `18`
+- `--coverage-threshold <RATIO>`: script coverage warning threshold, default `0.92`
+- `--fill-gap`: insert ellipses for missing script words
+
+### Examples
+
+```bash
+Centurion.Cli from-script input.mp3 script.txt -o output.ass --language en
+```
+
+```bash
+Centurion.Cli from-script input.wav script.txt --enable-alignment --max-chars-per-line 20
+```
 
 ---
 
-## 🤝 Contributing & Feedback
+## 3. `convert` Command
 
-Issues and Pull Requests are welcome! As the project is still in its early stages, please open an Issue first to discuss major feature changes before investing significant effort.
+Used to convert an existing subtitle file into ASS output, primarily for intermediate format conversion or format normalization.
+
+```bash
+Centurion.Cli convert <INPUT_FILE> [options]
+```
+
+### Options
+
+- `<INPUT_FILE>`: input subtitle file
+- `-o|--output <OUTPUT_FILE>`: output ASS file path; if omitted, it defaults to the same name with a `.ass` extension
+
+### Example
+
+```bash
+Centurion.Cli convert subtitles.srt -o subtitles.ass
+```
 
 ---
 
-## 📄 License
+## Typical Workflows
 
-MIT License — see the [LICENSE](LICENSE) file for details.
+### Generate subtitles directly
+
+```bash
+Centurion.Cli spawn video.mp4 --language en --karaoke
+```
+
+### Use a script to align the output
+
+```bash
+Centurion.Cli from-script podcast.wav transcript.txt --language en
+```
+
+### Convert to ASS output
+
+```bash
+Centurion.Cli convert input.vtt -o output.ass
+```
 
 ---
 
-**Built with .NET 10** — modular, extensible, and evolving.
+## Notes and Limitations
+
+- The project is still under active development, and command parameters and behavior may change between versions.
+- All inference currently runs on CPU, so processing long audio files may be relatively slow.
+- Forced alignment and various model strategies depend on the selected model and environment configuration. It is recommended to check the live help text with `--help`.
+- It is recommended to run `Centurion.Cli <command> --help` before each upgrade to confirm the current command-line parameters.
+
+---
+
+## Contributing and Feedback
+
+Issues, pull requests, and feedback are welcome.
+
+If you are contributing to the project, please first understand the current pipeline structure and prioritize compatibility for command-line options and output format.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+

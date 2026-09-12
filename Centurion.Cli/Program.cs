@@ -1,7 +1,7 @@
 ﻿// File: Program.cs
 using System.Globalization;
-using Centurion.Cli.Console;
 using Centurion.Cli.Commands;
+using Centurion.Cli.Console;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
@@ -12,6 +12,7 @@ using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -37,7 +38,11 @@ Console.CancelKeyPress += (_, e) =>
 
 // ----- DI Container -----
 var services = new ServiceCollection();
-services.AddLogging();
+services.AddLogging(logging => logging.AddSimpleConsole(options =>
+{
+    options.SingleLine = true;
+    options.TimestampFormat = "HH:mm:ss ";
+}));
 
 // ============================================================
 // 1. Infrastructure
@@ -51,6 +56,7 @@ services.AddSingleton<Centurion.Core.Operators.Downloader>();
 // 2. Process manager (transient)
 // ============================================================
 services.AddTransient<ProcessManager>();
+services.AddSingleton<EncoderfileManager>();
 
 // ============================================================
 // 3. Strategy factories (singleton)
@@ -70,12 +76,12 @@ services.AddTransient<CrispAsrWhisperStrategy>();
 // 5. Sentence splitting strategies
 // ============================================================
 services.AddTransient<RuleBasedSplitStrategy>();
-services.AddTransient<CatalystSplitStrategy>();
 
 // ============================================================
 // 6. Pipeline operators (transient)
 // ============================================================
 services.AddTransient<FFmpegConvertOperator>();
+services.AddTransient<AudioPreprocessOperator>();
 services.AddTransient<TranscribeOp>();
 services.AddTransient<SentenceSplitOperator>();
 services.AddTransient<TextPreprocessingOp>();
