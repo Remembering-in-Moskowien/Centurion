@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 using FFMpegCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Centurion.Core.PipeLine;
 
@@ -190,12 +191,11 @@ public static class LoudnormJsonParser
         var end = output.LastIndexOf("}", StringComparison.Ordinal);
         if (start < 0 || end <= start)
             throw new FormatException("loudnorm JSON was not found.");
-        using var document = JsonDocument.Parse(output[start..(end + 1)]);
-        var root = document.RootElement;
+        var root = JsonParser.Deserialize<JObject>(output[start..(end + 1)]);
         return new LoudnormMeasurements(Read(root, "input_i"), Read(root, "input_tp"), Read(root, "input_lra"), Read(root, "input_thresh"), Read(root, "target_offset"));
     }
 
-    private static double Read(JsonElement root, string name) => double.Parse(root.GetProperty(name).GetString()!, CultureInfo.InvariantCulture);
+    private static double Read(JObject root, string name) => double.Parse(root[name]?.Value<string>() ?? throw new FormatException($"Missing loudnorm value '{name}'."), CultureInfo.InvariantCulture);
 }
 
 public static class WavSnrEstimator

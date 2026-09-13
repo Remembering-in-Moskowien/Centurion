@@ -41,7 +41,8 @@ public sealed class ScriptLoaderOp : PipelineOperatorBase<ScriptLoaderOp>
         }
 
         context.State.ScriptSentences = sentences;
-        context.State.CurrentSentences = sentences;
+        if (string.IsNullOrWhiteSpace(context.Config.SubtitleFilePath))
+            context.State.CurrentSentences = sentences;
         _logger.LogInformation("Loaded {Count} script lines from {Path}.", sentences.Count, path);
         OnProgress(100, $"Loaded {sentences.Count} script lines.");
     }

@@ -695,11 +695,13 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         if (!string.IsNullOrEmpty(context.Config.InputFilePath))
             builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
 
-        var sentences = context.State.CurrentSentences is { Count: > 0 }
-            ? context.State.CurrentSentences
-            : context.State.AlignedSentences is { Count: > 0 }
-                ? context.State.AlignedSentences
-                : context.State.CoarseSentences;
+        var sentences = context.State.CorrectedSentences is { Count: > 0 }
+            ? context.State.CorrectedSentences
+            : context.State.CurrentSentences is { Count: > 0 }
+                ? context.State.CurrentSentences
+                : context.State.AlignedSentences is { Count: > 0 }
+                    ? context.State.AlignedSentences
+                    : context.State.CoarseSentences;
         if (sentences is null or { Count: 0 })
             return builder.WithLines([]);
 

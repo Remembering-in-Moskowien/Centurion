@@ -1,9 +1,10 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Centurion.Core.Strategy.SentenceSplit;
 
@@ -123,8 +124,7 @@ Output (JSON array only):
         // 先尝试直接反序列化
         try
         {
-            return JsonSerializer.Deserialize<List<string>>(responseText)
-                   ?? throw new InvalidOperationException("Deserialized to null.");
+                 return JsonParser.Deserialize<List<string>>(responseText);
         }
         catch (JsonException)
         {
@@ -133,8 +133,7 @@ Output (JSON array only):
             if (match.Success)
             {
                 var json = match.Value;
-                return JsonSerializer.Deserialize<List<string>>(json)
-                       ?? throw new InvalidOperationException("Failed to deserialize extracted JSON.");
+                  return JsonParser.Deserialize<List<string>>(json);
             }
             throw new FormatException("Response does not contain a valid JSON array.");
         }

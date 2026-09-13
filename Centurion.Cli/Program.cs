@@ -5,6 +5,7 @@ using Centurion.Cli.Console;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
+using Centurion.Core.Abstractions.Pipeline;
 using Centurion.Core.Factories;
 using Centurion.Core.Managers;
 using Centurion.Core.PipeLine;
@@ -88,6 +89,9 @@ services.AddTransient<TextPreprocessingOp>();
 services.AddTransient<AlignmentOp>();
 services.AddTransient<ScriptLoaderOp>();
 services.AddTransient<ScriptTimelineMapperOp>();
+services.AddTransient<SubtitleTimelineCorrectorOp>();
+services.AddTransient<SubtitleTextCorrectorOp>();
+services.AddTransient<CorrectionReportOp>();
 
 // ---------- 转换管道专用算子（使用 SubtitlesParserV2） ----------
 services.AddTransient<ConvertParseOp>();
@@ -128,6 +132,7 @@ app.Configure(config =>
     config.SetApplicationName("Centurion");
     config.AddCommand<SpawnCommand>("spawn");
     config.AddCommand<FromScriptCommand>("from-script");
+    config.AddCommand<CorrectCommand>("correct");
     config.AddCommand<ConvertCommand>("convert");
 });
 

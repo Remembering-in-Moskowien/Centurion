@@ -30,11 +30,11 @@ public sealed class SpawnSettings : CommandSettings
     // ----- 转录模块 (Transcriber) -----
     [CommandOption("-t|--transcriber <ENGINE>")]
     [Description("Transcription engine: whisper, crisp")]
-    public string Transcriber { get; init; } = "whisper";
+    public string Transcriber { get; init; } = "crispasr";
 
     [CommandOption("--tm|--transcriber-model <MODEL>")]
     [Description("Model name for the transcriber (e.g., base, large, qwen-asr-1.0)")]
-    public string? TranscriberModel { get; init; } = "large";
+    public string? TranscriberModel { get; init; } = "qwen3-asr-1.7b";
 
     [CommandOption("--tp|--transcriber-prompt <PROMPT>")]
     [Description("Initial prompt for transcription")]
@@ -63,7 +63,7 @@ public sealed class SpawnSettings : CommandSettings
 
     // ----- 分句模块 (Splitter) -----
     [CommandOption("-s|--splitter <STRATEGY>")]
-    [Description("Split strategy: rule, nlp (Encoderfile NER), llm")]
+    [Description("Split strategy: rule, llm")]
     public string Splitter { get; init; } = "rule";
 
     [CommandOption("--splitter-chunk-granularity <LEVEL>")]
@@ -91,7 +91,7 @@ public sealed class SpawnSettings : CommandSettings
     public string? SplitterApiKey { get; init; }
 
     // ----- 对齐模块 (Alignment) -----
-    [CommandOption("-a|--enable-alignment")]
+    [CommandOption("-a|--align")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
 

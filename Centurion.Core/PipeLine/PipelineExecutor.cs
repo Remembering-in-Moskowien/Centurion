@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Pipeline;
 using Centurion.Core.Models;
 using Microsoft.Extensions.Logging;
 
