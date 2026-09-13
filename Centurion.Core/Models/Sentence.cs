@@ -8,7 +8,6 @@ public class Sentence
     public double End { get; set; }
     public bool SkipRender { get; set; }
     public List<Word> Words { get; set; } = [];
-    public List<Word> Extensions { get; set; } = [];
 }
 
 public enum MappingStatus

@@ -1,4 +1,5 @@
 <Solution>
     <Project Path="Centurion.Cli/Centurion.Cli.csproj" />
     <Project Path="Centurion.Core/Centurion.Core.csproj" />
+    <Project Path="Centurion.Tests/Centurion.Tests.csproj" />
 </Solution>

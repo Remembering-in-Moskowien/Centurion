@@ -1,6 +1,7 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Core;
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Pipeline;
 using Centurion.Core.Models;
 using Centurion.Core.PipeLine;
 using Microsoft.Extensions.Logging;

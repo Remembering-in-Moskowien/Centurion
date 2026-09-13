@@ -24,8 +24,12 @@ public class WorkflowConfig
 {
     // ---------- 输入/输出 ----------
     public string InputFilePath { get; init; } = string.Empty;
+    public string? SubtitleFilePath { get; init; }
     public string? OutputFilePath { get; init; }
     public string? ScriptFilePath { get; init; }
+    public CorrectionStrategy CorrectStrategy { get; init; } = CorrectionStrategy.Both;
+    public int MaxDriftMs { get; init; } = 1500;
+    public double FuzzyThreshold { get; init; } = 0.72;
     public string MapperStrategy { get; init; } = "rule";
     public double CoverageThreshold { get; init; } = 0.92;
     public double MaxCps { get; init; } = 5.0;
@@ -62,7 +66,7 @@ public class WorkflowConfig
     // ---------- 其他 ----------
     public string CacheDirectory { get; init; } = "./cache";
     public bool EnableAlignment { get; init; } = true;
-    public string? AlignmentModel { get; init; }
+    public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 
     // ---------- 对齐前文本清洗 ----------
     public bool EnableTextCleaning { get; init; } = true;
@@ -88,6 +92,8 @@ public class WorkflowState
     // ---------- 各阶段处理后的句子列表 ----------
     // 注意：Sentence 中的 Word 对象会逐步被下游算子补充 Speaker 和精确时间戳。
     public List<Sentence> TranscribeSentences { get; set; } = []; // 刚转录完，无说话人信息
+    public List<Sentence> SubtitleSentences { get; set; } = []; // 校准输入的原始字幕基线
+    public List<Sentence> CorrectedSentences { get; set; } = [];
     public List<Sentence> SplitSentences { get; set; } = []; // 分句后（合并/切分），无说话人信息
     public List<Sentence> DiarizedSentences { get; set; } = []; // 说话人标注后（每个 Word 带 Speaker）
     public List<Sentence> AlignedSentences { get; set; } = []; // 强制对齐后（词级时间戳修正）
@@ -116,9 +122,29 @@ public class WorkflowState
     // ---------- 运行时诊断信息 ----------
     public List<string> Errors { get; set; } = [];
     public List<string> Warnings { get; set; } = [];
+    public CorrectionReport Report { get; set; } = new();
 
     // ---------- 扩展数据槽（用于算子间临时传递非常规数据，避免改上下文结构） ----------
     public Dictionary<string, object> Extensions { get; set; } = new();
+}
+
+public enum CorrectionStrategy
+{
+    TimelineOnly,
+    TextOnly,
+    Both
+}
+
+public sealed class CorrectionReport
+{
+    public int TotalSentences { get; set; }
+    public int TextCorrected { get; set; }
+    public int TimelineShifted { get; set; }
+    public int Unmatched { get; set; }
+    public int Removed { get; set; }
+    public double AverageDriftMs { get; set; }
+    public double TextCoverage { get; set; }
+    public TimeSpan Elapsed { get; set; }
 }
 
 

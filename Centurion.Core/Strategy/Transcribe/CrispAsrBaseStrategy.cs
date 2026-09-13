@@ -1,12 +1,13 @@
 ﻿// Centurion.Core/Strategies/Transcription/CrispAsrBaseStrategy.cs
 
-using System.Text.Json;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Centurion.Core.Strategy.Transcribe;
 
@@ -113,27 +114,29 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     /// </summary>
     private List<Word> ParseJsonOutput(string json)
     {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        var root = JsonParser.Deserialize<JObject>(json);
 
-        if (!root.TryGetProperty("transcription", out var transcriptionArray))
+        if (root["transcription"] is not JArray transcriptionArray)
             throw new InvalidOperationException("Missing 'transcription' array in CrispASR JSON output.");
 
         var words = new List<Word>();
-        foreach (var segment in transcriptionArray.EnumerateArray())
+        foreach (var segment in transcriptionArray.OfType<JObject>())
         {
-            if (!segment.TryGetProperty("words", out var wordArray))
+            if (segment["words"] is not JArray wordArray)
                 continue;
 
-            foreach (var wordElement in wordArray.EnumerateArray())
+            foreach (var wordElement in wordArray.OfType<JObject>())
             {
-                var text = wordElement.GetProperty("text").GetString() ?? string.Empty;
+                var text = wordElement["text"]?.Value<string>() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(text))
                     continue;
 
-                var offsets = wordElement.GetProperty("offsets");
-                var fromMs = offsets.GetProperty("from").GetInt64();
-                var toMs = offsets.GetProperty("to").GetInt64();
+                var offsets = wordElement["offsets"] as JObject
+                    ?? throw new InvalidOperationException("Missing 'offsets' in CrispASR word output.");
+                var fromMs = offsets["from"]?.Value<long>()
+                    ?? throw new InvalidOperationException("Missing 'from' in CrispASR word offsets.");
+                var toMs = offsets["to"]?.Value<long>()
+                    ?? throw new InvalidOperationException("Missing 'to' in CrispASR word offsets.");
 
                 words.Add(new Word
                 {

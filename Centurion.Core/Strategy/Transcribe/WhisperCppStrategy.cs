@@ -4,9 +4,9 @@ using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Centurion.Core.Strategy.Transcribe;
 
@@ -54,8 +54,7 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
 
         // 6. 读取并解析 JSON
         var jsonContent = File.ReadAllText(jsonPath);
-        var whisperResult = JsonConvert.DeserializeObject<WhisperTranscriptJson>(jsonContent)
-            ?? throw new InvalidOperationException("Failed to deserialize Whisper JSON output.");
+        var whisperResult = JsonParser.Deserialize<WhisperTranscriptJson>(jsonContent);
 
         // 7. 提取词级信息
         return ExtractWords(whisperResult);

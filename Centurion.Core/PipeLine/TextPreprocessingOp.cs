@@ -1,8 +1,8 @@
 using System.Globalization;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Models;
+using Centurion.Core.Utils;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 
@@ -94,7 +94,7 @@ public class TextPreprocessingOp : PipelineOperatorBase<TextPreprocessingOp>
 
         try
         {
-            var custom = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path));
+            var custom = JsonParser.Deserialize<Dictionary<string, string>>(File.ReadAllText(path));
             if (custom is not null)
             {
                 foreach (var pair in custom)

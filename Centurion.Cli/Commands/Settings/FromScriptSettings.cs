@@ -50,7 +50,7 @@ public sealed class FromScriptSettings : CommandSettings
     [Description("Disable EBU R128 loudness normalization")]
     public bool DisableAudioLoudness { get; init; }
 
-    [CommandOption("-a|--enable-alignment")]
+    [CommandOption("-a|--align")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
     

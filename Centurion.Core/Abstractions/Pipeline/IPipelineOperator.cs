@@ -1,6 +1,6 @@
 ﻿using Centurion.Core.Models;
 
-namespace Centurion.Core.Abstractions;
+namespace Centurion.Core.Abstractions.Pipeline;
 
 /// <summary>
 /// 管道算子基接口。
