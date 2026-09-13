@@ -85,7 +85,6 @@ services.AddTransient<AudioPreprocessOperator>();
 services.AddTransient<TranscribeOp>();
 services.AddTransient<SentenceSplitOperator>();
 services.AddTransient<TextPreprocessingOp>();
-services.AddTransient<Centurion.Core.Operators.EncoderfileNerOperator>();
 services.AddTransient<AlignmentOp>();
 services.AddTransient<ScriptLoaderOp>();
 services.AddTransient<ScriptTimelineMapperOp>();
