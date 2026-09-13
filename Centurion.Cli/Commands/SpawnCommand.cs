@@ -17,6 +17,7 @@ public sealed class SpawnCommand(
     TranscribeOp transcribeOp,
     SentenceSplitOperator splitOp,
     TextPreprocessingOp textCleaningOp,
+    EncoderfileNerOperator encoderfileNerOp,
     AlignmentOp alignmentOp,
     PipelineExecutor pipelineExecutor,
     ILogger<SpawnCommand> logger)
@@ -85,6 +86,10 @@ public sealed class SpawnCommand(
                 textCleaningOp,
                 alignmentOp
             };
+
+            if (settings.Splitter.Equals("nlp", StringComparison.OrdinalIgnoreCase) ||
+                settings.Splitter.Equals("catalyst", StringComparison.OrdinalIgnoreCase))
+                operators.Insert(operators.Count - 1, encoderfileNerOp);
 
             // Execute the dynamic pipeline
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
