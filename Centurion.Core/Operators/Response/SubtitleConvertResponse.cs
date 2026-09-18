@@ -1,4 +1,4 @@
-﻿using Centurion.Core.Models;
+﻿using Centurion.Core.Models.Ass;
 
 namespace Centurion.Core.Operators.Response;
 

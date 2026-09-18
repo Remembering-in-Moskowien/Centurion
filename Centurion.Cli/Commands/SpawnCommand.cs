@@ -1,11 +1,12 @@
 ﻿// File: Centurion.Cli/Commands/SpawnCommand.cs
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Models;
-using Centurion.Core.Operators;
-using Centurion.Core.PipeLine;
+using Centurion.Core.Infrastructure;
+using Centurion.Core.Models.Ass;
+using Centurion.Core.Models.Workflow;
+using Centurion.Core.Pipeline;
+using Centurion.Core.Pipeline.Operators;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
@@ -15,10 +16,10 @@ public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
-    TranscribeOp transcribeOp,
+    TranscribeOperator transcribeOp,
     SentenceSplitOperator splitOp,
-    TextPreprocessingOp textCleaningOp,
-    AlignmentOp alignmentOp,
+    TextPreprocessingOperator textCleaningOp,
+    AlignmentOperator alignmentOp,
     PipelineExecutor pipelineExecutor,
     ILogger<SpawnCommand> logger)
     : AsyncCommand<SpawnSettings>
@@ -65,7 +66,7 @@ public sealed class SpawnCommand(
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
                 SplitterApiKey = settings.SplitterApiKey,
-                
+
                 EnableAlignment = settings.EnableAlignment,
                 AlignmentModel = settings.AlignmentModel
             };

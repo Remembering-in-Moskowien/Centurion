@@ -33,22 +33,6 @@ public sealed class CorrectSettings : CommandSettings
     [Description("Minimum text similarity from 0 to 1")]
     public double FuzzyThreshold { get; init; } = 0.72;
 
-    [CommandOption("-a|--align")]
-    [Description("Enable forced alignment")]
-    public bool Align { get; init; } = true;
-
-    [CommandOption("-t|--transcriber <ENGINE>")]
-    [Description("Transcription engine")]
-    public string Transcriber { get; init; } = "crispasr";
-
-    [CommandOption("--tm|--transcriber-model <MODEL>")]
-    [Description("Transcription model")]
-    public string? TranscriberModel { get; init; } = "qwen3-asr-1.7b";
-
-    [CommandOption("--tp|--transcriber-prompt <PROMPT>")]
-    [Description("Initial transcription prompt")]
-    public string? TranscriberPrompt { get; init; }
-
     [CommandOption("--disable-audio-resampling")]
     [Description("Disable audio resampling")]
     public bool DisableAudioResampling { get; init; }

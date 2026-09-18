@@ -1,0 +1,112 @@
+﻿// File: Centurion.Core/Pipeline/Operators/ConvertParseOperator.cs
+using System.Text.RegularExpressions;
+using Centurion.Core.Abstractions.Pipeline;
+using Centurion.Core.Models;
+using Centurion.Core.Models.Workflow;
+using SubtitlesParserV2;
+
+namespace Centurion.Core.Pipeline.Operators;
+
+/// <summary>
+/// 转换管道 - 使用 SubtitlesParserV2 解析输入字幕文件，
+/// 并将每个字幕条目转换为 Sentence 对象存入 TranscribeSentences。
+/// </summary>
+public partial class ConvertParseOperator : IPipelineOperator
+{
+    public string Name => "ConvertParse";
+
+    public async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken = default)
+    {
+        var inputPath = context.Config.SubtitleFilePath ?? context.Config.InputFilePath;
+        if (string.IsNullOrEmpty(inputPath) || !File.Exists(inputPath))
+            throw new FileNotFoundException("Subtitle file not found.", inputPath);
+
+        await using var stream = File.OpenRead(inputPath);
+        var subtitle = SubtitleParser.ParseStream(stream)?.Subtitles;
+
+        if (subtitle == null || subtitle.Count == 0)
+            throw new InvalidOperationException("No subtitle items parsed.");
+
+        // 转换为 Sentence 列表
+        var sentences = subtitle
+            .Where(item => item.Lines.Count > 0)
+            .Select(item =>
+            {
+                var text = string.Join(" ", item.Lines);
+                var words = ParseKaraokeWords(text, item.StartTime, item.EndTime);
+                return new Sentence
+                {
+                    Text = KaraokeTagRegex().Replace(text, string.Empty).Trim(),
+                    Start = item.StartTime,
+                    End = item.EndTime,
+                    Words = words
+                };
+            })
+            .ToList();
+
+        // 保留独立基线；转换管道仍使用 TranscribeSentences 作为现有输出槽。
+        context.State.SubtitleSentences = sentences.Select(CloneSentence).ToList();
+        context.State.TranscribeSentences = sentences;
+        context.State.CurrentSentences = sentences;
+    }
+
+    private static Sentence CloneSentence(Sentence source)
+    {
+        return new Sentence
+        {
+            Text = source.Text,
+            CleanedText = source.CleanedText,
+            Start = source.Start,
+            End = source.End,
+            SkipRender = source.SkipRender,
+            Words = source.Words.Select(word => new Word
+            {
+                Text = word.Text,
+                Start = word.Start,
+                End = word.End,
+                Speaker = word.Speaker,
+                PosTag = word.PosTag,
+                Status = word.Status
+            }).ToList()
+        };
+    }
+
+    private static List<Word> ParseKaraokeWords(string text, double sentenceStart, double sentenceEnd)
+    {
+        var matches = KaraokeWordRegex().Matches(text);
+        if (matches.Count == 0)
+            return [];
+
+        var words = new List<Word>(matches.Count);
+        var cursor = sentenceStart;
+        foreach (Match match in matches)
+        {
+            if (!double.TryParse(match.Groups[1].Value, out var centiseconds))
+                continue;
+
+            var wordText = match.Groups[2].Value.Trim();
+            if (wordText.Length == 0)
+                continue;
+
+            var start = cursor;
+            var end = Math.Min(sentenceEnd, start + centiseconds * 10);
+            words.Add(new Word
+            {
+                Text = wordText,
+                Start = start,
+                End = end,
+                Speaker = "UNKNOWN",
+                Status = MappingStatus.Matched
+            });
+            cursor = end;
+        }
+
+        return words;
+    }
+
+    [GeneratedRegex(@"\{\\[Kk](\d+)\}([^{}]*)")]
+    private static partial Regex KaraokeWordRegex();
+
+    [GeneratedRegex(@"\{\\[Kk]\d+\}")]
+    private static partial Regex KaraokeTagRegex();
+}

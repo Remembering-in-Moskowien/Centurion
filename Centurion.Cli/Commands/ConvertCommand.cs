@@ -1,11 +1,12 @@
 ﻿// File: Centurion.Cli/Commands/ConvertCommand.cs
 
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core;
 using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Models;
-using Centurion.Core.PipeLine;
+using Centurion.Core.Infrastructure;
+using Centurion.Core.Models.Ass;
+using Centurion.Core.Models.Workflow;
+using Centurion.Core.Pipeline;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -38,7 +39,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             var workflowContext = new SubtitleWorkflowContext(config);
 
             // 执行管道（仅包含解析算子）
-            var operators = _convertOperatorsFactory(); // 返回 [ConvertParseOp]
+            var operators = _convertOperatorsFactory(); // 返回 [ConvertParseOperator]
             await _executor.ExecuteAsync(operators, workflowContext, cancellationToken);
 
             // 使用 AssSubBuilder 从上下文构建 ASS 字幕

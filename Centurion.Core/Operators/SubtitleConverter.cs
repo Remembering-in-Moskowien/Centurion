@@ -1,6 +1,7 @@
 ﻿using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Models;
+using Centurion.Core.Models.Ass;
 using Centurion.Core.Operators.Request;
 using Centurion.Core.Operators.Response;
 

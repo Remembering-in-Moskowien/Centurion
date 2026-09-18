@@ -7,12 +7,29 @@ public class ToolMeta
     public required string DownloadUrl { get; set; }       // 下载包URL（zip或tar）
     public required string ArchiveType { get; set; }       // "zip" 或 "tar.gz"
     public required string ExecutableRelativePath { get; set; } // 解压后可执行文件相对路径
-   public string? Version { get; set; }
+    public string? Version { get; set; }
 }
 
-public static class ToolRegistry
+/// <summary>
+/// 工具元数据注册表。
+/// 实例化对象，由 <see cref="MetadataJsonLoader"/> 在程序启动时从外部 JSON 加载；
+/// 未提供外部配置时回退到 <see cref="Default"/>（内置默认条目）。
+/// </summary>
+public sealed class ToolRegistry
 {
-    public static IReadOnlyDictionary<string, ToolMeta> Tools { get; } =
+    /// <summary>
+    /// 内置默认注册表（外部 JSON 缺失时的回退值，也是种子文件的内容来源）。
+    /// </summary>
+    public static ToolRegistry Default { get; } = new(BuildDefaultTools());
+
+    public IReadOnlyDictionary<string, ToolMeta> Tools { get; }
+
+    public ToolRegistry(IReadOnlyDictionary<string, ToolMeta> tools)
+    {
+        Tools = tools ?? throw new ArgumentNullException(nameof(tools));
+    }
+
+    private static IReadOnlyDictionary<string, ToolMeta> BuildDefaultTools() =>
         new Dictionary<string, ToolMeta>(StringComparer.OrdinalIgnoreCase)
         {
             ["whispercpp"] = new()

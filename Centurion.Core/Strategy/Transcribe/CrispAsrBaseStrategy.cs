@@ -1,6 +1,7 @@
 ﻿// Centurion.Core/Strategies/Transcription/CrispAsrBaseStrategy.cs
 
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
@@ -25,8 +26,8 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)
     {
-        _toolManager = new ToolManager("crispasr", serviceProvider);
-        _processManager = new ProcessManager(serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
+        _toolManager = serviceProvider.GetRequiredService<IToolManagerFactory>().Create("crispasr");
+        _processManager = serviceProvider.GetRequiredService<ProcessManager>();
         _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
         _logger = serviceProvider.GetRequiredService<ILogger<CrispAsrBaseStrategy>>();
     }

@@ -1,5 +1,6 @@
 using Centurion.Core.Models;
-using Centurion.Core.PipeLine;
+using Centurion.Core.Models.Workflow;
+using Centurion.Core.Pipeline.Operators;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -18,7 +19,7 @@ public sealed class SubtitleTextCorrectorTests
             End = 200,
             Words = [word]
         };
-        var context = new SubtitleWorkflowContext(new WorkflowConfig { FuzzyThreshold = 0.7 })
+        var context = new SubtitleWorkflowContext(new WorkflowConfig { FuzzyThreshold = 0.7, ScriptFilePath = "script.txt" })
         {
             State = new WorkflowState
             {
@@ -27,7 +28,7 @@ public sealed class SubtitleTextCorrectorTests
             }
         };
 
-        var operatorInstance = new SubtitleTextCorrectorOp(NullLogger<SubtitleTextCorrectorOp>.Instance);
+        var operatorInstance = new SubtitleTextCorrectorOperator(NullLogger<SubtitleTextCorrectorOperator>.Instance);
         await operatorInstance.ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal("hello", subtitle.Text);
@@ -42,7 +43,7 @@ public sealed class SubtitleTextCorrectorTests
     {
         var first = new Sentence { Text = "unrelated", Start = 0, End = 100 };
         var second = new Sentence { Text = "target", Start = 100, End = 200 };
-        var context = new SubtitleWorkflowContext(new WorkflowConfig { FuzzyThreshold = 0.9 })
+        var context = new SubtitleWorkflowContext(new WorkflowConfig { FuzzyThreshold = 0.9, ScriptFilePath = "script.txt" })
         {
             State = new WorkflowState
             {
@@ -54,7 +55,7 @@ public sealed class SubtitleTextCorrectorTests
             }
         };
 
-        var operatorInstance = new SubtitleTextCorrectorOp(NullLogger<SubtitleTextCorrectorOp>.Instance);
+        var operatorInstance = new SubtitleTextCorrectorOperator(NullLogger<SubtitleTextCorrectorOperator>.Instance);
         await operatorInstance.ExecuteAsync(context, CancellationToken.None);
 
         Assert.Equal("unrelated", first.Text);
