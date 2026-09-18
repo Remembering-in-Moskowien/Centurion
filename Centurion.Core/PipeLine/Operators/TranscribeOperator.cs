@@ -40,8 +40,11 @@ public class TranscribeOperator(
 
         var config = context.Config;
 
-        // 获取音频路径
-        var audioPath = context.State.PreprocessedAudioPath ?? context.State.ConvertedAudioPath ?? config.InputFilePath;
+        // 获取音频路径（人声分离后优先使用人声轨）
+        var audioPath = context.State.VocalsPath
+            ?? context.State.PreprocessedAudioPath
+            ?? context.State.ConvertedAudioPath
+            ?? config.InputFilePath;
         if (!File.Exists(audioPath))
             throw new FileNotFoundException($"Audio file not found: {audioPath}");
 
@@ -62,7 +65,8 @@ public class TranscribeOperator(
                 config.Language,
                 config.TranscriberModel ?? "base",
                 config.InitialPrompt,
-                cancellationToken);
+                cancellationToken,
+                config.Device);
 
             if (words == null || words.Count == 0)
                 throw new Exception("Transcription returned no words.");

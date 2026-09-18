@@ -2,11 +2,13 @@ using Centurion.Core.Abstractions;
 using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Pipeline;
 using Centurion.Core.Factories;
+using Centurion.Core.Infrastructure;
 using Centurion.Core.Managers;
 using Centurion.Core.Models.Metadata;
 using Centurion.Core.Operators;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
+using Centurion.Core.Strategy.Diarization;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
 using Centurion.Core.Utils;
@@ -39,6 +41,7 @@ public static class ServiceCollectionExtensions
 
         // ---------- 1. 基础设施 ----------
         services.AddSingleton<IBinaryLocator, BinaryLocator>();
+        services.AddSingleton<IDeviceDetector, DeviceDetector>();
         services.AddSingleton<ITempDirectoryManager, TempDirectoryManager>();
         services.AddSingleton<IModelPathResolver, ModelPathResolver>();
         services.AddSingleton<Centurion.Core.Operators.Downloader>();
@@ -52,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITranscriptionStrategyFactory, TranscriptionStrategyFactory>();
         services.AddSingleton<ISentenceSplitStrategyFactory, SentenceSplitStrategyFactory>();
         services.AddSingleton<IAlignmentStrategyFactory, AlignmentStrategyFactory>();
+        services.AddSingleton<IDiarizationStrategyFactory, DiarizationStrategyFactory>();
         services.AddSingleton<IToolManagerFactory, ToolManagerFactory>();
 
         // ---------- 4. 转录策略（具体实现） ----------
@@ -59,13 +63,19 @@ public static class ServiceCollectionExtensions
         services.AddTransient<CrispAsrQwenStrategy>();
         services.AddTransient<CrispAsrWhisperStrategy>();
 
+        // ---------- 4b. 说话人分割策略 ----------
+        services.AddTransient<CrispAsrDiarizationStrategy>();
+        services.AddTransient<PyannoteTitaNetDiarizationStrategy>();
+
         // ---------- 5. 分句策略 ----------
         services.AddTransient<RuleBasedSplitStrategy>();
 
         // ---------- 6. 管道算子 ----------
         services.AddTransient<FFmpegConvertOperator>();
         services.AddTransient<AudioPreprocessOperator>();
+        services.AddTransient<VocalSeparationOperator>();
         services.AddTransient<TranscribeOperator>();
+        services.AddTransient<DiarizationOperator>();
         services.AddTransient<SentenceSplitOperator>();
         services.AddTransient<TextPreprocessingOperator>();
         services.AddTransient<AlignmentOperator>();

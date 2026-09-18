@@ -132,10 +132,31 @@ public static class MetadataJsonLoader
                 ArchiveType = string.IsNullOrWhiteSpace(dto.ArchiveType) ? "zip" : dto.ArchiveType!,
                 ExecutableRelativePath = dto.ExecutableRelativePath
                     ?? throw new InvalidOperationException($"Tool '{key}' is missing 'executableRelativePath'."),
-                Version = dto.Version
+                Version = dto.Version,
+                Variants = BuildVariants(dto.Variants)
             };
         }
         return new ToolRegistry(dict);
+    }
+
+    private static Dictionary<string, ToolVariant>? BuildVariants(Dictionary<string, ToolVariantDto>? dtoVariants)
+    {
+        if (dtoVariants == null || dtoVariants.Count == 0)
+            return null;
+
+        var result = new Dictionary<string, ToolVariant>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (deviceKey, dto) in dtoVariants)
+        {
+            if (dto == null) continue;
+            result[deviceKey] = new ToolVariant
+            {
+                DownloadUrl = dto.DownloadUrl,
+                ArchiveType = dto.ArchiveType,
+                ExecutableRelativePath = dto.ExecutableRelativePath,
+                Description = dto.Description
+            };
+        }
+        return result;
     }
 
     private static ModelRegistry BuildModels(Dictionary<string, Dictionary<string, ModelMetaDto>>? dtoModels)
@@ -235,7 +256,17 @@ public static class MetadataJsonLoader
         DownloadUrl = meta.DownloadUrl,
         ArchiveType = meta.ArchiveType,
         ExecutableRelativePath = meta.ExecutableRelativePath,
-        Version = meta.Version
+        Version = meta.Version,
+        Variants = meta.Variants?.ToDictionary(
+            kv => kv.Key, kv => ToDto(kv.Value), StringComparer.OrdinalIgnoreCase)
+    };
+
+    private static ToolVariantDto ToDto(ToolVariant variant) => new()
+    {
+        DownloadUrl = variant.DownloadUrl,
+        ArchiveType = variant.ArchiveType,
+        ExecutableRelativePath = variant.ExecutableRelativePath,
+        Description = variant.Description
     };
 
     private static ModelMetaDto ToDto(ModelMeta meta) => new()
@@ -270,6 +301,16 @@ public static class MetadataJsonLoader
         public string? ArchiveType { get; set; }
         public string? ExecutableRelativePath { get; set; }
         public string? Version { get; set; }
+        public Dictionary<string, ToolVariantDto>? Variants { get; set; }
+    }
+
+    /// <summary>工具按设备变体的 JSON 结构。</summary>
+    public sealed class ToolVariantDto
+    {
+        public string? DownloadUrl { get; set; }
+        public string? ArchiveType { get; set; }
+        public string? ExecutableRelativePath { get; set; }
+        public string? Description { get; set; }
     }
 
     /// <summary>模型条目 JSON 结构。</summary>

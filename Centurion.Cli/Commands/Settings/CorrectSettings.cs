@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Centurion.Core.Abstractions;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands.Settings;
@@ -44,6 +45,20 @@ public sealed class CorrectSettings : CommandSettings
     [CommandOption("--disable-audio-loudness")]
     [Description("Disable loudness normalization")]
     public bool DisableAudioLoudness { get; init; }
+
+    // ----- 人声分离模块 (Vocal Separation) -----
+    [CommandOption("--vocal-separation")]
+    [Description("Separate vocals with Demucs before alignment (only for music/BGM-heavy media)")]
+    public bool VocalSeparation { get; init; } = false;
+
+    [CommandOption("--vocal-separation-model <MODEL>")]
+    [Description("Demucs model name, default htdemucs")]
+    public string VocalSeparationModel { get; init; } = "htdemucs";
+
+    // ----- 推理设备 (Device) -----
+    [CommandOption("--device <DEVICE>")]
+    [Description("Inference device: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded)")]
+    public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
 
     [CommandOption("-k|--karaoke")]
     [Description("Generate ASS karaoke effects")]

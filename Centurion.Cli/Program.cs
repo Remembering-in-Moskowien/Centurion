@@ -2,6 +2,7 @@
 using System.Globalization;
 using Centurion.Cli.Commands;
 using Centurion.Cli.Console;
+using Centurion.Core.Abstractions;
 using Centurion.Core.DependencyInjection;
 using Centurion.Core.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,7 +42,18 @@ services.AddLogging(logging => logging.AddSimpleConsole(options =>
 services.AddCenturionCore();
 
 // ----- Build service provider -----
-_ = services.BuildServiceProvider();
+var serviceProvider = services.BuildServiceProvider();
+
+// 设备检测：打印 GPU/内存摘要（GPU 可用时工具将自动下载对应变体，如 whisper.cpp CUDA 版）
+try
+{
+    var detected = serviceProvider.GetRequiredService<IDeviceDetector>().Detect();
+    AnsiConsole.MarkupLine($"[grey]Device: {detected.DeviceSummary}[/]");
+}
+catch (Exception ex)
+{
+    AnsiConsole.MarkupLine($"[grey]Device detection failed: {ex.Message}[/]");
+}
 
 // ----- Configure Spectre.Cli -----
 var registrar = new Centurion.Cli.TypeRegistrar(services);

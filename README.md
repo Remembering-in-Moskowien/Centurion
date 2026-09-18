@@ -1,65 +1,81 @@
-# Centurion
+# 🛡️ Centurion
 
-Centurion is a .NET 10 CLI tool for generating ASS subtitles from audio/video files. It supports a complete workflow covering speech recognition, sentence splitting, script alignment, and subtitle export.
+**Speech → Subtitles, done properly.** Centurion is a .NET 10 CLI that turns audio/video into polished ASS subtitles — transcription, sentence splitting, script alignment, speaker diarization, vocal separation, and export, all in one pipeline. 🎬✨
 
-The project uses an operator pipeline architecture, where transcription, sentence splitting, text cleanup, and alignment are separated into independent modules to make the system extensible and easier to replace with different strategies.
-
----
-
-## Project Status
-
-- This project is still in an early development / pre-release stage, and commands and parameters may change as the project evolves.
-- Primary output target: ASS subtitle files.
-- Runtime environment: CPU-based inference; GPU acceleration is currently not supported.
-- Dependencies: FFmpeg, .NET 10 SDK.
+It's built as a **operator-pipeline architecture**: every stage (transcribe → diarize → split → clean → align) is an independent module that you can swap, extend, or reorder. No monoliths, no tears. 🧩
 
 ---
 
-## Feature Overview
+## 🚦 Project Status
 
-- Generate ASS subtitles from audio/video files
-- Support transcription engines such as Whisper and Crisp
-- Support rule-based sentence splitting, Catalyst/NLP splitting, and LLM-based splitting strategies
-- Support text cleaning and script-based alignment
-- Support forced alignment
-- Support karaoke mode to generate timing with `\K` markers
-- Support subtitle generation from plain-text script files
-- Support subtitle conversion across different formats
+> ⚠️ Still in early development (pre-release). Commands and flags may shift as we go — check `--help` if something surprises you.
+
+- 🎯 Primary output: **ASS subtitle files**
+- 🧠 Inference: **CPU by default, GPU auto-detected & auto-downloaded** when available (see [🖥️ GPU section](#-gpu-detection--auto-download))
+- 🔧 Dependencies: **FFmpeg**, **.NET 10 SDK** — everything else is downloaded on demand (see [🗂️ Metadata Registry](#-metadata-registry))
 
 ---
 
-## Requirements
+## ✨ Feature Overview
 
-### 1. Install .NET 10 SDK
-
-Make sure the .NET 10 SDK is installed:
-
-- https://dotnet.microsoft.com/download
-
-### 2. Install FFmpeg
-
-Centurion depends on FFmpeg for audio/video processing.
-
-- https://ffmpeg.org/download.html
-- On Windows, it is recommended to add the FFmpeg `bin` directory to `PATH`
+- 🎬 Generate ASS subtitles from audio/video files (mp3, mp4, mkv, flac, ...)
+- 🗣️ Multiple transcription engines: **Whisper.cpp** and **CrispASR** (Qwen3 / Whisper backends)
+- 👥 **Speaker diarization** on every pipeline path — two backends: CrispASR built-in & Pyannote + TitaNet
+- 🎤 **Vocal separation** with Demucs-rs (opt-in, great for music/BGM-heavy media)
+- 🖥️ **GPU detection** (NVIDIA CUDA / Vulkan / DirectML) with automatic download of GPU tool builds
+- ✂️ Rule-based / NLP / LLM sentence splitting
+- 📏 Forced alignment (word-level timestamps) + text cleaning
+- 🎵 Karaoke mode with `\K` tags
+- 📜 Script-based subtitle generation (台本打轴)
+- 🛠️ Subtitle calibration (correct existing subs against audio/script)
+- 🔄 Subtitle format conversion (SRT/VTT/... → ASS)
 
 ---
 
-## Build the Project
+## 🧠 Architecture
 
-Run this at the repository root:
+```
+ input ──► FFmpegConvert ──► AudioPreprocess ──► [VocalSeparation] ──► Transcribe
+              ──► Diarization ──► SentenceSplit ──► TextCleaning ──► Alignment ──► ASS 📦
+```
+
+- Each step is a `PipelineOperator` operating on a shared `SubtitleWorkflowContext` (immutable `WorkflowConfig` + mutable `WorkflowState`)
+- Pipelines are **assembled dynamically per command** and executed by `PipelineExecutor`
+- Everything is **async** and **cancellation-aware**; non-fatal failures log a warning and keep going 💪
+
+---
+
+## ⚙️ Requirements
+
+### 1️⃣ Install .NET 10 SDK
+
+👉 https://dotnet.microsoft.com/download
+
+### 2️⃣ Install FFmpeg
+
+Centurion uses FFmpeg for audio/video processing.
+
+👉 https://ffmpeg.org/download.html
+
+On Windows, add the FFmpeg `bin` directory to your `PATH` (or drop `ffmpeg.exe` / `ffprobe.exe` into the project's `tools/ffmpeg` folder). 🔧
+
+> 🎁 Everything else (whisper.cpp, CrispASR, Demucs-rs, models) is downloaded **automatically on first use** — no manual installs.
+
+---
+
+## 🔨 Build the Project
 
 ```bash
 dotnet build -c Release
 ```
 
-The build output will be generated under:
+Output lands in:
 
 ```text
 Centurion.Cli/bin/Release/net10.0/
 ```
 
-If you want to run the executable directly, use:
+Run it directly:
 
 ```bash
 ./Centurion.Cli/bin/Release/net10.0/Centurion.Cli
@@ -67,162 +83,267 @@ If you want to run the executable directly, use:
 
 ---
 
-## Command List
+## 🎮 Command List
 
-The current CLI includes three main commands:
-
-- `spawn`: core subtitle generation command
-- `from-script`: generate subtitles from a script file plus media input
-- `convert`: subtitle format conversion helper command
+| Command | What it does | Signature |
+|---|---|---|
+| `spawn` | 🎬 Standard transcription: media → ASS | `spawn <INPUT_FILE>` |
+| `correct` | 📜 Script timing (打轴): media + script → ASS | `correct <INPUT_FILE> <SCRIPT_FILE>` |
+| `from-script` | 🛠️ Calibrate existing subtitles against audio/script | `from-script <SUBTITLE_FILE>` |
+| `convert` | 🔄 Subtitle format conversion | `convert <INPUT_FILE>` |
 
 ---
 
-## 1. `spawn` Command
+## 1️⃣ `spawn` — Standard Transcription 🎬
 
-Used to generate ASS subtitles directly from an input media file.
+The bread-and-butter command: media file in, ASS subtitles out.
 
 ```bash
-Centurion.Cli spawn <INPUT_FILE> [options]
+Centurion spawn <INPUT_FILE> [options]
 ```
 
 ### Common Options
 
-- `<INPUT_FILE>`: input audio/video file, required
-- `-o|--output <OUTPUT_FILE>`: output ASS file path; if omitted, it defaults to the input filename with a `.ass` extension
-- `-l|--language <LANG>`: audio language, default `en`
-- `--num-speakers <NUM>`: number of speakers, default `0` (auto-detect)
-- `-k|--karaoke`: enable karaoke mode and generate `\K` markers
-- `-t|--transcriber <ENGINE>`: transcription engine, default `whisper`
-- `--tm|--transcriber-model <MODEL>`: transcriber model name
-- `--tp|--transcriber-prompt <PROMPT>`: initial transcription prompt
-- `-s|--splitter <STRATEGY>`: sentence splitting strategy, supports `rule`, `nlp`, and `llm`
-- `--splitter-chunk-granularity <LEVEL>`: Catalyst/NLP chunk granularity, default `0.5`
-- `--splitter-target-length <CHARS>`: target characters per line, default `50`
-- `--splitter-max-length <CHARS>`: maximum characters per line, default `80`
-- `--splitter-spread <RANGE>`: line-length spread range, default `10`
-- `--splitter-model <MODEL>`: LLM-based splitting model
-- `--splitter-api-key <KEY>`: API key for LLM splitting
-- `-a|--enable-alignment`: enable forced alignment, enabled by default
-- `--am|--alignment-model <MODEL>`: alignment model
+- `<INPUT_FILE>` — input audio/video file (required) 🎞️
+- `-o, --output <OUTPUT_FILE>` — output ASS path (defaults to `<input>.ass`)
+- `-l, --language <LANG>` — audio language, default `en`
+- `--num-speakers <NUM>` — speaker count for diarization, `0` = auto-detect (default)
+- `-k, --karaoke` — karaoke mode with `\K` tags 🎵
+- `-t, --transcriber <ENGINE>` — engine: `crispasr` (default) / `whisper`
+- `--tm, --transcriber-model <MODEL>` — model, e.g. `qwen3-asr-1.7b`, `base`, `large`
+- `--tp, --transcriber-prompt <PROMPT>` — initial prompt 🧠
+- `--vocal-separation` — separate vocals with Demucs first (for music/BGM-heavy media) 🎤
+- `--vocal-separation-model <MODEL>` — Demucs model, default `htdemucs`
+- `--device <DEVICE>` — `auto` (default) / `cpu` / `cuda` / `vulkan` / `directml` 🖥️
+- `--audio-noise-reduction` — conditional FFmpeg noise reduction
+- `--audio-snr-threshold <DB>` — SNR threshold for noise reduction, default `15`
+- `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
+- `-s, --splitter <STRATEGY>` — `rule` (default) / `llm`
+- `--splitter-*` — sentence splitting knobs (length, granularity, spread...)
+- `-a, --align` — forced alignment, **enabled by default** 📏
+- `--am, --alignment-model <MODEL>` — aligner model, default `qwen3-forced-aligner-0.6b-f16`
 
-### Examples
-
-#### Basic generation
-
-```bash
-Centurion.Cli spawn demo.mp4 --language en
-```
-
-#### Specify output file
+### Examples 🧪
 
 ```bash
-Centurion.Cli spawn lecture.wav -o lecture.ass --language zh
-```
+# The classic
+Centurion spawn demo.mp4 --language en
 
-#### Enable karaoke
+# Chinese lecture, custom output
+Centurion spawn lecture.wav -o lecture.ass --language zh
 
-```bash
-Centurion.Cli spawn meeting.mp4 -o meeting.ass --language en --karaoke
+# Meeting + karaoke + speaker labels
+Centurion spawn meeting.mp4 --karaoke --num-speakers 2
 ```
 
 ---
 
-## 2. `from-script` Command
+## 2️⃣ `correct` — Script Timing (打轴) 📜
 
-This command is suitable for a scenario where you already have a script text file and a media file. It aligns the script with the audio and generates subtitles.
+Got a transcript/script and the matching media? This command aligns the script to the audio and produces subtitles — perfect for podcasts, interviews, and any "we already know what was said" scenario.
 
 ```bash
-Centurion.Cli from-script <INPUT_FILE> <SCRIPT_FILE> [options]
+Centurion correct <INPUT_FILE> <SCRIPT_FILE> [options]
 ```
 
 ### Common Options
 
-- `<INPUT_FILE>`: input media file
-- `<SCRIPT_FILE>`: script text file
-- `-o|--output <OUTPUT_FILE>`: output ASS file
-- `-l|--language <LANG>`: audio language, default `en`
-- `-t|--transcriber <ENGINE>`: transcription engine
-- `--tm|--transcriber-model <MODEL>`: transcriber model
-- `-a|--enable-alignment`: enable forced alignment, enabled by default
-- `--am|--alignment-model <MODEL>`: alignment model
-- `--max-cps <CPS>`: maximum displayed characters per second, default `5.0`
-- `--max-chars-per-line <CHARS>`: maximum characters per subtitle line, default `18`
-- `--coverage-threshold <RATIO>`: script coverage warning threshold, default `0.92`
-- `--fill-gap`: insert ellipses for missing script words
+- `<INPUT_FILE>` — input media file 🎞️
+- `<SCRIPT_FILE>` — plain-text script file 📄
+- `-o, --output <OUTPUT_FILE>` — output ASS file
+- `-l, --language <LANG>` — audio language, default `en`
+- `-t, --transcriber <ENGINE>` — transcription engine, default `whisper`
+- `--tm, --transcriber-model <MODEL>` — transcription model, default `base`
+- `--vocal-separation` / `--vocal-separation-model <MODEL>` — Demucs vocal separation 🎤
+- `--device <DEVICE>` — inference device 🖥️
+- `-a, --align` — forced alignment (default on) 📏
+- `--am, --alignment-model <MODEL>` — aligner model
+- `--max-cps <CPS>` — max characters per second, default `5.0`
+- `--max-chars-per-line <CHARS>` — max characters per line, default `18`
+- `--coverage-threshold <RATIO>` — script-coverage warning threshold, default `0.92`
+- `--fill-gap` — render missing script words as ellipsis
 
-### Examples
-
-```bash
-Centurion.Cli from-script input.mp3 script.txt -o output.ass --language en
-```
+### Example 🧪
 
 ```bash
-Centurion.Cli from-script input.wav script.txt --enable-alignment --max-chars-per-line 20
+Centurion correct podcast.mp3 transcript.txt -o podcast.ass --language en --max-chars-per-line 20
 ```
 
 ---
 
-## 3. `convert` Command
+## 3️⃣ `from-script` — Calibrate Existing Subtitles 🛠️
 
-Used to convert an existing subtitle file into ASS output, primarily for intermediate format conversion or format normalization.
+Have subtitles that are close-but-not-quite? This command corrects an existing subtitle file against the source audio and/or a reference script.
 
 ```bash
-Centurion.Cli convert <INPUT_FILE> [options]
+Centurion from-script <SUBTITLE_FILE> [options]
+```
+
+### Common Options
+
+- `<SUBTITLE_FILE>` — input subtitle file (SRT/VTT/ASS...) 📄
+- `-o, --output <OUTPUT_FILE>` — output ASS file
+- `--audio <AUDIO_FILE>` — audio for **timeline correction** ⏱️
+- `--script <SCRIPT_FILE>` — script for **text correction** ✏️
+- `-s, --strategy <MODE>` — `both` (default) / `timeline-only` / `text-only`
+- `--max-drift <MS>` — max drift for reporting, default `1500`
+- `--fuzzy-threshold <T>` — minimum text similarity 0..1, default `0.72`
+- `--vocal-separation` / `--vocal-separation-model <MODEL>` — Demucs before alignment 🎤
+- `--device <DEVICE>` — inference device 🖥️
+- `--disable-audio-*` — preprocess toggles
+- `-k, --karaoke` — karaoke mode 🎵
+
+### Example 🧪
+
+```bash
+Centurion from-script subtitles.srt --audio podcast.mp3 --script transcript.txt
+```
+
+---
+
+## 4️⃣ `convert` — Format Conversion 🔄
+
+Convert any supported subtitle format to ASS. Simple as that.
+
+```bash
+Centurion convert <INPUT_FILE> [options]
 ```
 
 ### Options
 
-- `<INPUT_FILE>`: input subtitle file
-- `-o|--output <OUTPUT_FILE>`: output ASS file path; if omitted, it defaults to the same name with a `.ass` extension
+- `<INPUT_FILE>` — input subtitle file
+- `-o, --output <OUTPUT_FILE>` — output ASS path (defaults to `<input>.ass`)
 
-### Example
+### Example 🧪
 
 ```bash
-Centurion.Cli convert subtitles.srt -o subtitles.ass
+Centurion convert subtitles.srt -o subtitles.ass
+Centurion convert subtitles.vtt --output subtitles.ass
 ```
 
 ---
 
-## Typical Workflows
+## 👥 Speaker Diarization (说话人分割)
 
-### Generate subtitles directly
+Every pipeline path can label **who said what** — each word gets a `Speaker` attribute. 🗣️
 
-```bash
-Centurion.Cli spawn video.mp4 --language en --karaoke
+**Two backends**, both implemented natively through the CrispASR CLI (no Python required 🐍❌):
+
+| Backend | `DiarizationBackend` | Method | Notes |
+|---|---|---|---|
+| CrispASR built-in | `crispasr` | `foxnose` (default), `energy`, `xcorr`, `vad-turns` | Zero extra deps, auto speaker count |
+| Pyannote + TitaNet | `pyannote` | pyannote segmentation + TitaNet embeddings | Best long-audio stability; models auto-downloaded |
+
+Configure via `WorkflowConfig`:
+
+```csharp
+DiarizationBackend = "crispasr",   // "none" to disable
+DiarizationMethod  = "foxnose",    // crispasr methods
+DiarizationModel   = "pyannote-seg-3.0",
+NumSpeakers        = 0,            // 0 = auto
 ```
 
-### Use a script to align the output
+> 💡 Diarization runs **before sentence splitting** and is **non-fatal**: if it fails, subtitles still get generated (just without speaker labels). No drama. 😌
+
+---
+
+## 🎤 Vocal Separation (Demucs)
+
+BGM drowning out the speech? Separate the vocals first, then transcribe — clean input, better subtitles. 🧼
+
+- Powered by **demucs-rs** (native Rust, no Python), models auto-downloaded on first run
+- **Off by default** — it's slow (deep learning is patient work) and pointless for clean speech
+- Turn it on only for music / MV / BGM-heavy media:
 
 ```bash
-Centurion.Cli from-script podcast.wav transcript.txt --language en
-```
-
-### Convert to ASS output
-
-```bash
-Centurion.Cli convert input.vtt -o output.ass
+Centurion spawn song.mp4 --vocal-separation
+Centurion spawn song.mp4 --vocal-separation --vocal-separation-model htdemucs_ft
 ```
 
 ---
 
-## Notes and Limitations
+## 🖥️ GPU Detection & Auto-Download
 
-- The project is still under active development, and command parameters and behavior may change between versions.
-- All inference currently runs on CPU, so processing long audio files may be relatively slow.
-- Forced alignment and various model strategies depend on the selected model and environment configuration. It is recommended to check the live help text with `--help`.
-- It is recommended to run `Centurion.Cli <command> --help` before each upgrade to confirm the current command-line parameters.
+Centurion **detects your hardware** at startup and downloads the right tool builds automatically. No more "please manually install the CUDA version" emails. 📬➡️🗑️
+
+- 🔍 Detects NVIDIA (via `nvidia-smi` / `CUDA_PATH`), other GPUs (AMD/Intel → Vulkan), system RAM, and platform
+- 📦 Tools can declare **per-device variants** (e.g. whisper.cpp CPU vs CUDA builds); the matching one is auto-selected & downloaded
+- 🎯 Override detection anytime with `--device`:
+
+```bash
+Centurion spawn audio.mp3 --device cuda     # force CUDA builds
+Centurion spawn audio.mp3 --device cpu      # stay cozy on CPU
+```
+
+Startup banner example:
+
+```
+🖥️ Device: Platform: win-x64; GPU: Intel(R) Arc(TM) 130T GPU (16GB) (non-NVIDIA); RAM: 15.7 GB; Recommended: Vulkan
+```
 
 ---
 
-## Contributing and Feedback
+## 🗂️ Metadata Registry
 
-Issues, pull requests, and feedback are welcome.
+Tools & models live in an **external JSON registry**, loaded at startup — edit it without touching code. 🎛️
 
-If you are contributing to the project, please first understand the current pipeline structure and prioritize compatibility for command-line options and output format.
+- **Default location**: `config/metadata.json` next to the executable (seeded automatically on first run)
+- **Override**: `CENTURION_METADATA_PATH` env var, or pass a path to `AddCenturionCore(metadataPath)`
+- Tools support `variants` for per-device builds:
+
+```jsonc
+{
+  "tools": {
+    "whispercpp": {
+      "downloadUrl": ".../whisper-bin-x64.zip",
+      "variants": {
+        "cuda": { "downloadUrl": ".../whisper-cublas-12.4.0-bin-x64.zip" }
+      }
+    }
+  }
+}
+```
 
 ---
 
-## License
+## 📋 Typical Workflows
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+```bash
+# 🎬 Just make the subtitles
+Centurion spawn video.mp4 --language en --karaoke
 
+# 📜 Script → timed subtitles
+Centurion correct podcast.wav transcript.txt --language en
+
+# 🛠️ Fix the timing of an existing subtitle file
+Centurion from-script subs.srt --audio episode.mp4 --strategy timeline-only
+
+# 🎤 Music video with vocal separation + speakers
+Centurion spawn concert.mp4 --vocal-separation --num-speakers 2
+
+# 🖥️ Big GPU? Go fast
+Centurion spawn long_lecture.wav --device cuda
+```
+
+---
+
+## ⚠️ Notes & Limitations
+
+- 🚧 Active development: flags may change between versions — `Centurion <command> --help` is your friend 🤝
+- 🐢 First runs download tools/models (whisper.cpp, CrispASR, Demucs, GGUF files...) — grab a coffee ☕
+- 🎵 Vocal separation & diarization models live on HuggingFace — slower downloads in some regions
+- ⏱️ Long audio + vocal separation on CPU = patience required (deep learning is worth it, we promise)
+
+---
+
+## 🤝 Contributing & Feedback
+
+Issues, PRs, and spicy feedback are all welcome! 🔥
+
+Before contributing, get familiar with the pipeline/operator structure and keep CLI options & output format backward-compatible where possible.
+
+---
+
+## 📜 License
+
+MIT License — see [LICENSE](LICENSE) for details.

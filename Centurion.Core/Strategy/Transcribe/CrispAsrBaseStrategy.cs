@@ -17,20 +17,25 @@ namespace Centurion.Core.Strategy.Transcribe;
 /// </summary>
 public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 {
-    protected readonly ToolManager _toolManager;
+    protected readonly IToolManagerFactory _toolManagerFactory;
     protected readonly ProcessManager _processManager;
     protected readonly IModelPathResolver _modelResolver;
     protected readonly ILogger<CrispAsrBaseStrategy> _logger;
+    private ToolManager? _toolManager;
 
     public abstract string StrategyName { get; }
 
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)
     {
-        _toolManager = serviceProvider.GetRequiredService<IToolManagerFactory>().Create("crispasr");
+        _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
         _processManager = serviceProvider.GetRequiredService<ProcessManager>();
         _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
         _logger = serviceProvider.GetRequiredService<ILogger<CrispAsrBaseStrategy>>();
     }
+
+    /// <summary>按推理设备创建（懒加载）CrispASR 工具管理器。</summary>
+    protected ToolManager GetToolManager(InferenceDevice device) =>
+        _toolManager ??= _toolManagerFactory.Create("crispasr", device);
 
     /// <summary>
     /// Backend name to pass to CrispASR (e.g., "qwen3", "whisper")
@@ -74,10 +79,12 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         string language,
         string modelName,
         string? initialPrompt = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        InferenceDevice device = InferenceDevice.Auto)
     {
-        // 1. Ensure CrispASR tool is downloaded
-        await _toolManager.EnsureToolAsync(cancellationToken);
+        // 1. Ensure CrispASR tool is downloaded（GPU 变体按设备自动选择）
+        var toolManager = GetToolManager(device);
+        await toolManager.EnsureToolAsync(cancellationToken);
 
         // 2. Get model path
         var modelPath = await GetModelPathAsync(modelName, cancellationToken);
@@ -94,10 +101,10 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
         // 4. Build arguments
         var args = BuildArguments(audioPath, language, modelPath, alignerPath, initialPrompt);
-        _logger.LogDebug("Executing CrispASR: {Exe} {Args}", _toolManager.ExecutablePath, args);
+        _logger.LogDebug("Executing CrispASR: {Exe} {Args}", toolManager.ExecutablePath, args);
 
         // 5. Execute process
-        await _processManager.ExecuteAsync(_toolManager.ExecutablePath, args, cancellationToken: cancellationToken);
+        await _processManager.ExecuteAsync(toolManager.ExecutablePath, args, cancellationToken: cancellationToken);
 
         // 6. Read generated JSON
         var jsonOutputPath = Path.ChangeExtension(audioPath, ".json");

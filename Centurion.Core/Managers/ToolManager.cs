@@ -10,7 +10,8 @@ using SharpCompress.Archives;
 namespace Centurion.Core.Managers;
 
 /// <summary>
-/// 管理外部工具（ASR引擎）的下载、解压和路径
+/// 管理外部工具（ASR引擎）的下载、解压和路径。
+/// 支持按推理设备（CUDA/Vulkan/CPU 等）自动选择工具的对应变体下载。
 /// </summary>
 public class ToolManager : IDisposable
 {
@@ -22,7 +23,10 @@ public class ToolManager : IDisposable
     public string ToolDirectory { get; private set; }
     public string ExecutablePath { get; private set; }
 
-    public ToolManager(string toolName, ToolRegistry registry, IServiceProvider serviceProvider)
+    /// <summary>实际选用的设备变体（null 表示基础构建）。</summary>
+    public string? ActiveVariantDescription { get; }
+
+    public ToolManager(string toolName, ToolRegistry registry, InferenceDevice device, IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(registry);
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
@@ -30,12 +34,59 @@ public class ToolManager : IDisposable
         _toolsRoot = Path.Combine(AppContext.BaseDirectory, "tools", "asr");
         Directory.CreateDirectory(_toolsRoot);
 
-        if (!registry.Tools.TryGetValue(toolName, out var meta))
+        if (!registry.Tools.TryGetValue(toolName, out var baseMeta))
             throw new ArgumentException($"Unsupported tool: {toolName}", nameof(toolName));
-        _toolMeta = meta;
+
+        // 按设备选择变体（精确匹配 → default → 基础字段）
+        var (url, archiveType, exeRelative, description) = ResolveVariant(baseMeta, device);
+        _toolMeta = new ToolMeta
+        {
+            ToolName = baseMeta.ToolName,
+            DownloadUrl = url,
+            ArchiveType = archiveType,
+            ExecutableRelativePath = exeRelative,
+            Version = baseMeta.Version
+        };
+        ActiveVariantDescription = description;
 
         ToolDirectory = Path.Combine(_toolsRoot, toolName);
-        ExecutablePath = Path.Combine(ToolDirectory, meta.ExecutableRelativePath);
+        ExecutablePath = Path.Combine(ToolDirectory, _toolMeta.ExecutableRelativePath);
+    }
+
+    /// <summary>
+    /// 解析工具在指定设备下应使用的下载信息（internal，便于单元测试）。
+    /// 匹配顺序：设备键（cuda/vulkan/directml/cpu）→ "default" → 基础字段。
+    /// </summary>
+    internal static (string Url, string ArchiveType, string ExecutableRelativePath, string? Description) ResolveVariant(
+        ToolMeta meta, InferenceDevice device)
+    {
+        var variants = meta.Variants;
+        if (variants is null || variants.Count == 0)
+            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null);
+
+        var deviceKey = device switch
+        {
+            InferenceDevice.Cuda => "cuda",
+            InferenceDevice.Vulkan => "vulkan",
+            InferenceDevice.DirectMl => "directml",
+            InferenceDevice.Cpu => "cpu",
+            _ => "cpu"
+        };
+
+        ToolVariant? variant = null;
+        if (variants.TryGetValue(deviceKey, out var exact))
+            variant = exact;
+        else if (variants.TryGetValue("default", out var fallback))
+            variant = fallback;
+
+        if (variant is null)
+            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null);
+
+        return (
+            variant.DownloadUrl ?? meta.DownloadUrl,
+            variant.ArchiveType ?? meta.ArchiveType,
+            variant.ExecutableRelativePath ?? meta.ExecutableRelativePath,
+            variant.Description);
     }
 
     /// <summary>
@@ -43,6 +94,9 @@ public class ToolManager : IDisposable
     /// </summary>
     public async Task EnsureToolAsync(CancellationToken cancellationToken = default)
     {
+        if (ActiveVariantDescription is not null)
+            _logger.LogInformation("Tool '{ToolName}' selected {Variant} build.", _toolMeta.ToolName, ActiveVariantDescription);
+
         if (File.Exists(ExecutablePath))
         {
             _logger.LogInformation("Tool '{ToolName}' already exists at {Path}", _toolMeta.ToolName, ExecutablePath);
