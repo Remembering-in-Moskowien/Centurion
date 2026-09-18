@@ -7,6 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Centurion.Models\Centurion.Models.csproj" />
+        <ProjectReference Include="..\Centurion.Abstractions\Centurion.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- 允许测试程序集访问 internal 成员（如算子内部可测逻辑） -->
         <InternalsVisibleTo Include="Centurion.Tests" />
     </ItemGroup>

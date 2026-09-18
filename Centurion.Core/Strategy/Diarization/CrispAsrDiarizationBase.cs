@@ -1,9 +1,11 @@
+using Centurion.Core.Factories;
+using Centurion.Models.Workflow;
 // Centurion.Core/Strategy/Diarization/CrispAsrDiarizationBase.cs
 
-using Centurion.Core.Abstractions;
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Strategy;
-using Centurion.Core.Exceptions;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Strategy;
+using Centurion.Abstractions.Exceptions;
 using Centurion.Core.Managers;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;

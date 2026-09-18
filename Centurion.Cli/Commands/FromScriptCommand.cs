@@ -1,9 +1,10 @@
+using Centurion.Models.Console;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Abstractions;
-using Centurion.Core.Abstractions.Pipeline;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Infrastructure;
-using Centurion.Core.Models.Ass;
-using Centurion.Core.Models.Workflow;
+using Centurion.Models.Ass;
+using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
 using Microsoft.Extensions.Logging;
@@ -11,108 +12,92 @@ using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
+/// <summary>
+/// Script timing: align a plain-text script to the media and generate timed subtitles.
+/// </summary>
 public sealed class FromScriptCommand(
     ITempDirectoryManager tempManager,
-    ConvertParseOperator convertParseOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
-    ScriptLoaderOperator scriptLoaderOp,
-    SubtitleTextCorrectorOperator textCorrectorOp,
+    TranscribeOperator transcribeOp,
     DiarizationOperator diarizationOp,
+    ScriptLoaderOperator scriptLoaderOp,
+    TextPreprocessingOperator textCleaningOp,
+    ScriptTimelineMapperOperator mapperOp,
     AlignmentOperator alignmentOp,
-    CorrectionReportOperator reportOp,
     PipelineExecutor pipelineExecutor,
-    ILogger<FromScriptCommand> logger) : AsyncCommand<CorrectSettings>
+    ILogger<FromScriptCommand> logger) : AsyncCommand<FromScriptSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, CorrectSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, FromScriptSettings settings, CancellationToken ct)
     {
         try
         {
-            var strategy = ParseStrategy(settings.Strategy);
-            Validate(settings, strategy);
-            var subtitlePath = settings.SubtitleFile.FullName;
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(subtitlePath, ".ass");
-            var needsAudio = strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both;
+            var inputPath = settings.InputFile.FullName;
+            if (!File.Exists(inputPath))
+                throw new FileNotFoundException($"Input media file not found: {inputPath}", inputPath);
+            if (!File.Exists(settings.ScriptFile.FullName))
+                throw new FileNotFoundException($"Script file not found: {settings.ScriptFile.FullName}", settings.ScriptFile.FullName);
 
+            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
             var config = new WorkflowConfig
             {
-                InputFilePath = needsAudio ? settings.AudioFile!.FullName : subtitlePath,
-                SubtitleFilePath = subtitlePath,
+                InputFilePath = inputPath,
                 OutputFilePath = outputPath,
-                ScriptFilePath = settings.ScriptFile?.FullName,
-                CorrectStrategy = strategy,
-                MaxDriftMs = settings.MaxDrift,
-                FuzzyThreshold = settings.FuzzyThreshold,
-                KaraokeMode = settings.Karaoke,
+                ScriptFilePath = settings.ScriptFile.FullName,
+                MapperStrategy = "rule",
+                SplitStrategy = "nlp",
+                Language = settings.Language,
+                TranscriberEngine = settings.Transcriber,
+                TranscriberModel = settings.TranscriberModel,
                 AudioPreprocess = new AudioPreprocessConfig
                 {
                     EnableResampling = !settings.DisableAudioResampling,
                     EnableHighPass = !settings.DisableAudioHighPass,
-                    EnableLoudnessNormalization = !settings.DisableAudioLoudness
+                    EnableLoudnessNormalization = !settings.DisableAudioLoudness,
+                    EnableNoiseReduction = settings.EnableAudioNoiseReduction,
+                    SnrThresholdDb = settings.AudioSnrThresholdDb
                 },
                 VocalSeparation = settings.VocalSeparation,
                 VocalSeparationModel = settings.VocalSeparationModel,
                 Device = settings.Device,
+                EnableAlignment = settings.EnableAlignment,
+                AlignmentModel = settings.AlignmentModel,
+                MaxCps = settings.MaxCps,
+                MaxCharsPerLine = settings.MaxCharsPerLine,
+                CoverageThreshold = settings.CoverageThreshold,
+                FillGapWithEllipsis = settings.FillGapWithEllipsis,
+                CacheDirectory = "./cache"
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
-            await using var tempDir = await tempManager.CreateTempDirectoryAsync("correct_");
+            await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            var operators = new List<IPipelineOperator> { convertParseOp };
-            if (strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both)
+            var operators = new List<IPipelineOperator>
             {
-                operators.Add(scriptLoaderOp);
-                operators.Add(textCorrectorOp);
-            }
-
-            if (needsAudio)
-            {
-                operators.Add(ffmpegOp);
-                operators.Add(audioPreprocessOp);
-                operators.Add(vocalSepOp);
-                operators.Add(diarizationOp);
-                operators.Add(alignmentOp);
-            }
-
-            operators.Add(reportOp);
-            await pipelineExecutor.ExecuteAsync(operators, workflowContext, cancellationToken);
+                ffmpegOp,
+                audioPreprocessOp,
+                vocalSepOp,
+                transcribeOp,
+                diarizationOp,
+                scriptLoaderOp,
+                textCleaningOp,
+                mapperOp,
+                alignmentOp
+            };
+            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
             var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), cancellationToken);
-            ConsoleServices.Output.WriteMarkupLine($"[green]Correction completed: {outputPath}[/]");
+            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
+            ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
             return 0;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "From-script pipeline execution failed.");
             ConsoleServices.Output.WriteError(ex.Message);
-            logger.LogError(ex, "Correction pipeline execution failed.");
             return 1;
         }
-    }
-
-    private static CorrectionStrategy ParseStrategy(string value) => value.ToLowerInvariant() switch
-    {
-        "timeline-only" => CorrectionStrategy.TimelineOnly,
-        "text-only" => CorrectionStrategy.TextOnly,
-        "both" => CorrectionStrategy.Both,
-        _ => throw new ArgumentException($"Unsupported correction strategy: {value}")
-    };
-
-    private static void Validate(CorrectSettings settings, CorrectionStrategy strategy)
-    {
-        if ((strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both) && settings.AudioFile is null)
-            throw new ArgumentException("--audio is required for the selected correction strategy.");
-        if ((strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both) && settings.ScriptFile is null)
-            throw new ArgumentException("--script is required for the selected correction strategy.");
-        if (settings.FuzzyThreshold is <= 0 or >= 1)
-            throw new ArgumentException("--fuzzy-threshold must be between 0 and 1.");
-        if (settings.MaxDrift < 0)
-            throw new ArgumentException("--max-drift must be non-negative.");
     }
 }

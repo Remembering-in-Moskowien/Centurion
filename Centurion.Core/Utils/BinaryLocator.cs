@@ -1,5 +1,5 @@
-﻿using Centurion.Core.Abstractions;
-using Centurion.Core.Exceptions;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Exceptions;
 
 // localization removed; strings hard-coded
 

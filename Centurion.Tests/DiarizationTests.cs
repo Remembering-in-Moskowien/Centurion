@@ -1,5 +1,5 @@
-using Centurion.Core.Abstractions.Strategy;
-using Centurion.Core.Models;
+using Centurion.Abstractions.Strategy;
+using Centurion.Models;
 using Centurion.Core.Pipeline.Operators;
 using Centurion.Core.Strategy.Diarization;
 using Centurion.Core.Utils;

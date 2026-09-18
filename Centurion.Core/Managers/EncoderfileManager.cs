@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
-using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 using Centurion.Core.Operators;
 using Centurion.Core.Operators.Request;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,6 @@
 // Centurion.Core/Utils/DiarizationJsonParser.cs
 
-using Centurion.Core.Abstractions.Strategy;
+using Centurion.Abstractions.Strategy;
 using Newtonsoft.Json.Linq;
 
 namespace Centurion.Core.Utils;

@@ -1,8 +1,9 @@
-﻿// File: Program.cs
+using Centurion.Models.Console;
+// File: Program.cs
 using System.Globalization;
 using Centurion.Cli.Commands;
 using Centurion.Cli.Console;
-using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 using Centurion.Core.DependencyInjection;
 using Centurion.Core.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,13 +13,13 @@ using Spectre.Console.Cli;
 
 // ----- Console setup -----
 ConsoleServices.Output = new SpectreConsoleOutput();
-ConsoleServices.Progress = new SpectreProgressReporter();
+ConsoleServices.Progress = new DotnetStyleProgressReporter();
 ConsoleServices.Confirm = new SpectreConfirmPrompt();
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-const string version = "alpha";
+var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "alpha";
 AnsiConsole.Write(new FigletText($"Centurion {version}") { Color = Color.Yellow });
 
 // Cancellation token
@@ -66,6 +67,7 @@ app.Configure(config =>
     config.AddCommand<FromScriptCommand>("from-script");
     config.AddCommand<CorrectCommand>("correct");
     config.AddCommand<ConvertCommand>("convert");
+    config.AddCommand<UpdateCommand>("update");
 });
 
 // ----- Run -----

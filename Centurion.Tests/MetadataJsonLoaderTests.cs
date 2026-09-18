@@ -1,4 +1,4 @@
-using Centurion.Core.Models.Metadata;
+using Centurion.Models.Metadata;
 using Xunit;
 
 namespace Centurion.Tests;
