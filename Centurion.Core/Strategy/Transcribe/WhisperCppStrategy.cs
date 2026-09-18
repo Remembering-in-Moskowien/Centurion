@@ -14,22 +14,29 @@ namespace Centurion.Core.Strategy.Transcribe;
 
 public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscriptionStrategy
 {
-    private readonly ToolManager _toolManager = serviceProvider.GetRequiredService<IToolManagerFactory>().Create("whispercpp");
+    private readonly IToolManagerFactory _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
     private readonly ProcessManager _processManager = serviceProvider.GetRequiredService<ProcessManager>();
     private readonly IModelPathResolver _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
     private readonly ILogger<WhisperCppStrategy> _logger = serviceProvider.GetRequiredService<ILogger<WhisperCppStrategy>>();
+    private ToolManager? _toolManager;
 
     public string StrategyName => "Whisper.cpp";
+
+    /// <summary>按推理设备创建（懒加载）whisper.cpp 工具管理器（GPU 可用时自动选用 CUDA 构建）。</summary>
+    private ToolManager GetToolManager(InferenceDevice device) =>
+        _toolManager ??= _toolManagerFactory.Create("whispercpp", device);
 
     public async Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
         string modelName,
         string? initialPrompt = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        InferenceDevice device = InferenceDevice.Auto)
     {
-        // 1. 确保工具已下载
-        await _toolManager.EnsureToolAsync(cancellationToken);
+        // 1. 确保工具已下载（按设备选择 GPU/CPU 变体）
+        var toolManager = GetToolManager(device);
+        await toolManager.EnsureToolAsync(cancellationToken);
 
         // 2. 获取模型文件路径
         var modelPath = await _modelResolver.GetWhisperModelPathAsync(modelName, cancellationToken);
@@ -41,11 +48,11 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
         if (!string.IsNullOrEmpty(initialPrompt))
             args += $" -p \"{initialPrompt}\"";
 
-        _logger.LogDebug("Executing: {Exe} {Args}", _toolManager.ExecutablePath, args);
+        _logger.LogDebug("Executing: {Exe} {Args}", toolManager.ExecutablePath, args);
 
         // 4. 执行进程（输出会生成 JSON 文件，标准输出可能只是进度或日志）
         var output = await _processManager.ExecuteAsync(
-            _toolManager.ExecutablePath,
+            toolManager.ExecutablePath,
             args,
             cancellationToken: cancellationToken);
 

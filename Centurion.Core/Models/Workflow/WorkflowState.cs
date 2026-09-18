@@ -11,6 +11,7 @@ public class WorkflowState
     public string? PipelineTempDirectory { get; set; }
     public string? ConvertedAudioPath { get; set; } // FFmpeg 重采样/转换后的临时文件路径
     public string? PreprocessedAudioPath { get; set; }
+    public string? VocalsPath { get; set; } // Demucs 人声分离后的人声轨（转录/说话人分割优先消费）
     public AudioProbeInfo? SourceAudioInfo { get; set; }
     public AudioProbeInfo? PreprocessedAudioInfo { get; set; }
     public double? EstimatedSnrDb { get; set; }
@@ -37,6 +38,7 @@ public class WorkflowState
 
     // ---------- 阶段完成标志（用于检查点恢复） ----------
     public bool IsAudioConverted { get; set; }
+    public bool IsVocalsSeparated { get; set; }
     public bool IsTranscribed { get; set; }
     public bool IsSplit { get; set; }
     public bool IsDiarized { get; set; }

@@ -16,7 +16,9 @@ public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
+    VocalSeparationOperator vocalSepOp,
     TranscribeOperator transcribeOp,
+    DiarizationOperator diarizationOp,
     SentenceSplitOperator splitOp,
     TextPreprocessingOperator textCleaningOp,
     AlignmentOperator alignmentOp,
@@ -56,6 +58,9 @@ public sealed class SpawnCommand(
                     EnableNoiseReduction = settings.EnableAudioNoiseReduction,
                     SnrThresholdDb = settings.AudioSnrThresholdDb
                 },
+                VocalSeparation = settings.VocalSeparation,
+                VocalSeparationModel = settings.VocalSeparationModel,
+                Device = settings.Device,
 
                 SplitStrategy = settings.Splitter,
                 MaxSentenceLength = settings.MaxLength,
@@ -82,7 +87,9 @@ public sealed class SpawnCommand(
             {
                 ffmpegOp,
                 audioPreprocessOp,
+                vocalSepOp,
                 transcribeOp,
+                diarizationOp,
                 splitOp,
                 textCleaningOp,
                 alignmentOp

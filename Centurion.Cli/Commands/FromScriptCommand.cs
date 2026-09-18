@@ -16,8 +16,10 @@ public sealed class FromScriptCommand(
     ConvertParseOperator convertParseOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
+    VocalSeparationOperator vocalSepOp,
     ScriptLoaderOperator scriptLoaderOp,
     SubtitleTextCorrectorOperator textCorrectorOp,
+    DiarizationOperator diarizationOp,
     AlignmentOperator alignmentOp,
     CorrectionReportOperator reportOp,
     PipelineExecutor pipelineExecutor,
@@ -48,7 +50,10 @@ public sealed class FromScriptCommand(
                     EnableResampling = !settings.DisableAudioResampling,
                     EnableHighPass = !settings.DisableAudioHighPass,
                     EnableLoudnessNormalization = !settings.DisableAudioLoudness
-                }
+                },
+                VocalSeparation = settings.VocalSeparation,
+                VocalSeparationModel = settings.VocalSeparationModel,
+                Device = settings.Device,
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
@@ -66,6 +71,8 @@ public sealed class FromScriptCommand(
             {
                 operators.Add(ffmpegOp);
                 operators.Add(audioPreprocessOp);
+                operators.Add(vocalSepOp);
+                operators.Add(diarizationOp);
                 operators.Add(alignmentOp);
             }
 

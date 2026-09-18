@@ -1,4 +1,5 @@
-﻿using Centurion.Core.Models;
+﻿using Centurion.Core.Abstractions;
+using Centurion.Core.Models;
 
 namespace Centurion.Core.Abstractions.Strategy;
 
@@ -15,13 +16,15 @@ public interface ITranscriptionStrategy
     /// <param name="modelName">模型名称（如 tiny/base/small）</param>
     /// <param name="initialPrompt">可选的初始提示词</param>
     /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="device">推理设备偏好（默认 Auto 自动检测，GPU 可用时自动选用工具 GPU 变体）</param>
     /// <returns>词列表，包含文本、起止时间（毫秒）</returns>
     Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
         string modelName,
         string? initialPrompt = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        InferenceDevice device = InferenceDevice.Auto);
 
     /// <summary>
     /// 策略名称，用于日志

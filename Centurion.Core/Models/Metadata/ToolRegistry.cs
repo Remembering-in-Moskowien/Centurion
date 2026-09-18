@@ -1,13 +1,30 @@
 ﻿// Centurion.Core/Models/Metadata/ToolRegistry.cs
 namespace Centurion.Core.Models.Metadata;
 
+/// <summary>
+/// 工具的按设备变体（如 CUDA / Vulkan / CPU 构建）。
+/// 字段为可空覆盖：null 时回退到 <see cref="ToolMeta"/> 的基础值。
+/// </summary>
+public class ToolVariant
+{
+    public string? DownloadUrl { get; set; }
+    public string? ArchiveType { get; set; }
+    public string? ExecutableRelativePath { get; set; }
+    public string? Description { get; set; }
+}
+
 public class ToolMeta
 {
     public required string ToolName { get; set; }          // 标识，如 "whispercpp", "fasterwhisperxxl"
-    public required string DownloadUrl { get; set; }       // 下载包URL（zip或tar）
+    public required string DownloadUrl { get; set; }       // 默认（回退）下载包URL（zip或tar）
     public required string ArchiveType { get; set; }       // "zip" 或 "tar.gz"
     public required string ExecutableRelativePath { get; set; } // 解压后可执行文件相对路径
     public string? Version { get; set; }
+    /// <summary>
+    /// 按设备键（cuda / vulkan / directml / cpu / default）的下载变体。
+    /// 设备匹配优先于 "default"，"default" 优先于基础字段。
+    /// </summary>
+    public IReadOnlyDictionary<string, ToolVariant>? Variants { get; set; }
 }
 
 /// <summary>
@@ -35,10 +52,19 @@ public sealed class ToolRegistry
             ["whispercpp"] = new()
             {
                 ToolName = "whispercpp",
-                DownloadUrl = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.7.5/whisper-bin-x64.zip",
+                DownloadUrl = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-x64.zip",
                 ArchiveType = "zip",
                 ExecutableRelativePath = "whisper-cli.exe",
-                Version = "v1.7.5"
+                Version = "v1.9.2",
+                Variants = new Dictionary<string, ToolVariant>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["cuda"] = new()
+                    {
+                        DownloadUrl = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-cublas-12.4.0-bin-x64.zip",
+                        ExecutableRelativePath = "whisper-cli.exe",
+                        Description = "CUDA 12.4 build (requires NVIDIA GPU)"
+                    }
+                }
             },
             ["crispasr"] = new()
             {
@@ -47,6 +73,14 @@ public sealed class ToolRegistry
                 ArchiveType = "zip",
                 ExecutableRelativePath = "crispasr.exe", // Linux/macOS 下为 "crispasr"
                 Version = "v0.8.29"
+            },
+            ["demucsrs"] = new()
+            {
+                ToolName = "demucsrs",
+                DownloadUrl = "https://github.com/nikhilunni/demucs-rs/releases/download/v0.3.4/demucs-x86_64-pc-windows-msvc.zip",
+                ArchiveType = "zip",
+                ExecutableRelativePath = "demucs.exe", // Linux/macOS 下为 "demucs"
+                Version = "v0.3.4"
             }
         };
 }

@@ -1,3 +1,5 @@
+using Centurion.Core.Abstractions;
+
 namespace Centurion.Core.Models.Workflow;
 
 /// <summary>
@@ -10,6 +12,11 @@ public class WorkflowConfig
     public string? SubtitleFilePath { get; init; }
     public string? OutputFilePath { get; init; }
     public string? ScriptFilePath { get; init; }
+    /// <summary>
+    /// 推理设备偏好（auto/cpu/cuda/vulkan/directml）。
+    /// Auto 时由系统自动检测（NVIDIA GPU → CUDA 构建的工具自动下载）。
+    /// </summary>
+    public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
     public CorrectionStrategy CorrectStrategy { get; init; } = CorrectionStrategy.Both;
     public int MaxDriftMs { get; init; } = 1500;
     public double FuzzyThreshold { get; init; } = 0.72;
@@ -39,8 +46,30 @@ public class WorkflowConfig
     public string? SplitterModel { get; init; }                 // 用于LLM
     public string? SplitterApiKey { get; init; }                // 用于LLM
 
-    // ---------- 说话人分割（保留，但可后续独立） ----------
-    public string DiarizationModel { get; init; } = "voxceleb_resnet293_LM";
+    // ---------- 人声分离（可选增强，默认关闭） ----------
+    /// <summary>
+    /// 是否启用 Demucs 人声分离（将人声与伴奏/音乐分离后再转录）。
+    /// 仅对含明显音乐/BGM 的素材有价值；纯语音素材开启会显著增加耗时。
+    /// </summary>
+    public bool VocalSeparation { get; init; } = false;
+    /// <summary>
+    /// Demucs 分离模型名（如 htdemucs），由 demucs-rs 首次运行时自动从 HuggingFace 下载缓存。
+    /// </summary>
+    public string VocalSeparationModel { get; init; } = "htdemucs";
+
+    // ---------- 说话人分割 ----------
+    /// <summary>
+    /// 说话人分割后端："none"（关闭）| "crispasr"（内置方法）| "pyannote"（Pyannote 分割 + TitaNet 嵌入）。
+    /// </summary>
+    public string DiarizationBackend { get; init; } = "crispasr";
+    /// <summary>
+    /// crispasr 后端的分割方法：energy / xcorr / vad-turns / foxnose（默认 foxnose，精度最高且无需立体声）。
+    /// </summary>
+    public string DiarizationMethod { get; init; } = "foxnose";
+    /// <summary>
+    /// pyannote 后端使用的分割模型名（由 CrispASR 模型注册表自动下载，如 "pyannote-seg-3.0"）。
+    /// </summary>
+    public string DiarizationModel { get; init; } = "pyannote-seg-3.0";
     public int NumSpeakers { get; init; } = 0;
 
     // ---------- 输出风格 ----------
