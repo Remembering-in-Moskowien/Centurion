@@ -1,16 +1,17 @@
-using Centurion.Core.Abstractions;
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Pipeline;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Factories;
 using Centurion.Core.Infrastructure;
 using Centurion.Core.Managers;
-using Centurion.Core.Models.Metadata;
+using Centurion.Models.Metadata;
 using Centurion.Core.Operators;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
 using Centurion.Core.Strategy.Diarization;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
+using Centurion.Core.Update;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -95,6 +96,9 @@ public static class ServiceCollectionExtensions
         [
             sp.GetRequiredService<ConvertParseOperator>()
         ]);
+
+        // ---------- 9. 自更新服务（GitHub Releases） ----------
+        services.AddSingleton<IUpdateService, GitHubUpdateService>();
 
         return services;
     }

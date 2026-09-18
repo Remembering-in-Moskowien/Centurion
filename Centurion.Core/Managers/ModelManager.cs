@@ -1,6 +1,7 @@
-﻿using Centurion.Core.Abstractions;
+using Centurion.Models.Console;
+using Centurion.Abstractions;
 using Centurion.Core.Infrastructure;
-using Centurion.Core.Models.Metadata;
+using Centurion.Models.Metadata;
 using Centurion.Core.Operators.Request;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -134,8 +135,6 @@ public class ModelManager : IDisposable
         Directory.CreateDirectory(ModelFolder);
         ConsoleServices.Output.WriteLine($"Model '{_modelName}' not found.");
         cancellationToken.ThrowIfCancellationRequested();
-        if (!await ConsoleServices.Confirm.ConfirmAsync("Continue with installation?"))
-            throw new OperationCanceledException("User cancelled model download.");
 
         using var aria = _serviceProvider.GetRequiredService<Operators.Downloader>();
         var request = new OperatorsRequest<AriaDownloadRequest>

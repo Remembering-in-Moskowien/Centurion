@@ -1,6 +1,6 @@
-﻿// Centurion.Cli.Console/SpectreConfirmPrompt.cs
+// Centurion.Cli.Console/SpectreConfirmPrompt.cs
 
-using Centurion.Core.Abstractions.Console;
+using Centurion.Models.Console;
 using Spectre.Console;
 
 namespace Centurion.Cli.Console;

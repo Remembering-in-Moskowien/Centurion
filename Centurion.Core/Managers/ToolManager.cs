@@ -1,7 +1,8 @@
-﻿// Centurion.Core/Managers/ToolManager.cs
+using Centurion.Models.Workflow;
+// Centurion.Core/Managers/ToolManager.cs
 
-using Centurion.Core.Abstractions;
-using Centurion.Core.Models.Metadata;
+using Centurion.Abstractions;
+using Centurion.Models.Metadata;
 using Centurion.Core.Operators.Request;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,9 @@ public class ToolManager : IDisposable
 
     public string ToolDirectory { get; private set; }
     public string ExecutablePath { get; private set; }
+
+    /// <summary>工具运行时模型/权重的下载基础地址（可为空，为空时使用工具内置默认）。</summary>
+    public string? ModelBaseUrl { get; }
 
     /// <summary>实际选用的设备变体（null 表示基础构建）。</summary>
     public string? ActiveVariantDescription { get; }
@@ -45,8 +49,10 @@ public class ToolManager : IDisposable
             DownloadUrl = url,
             ArchiveType = archiveType,
             ExecutableRelativePath = exeRelative,
-            Version = baseMeta.Version
+            Version = baseMeta.Version,
+            ModelBaseUrl = baseMeta.ModelBaseUrl
         };
+        ModelBaseUrl = baseMeta.ModelBaseUrl;
         ActiveVariantDescription = description;
 
         ToolDirectory = Path.Combine(_toolsRoot, toolName);

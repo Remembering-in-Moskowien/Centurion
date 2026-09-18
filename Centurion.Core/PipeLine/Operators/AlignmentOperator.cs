@@ -1,9 +1,10 @@
-﻿// File: Centurion.Core.Pipeline/Operators/AlignmentOperator.cs
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Exceptions;
-using Centurion.Core.Models;
-using Centurion.Core.Models.Workflow;
+using Centurion.Core.Factories;
+// File: Centurion.Core.Pipeline/Operators/AlignmentOperator.cs
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Exceptions;
+using Centurion.Models;
+using Centurion.Models.Workflow;
 using Centurion.Core.Text;
 using Microsoft.Extensions.Logging;
 

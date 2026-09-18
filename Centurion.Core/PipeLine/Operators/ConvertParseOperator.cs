@@ -1,8 +1,8 @@
-﻿// File: Centurion.Core/Pipeline/Operators/ConvertParseOperator.cs
+// File: Centurion.Core/Pipeline/Operators/ConvertParseOperator.cs
 using System.Text.RegularExpressions;
-using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Models;
-using Centurion.Core.Models.Workflow;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Models;
+using Centurion.Models.Workflow;
 using SubtitlesParserV2;
 
 namespace Centurion.Core.Pipeline.Operators;

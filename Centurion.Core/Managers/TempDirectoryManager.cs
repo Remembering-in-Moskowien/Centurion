@@ -1,4 +1,4 @@
-﻿using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 
 namespace Centurion.Core.Managers;
 

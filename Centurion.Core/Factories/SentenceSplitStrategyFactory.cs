@@ -1,5 +1,5 @@
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Strategy;
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Strategy;
 using Centurion.Core.Strategy.SentenceSplit;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

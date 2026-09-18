@@ -1,6 +1,7 @@
-using Centurion.Core.Abstractions;
+using Centurion.Models.Workflow;
+using Centurion.Abstractions;
 using Centurion.Core.Managers;
-using Centurion.Core.Models.Metadata;
+using Centurion.Models.Metadata;
 using Xunit;
 
 namespace Centurion.Tests;

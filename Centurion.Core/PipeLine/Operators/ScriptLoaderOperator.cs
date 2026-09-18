@@ -1,7 +1,7 @@
 using System.Text;
-using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Models;
-using Centurion.Core.Models.Workflow;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Models;
+using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;

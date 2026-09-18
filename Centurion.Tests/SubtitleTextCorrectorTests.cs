@@ -1,5 +1,5 @@
-using Centurion.Core.Models;
-using Centurion.Core.Models.Workflow;
+using Centurion.Models;
+using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline.Operators;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;

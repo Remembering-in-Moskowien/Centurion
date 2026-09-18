@@ -1,6 +1,7 @@
-﻿// Centurion.Cli/Commands/Settings/SpawnSettings.cs
+using Centurion.Models.Workflow;
+// Centurion.Cli/Commands/Settings/SpawnSettings.cs
 using System.ComponentModel;
-using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands.Settings;
@@ -63,11 +64,11 @@ public sealed class SpawnSettings : CommandSettings
     public bool DisableAudioLoudness { get; init; }
 
     // ----- 人声分离模块 (Vocal Separation) -----
-    [CommandOption("--vocal-separation")]
+    [CommandOption("--vs|--vocal-separation")]
     [Description("Separate vocals with Demucs before transcription (only for music/BGM-heavy media)")]
     public bool VocalSeparation { get; init; } = false;
 
-    [CommandOption("--vocal-separation-model <MODEL>")]
+    [CommandOption("--vsm|--vocal-separation-model <MODEL>")]
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 

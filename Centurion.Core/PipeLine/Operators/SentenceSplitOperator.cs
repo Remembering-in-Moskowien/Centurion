@@ -1,9 +1,9 @@
-﻿using Centurion.Core.Abstractions;
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Pipeline;
-using Centurion.Core.Abstractions.Strategy;
-using Centurion.Core.Models;
-using Centurion.Core.Models.Workflow;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Strategy;
+using Centurion.Models;
+using Centurion.Models.Workflow;
 using Centurion.Core.Strategy.SentenceSplit;
 using Microsoft.Extensions.Logging;
 

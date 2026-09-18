@@ -1,5 +1,6 @@
+using Centurion.Models.Workflow;
 using System.ComponentModel;
-using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands.Settings;

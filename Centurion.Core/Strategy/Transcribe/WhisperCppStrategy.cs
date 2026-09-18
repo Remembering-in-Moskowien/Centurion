@@ -1,11 +1,13 @@
-﻿// Centurion.Core/Strategies/Transcription/WhisperCppStrategy.cs
+using Centurion.Core.Factories;
+using Centurion.Models.Workflow;
+// Centurion.Core/Strategies/Transcription/WhisperCppStrategy.cs
 
-using Centurion.Core.Abstractions;
-using Centurion.Core.Abstractions.Factories;
-using Centurion.Core.Abstractions.Strategy;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Factories;
+using Centurion.Abstractions.Strategy;
 using Centurion.Core.Managers;
-using Centurion.Core.Models;
-using Centurion.Core.Models.Transcript;
+using Centurion.Models;
+using Centurion.Models.Transcript;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

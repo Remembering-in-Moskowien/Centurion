@@ -1,4 +1,4 @@
-﻿using Centurion.Core.Abstractions;
+using Centurion.Abstractions;
 using FFMpegCore;
 
 namespace Centurion.Core.Managers;
