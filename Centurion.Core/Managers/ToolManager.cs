@@ -22,14 +22,15 @@ public class ToolManager : IDisposable
     public string ToolDirectory { get; private set; }
     public string ExecutablePath { get; private set; }
 
-    public ToolManager(string toolName, IServiceProvider serviceProvider)
+    public ToolManager(string toolName, ToolRegistry registry, IServiceProvider serviceProvider)
     {
+        ArgumentNullException.ThrowIfNull(registry);
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = serviceProvider.GetRequiredService<ILogger<ToolManager>>();
         _toolsRoot = Path.Combine(AppContext.BaseDirectory, "tools", "asr");
         Directory.CreateDirectory(_toolsRoot);
 
-        if (!ToolRegistry.Tools.TryGetValue(toolName, out var meta))
+        if (!registry.Tools.TryGetValue(toolName, out var meta))
             throw new ArgumentException($"Unsupported tool: {toolName}", nameof(toolName));
         _toolMeta = meta;
 

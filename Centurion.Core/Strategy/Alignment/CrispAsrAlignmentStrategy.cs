@@ -1,4 +1,5 @@
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Exceptions;
 using Centurion.Core.Managers;
@@ -23,7 +24,7 @@ public sealed class CrispAsrAlignmentStrategy(
 
         var expectedSentenceCount = sentences.Count;
 
-        var toolManager = new ToolManager("crispasr", serviceProvider);
+        var toolManager = serviceProvider.GetRequiredService<IToolManagerFactory>().Create("crispasr");
         await toolManager.EnsureToolAsync(cancellationToken);
         var modelPath = await modelPathResolver.GetQwen3ForcedAlignerPathAsync(modelName, cancellationToken);
         var tempDir = Path.Combine(Path.GetTempPath(), $"crispalign_{Guid.NewGuid():N}");
@@ -86,8 +87,7 @@ public sealed class CrispAsrAlignmentStrategy(
         {
             var reference = sentence.Text.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var arguments = $"--align-only -am \"{modelPath}\" -f \"{audioPath}\" --ref-text \"{reference}\" --align-format srt --align-output \"{outputPath}\"";
-            var processManager = new ProcessManager(
-                serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
+            var processManager = serviceProvider.GetRequiredService<ProcessManager>();
             await processManager.ExecuteAsync(toolManager.ExecutablePath, arguments, cancellationToken);
             if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
                 return [];
@@ -122,6 +122,22 @@ public sealed class CrispAsrAlignmentStrategy(
 
     private static void MapTimingsToSentence(Sentence sentence, List<(double Start, double End)> timings, double offsetMilliseconds)
     {
+        if (sentence.Words.Count == 0)
+        {
+            var generatedWords = sentence.Text
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .Select(text => new Word
+                {
+                    Text = text,
+                    Start = sentence.Start,
+                    End = sentence.End,
+                    Speaker = "UNKNOWN",
+                    Status = MappingStatus.Matched
+                })
+                .ToList();
+            sentence.Words = generatedWords;
+        }
+
         var words = sentence.Words.Where(word => word.Status != MappingStatus.AudioExtra).ToList();
         var count = Math.Min(words.Count, timings.Count);
         for (var index = 0; index < count; index++)

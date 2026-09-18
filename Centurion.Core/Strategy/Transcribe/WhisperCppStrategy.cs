@@ -1,9 +1,11 @@
 ﻿// Centurion.Core/Strategies/Transcription/WhisperCppStrategy.cs
 
 using Centurion.Core.Abstractions;
+using Centurion.Core.Abstractions.Factories;
 using Centurion.Core.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Core.Models;
+using Centurion.Core.Models.Transcript;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,8 +14,8 @@ namespace Centurion.Core.Strategy.Transcribe;
 
 public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscriptionStrategy
 {
-    private readonly ToolManager _toolManager = new("whispercpp", serviceProvider);
-    private readonly ProcessManager _processManager = new(serviceProvider.GetRequiredService<ILogger<ProcessManager>>());
+    private readonly ToolManager _toolManager = serviceProvider.GetRequiredService<IToolManagerFactory>().Create("whispercpp");
+    private readonly ProcessManager _processManager = serviceProvider.GetRequiredService<ProcessManager>();
     private readonly IModelPathResolver _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
     private readonly ILogger<WhisperCppStrategy> _logger = serviceProvider.GetRequiredService<ILogger<WhisperCppStrategy>>();
 
