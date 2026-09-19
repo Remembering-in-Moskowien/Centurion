@@ -126,8 +126,8 @@ public class ModelManager : IDisposable
                 Payload = new AriaDownloadRequest
                 {
                     Url = fileUrl,
-                    FullSavePath = savePath
-                    // 不再传递哈希
+                    FullSavePath = savePath,
+                    FileHash = _targetMeta.FileHash ?? string.Empty
                 }
             };
             await aria.ProcessAsync(request, cancellationToken);
@@ -151,7 +151,7 @@ public class ModelManager : IDisposable
             {
                 Url = _targetMeta.DownloadUrl!,
                 FullSavePath = ModelFilePath,
-                // 不再传递哈希
+                FileHash = _targetMeta.FileHash ?? string.Empty,
                 SplitThread = 4,
                 ServerConnection = 4,
                 MaxRetry = 5,

@@ -13,18 +13,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- 允许测试程序集访问 internal 成员（如算子内部可测逻辑） -->
         <InternalsVisibleTo Include="Centurion.Tests" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Downloader" Version="5.9.6" />        <PackageReference Include="FFMpegCore" Version="5.4.0"/>
+        <PackageReference Include="Downloader" Version="5.9.6" />
+        <PackageReference Include="FFMpegCore" Version="5.4.0" />
         <PackageReference Include="Humanizer" Version="3.0.10" />
         <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
         <PackageReference Include="OllamaSharp" Version="5.4.30" />
         <PackageReference Include="SharpCompress" Version="0.50.4" />
         <PackageReference Include="Soenneker.Utils.String.NeedlemanWunsch" Version="4.0.1000" />
@@ -39,14 +39,6 @@
             <Generator>PublicResXFileCodeGenerator</Generator>
             <DependentUpon>Localization.cs</DependentUpon>
         </EmbeddedResource>
-    </ItemGroup>
-
-    <ItemGroup>
-        <MavenReference Include="edu.stanford.nlp:stanford-corenlp" Version="4.5.6"/>
-        <MavenReference Include="edu.stanford.nlp:stanford-corenlp" Version="4.5.6" Classifier="models"/>
-
-        <MavenReference Include="org.slf4j:slf4j-api" Version="2.0.9"/>
-        <MavenReference Include="org.slf4j:slf4j-simple" Version="2.0.9"/>
     </ItemGroup>
 
 </Project>

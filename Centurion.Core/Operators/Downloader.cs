@@ -37,6 +37,10 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
         var payload = request.Payload;
         await CheckHealthAsync();
 
+        // 生产安全：仅允许 HTTPS 下载，防止配置被篡改为明文 HTTP 造成中间人攻击
+        if (!Uri.TryCreate(payload.Url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Refusing to download from non-HTTPS URL: {payload.Url}");
+
         // 确保目标目录存在
         var targetDir = Path.GetDirectoryName(payload.FullSavePath)!;
         if (!Directory.Exists(targetDir))

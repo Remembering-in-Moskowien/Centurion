@@ -82,7 +82,7 @@ public sealed class GitHubUpdateService : IUpdateService
 
         ExtractZipSafely(zipPath, payloadDir);
 
-        var scriptPath = CreateApplyScript(stagingDir, payloadDir, release.TagName);
+        var scriptPath = CreateApplyScript(stagingDir, payloadDir, tagDir);
         return new UpdateStageResult(stagingDir, payloadDir, scriptPath, asset);
     }
 
@@ -262,8 +262,9 @@ public sealed class GitHubUpdateService : IUpdateService
     /// <summary>
     /// 生成延迟应用的更新脚本：等待旧进程退出 → 拷贝新文件 → 清理 → 重启。
     /// Windows 生成 .cmd，其他平台生成 .sh。
+    /// 仅接受已净化（仅字母/数字/.-_）的版本标识，避免远程标签注入脚本命令。
     /// </summary>
-    private string CreateApplyScript(string stagingDir, string payloadDir, string tagName)
+    private string CreateApplyScript(string stagingDir, string payloadDir, string tagDir)
     {
         var appDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var exeBase = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "Centurion.Cli";
@@ -276,7 +277,7 @@ public sealed class GitHubUpdateService : IUpdateService
                 "chcp 65001 >nul",
                 "setlocal",
                 "echo.",
-                $"echo 🔄 Centurion update: applying {tagName} ...",
+                $"echo 🔄 Centurion update: applying {tagDir} ...",
                 "timeout /t 3 /nobreak >nul",
                 $"taskkill /f /im \"{exeBase}.exe\" >nul 2>&1",
                 $"xcopy /y /e /q \"{payloadDir}\\*\" \"{appDir}\\\" >nul",
@@ -297,7 +298,7 @@ public sealed class GitHubUpdateService : IUpdateService
         File.WriteAllText(sh, string.Join("\n",
             "#!/usr/bin/env bash",
             "set -u",
-            $"echo \"🔄 Centurion update: applying {tagName} ...\"",
+            $"echo \"🔄 Centurion update: applying {tagDir} ...\"",
             "sleep 3",
             $"pkill -f '{exeBase}' >/dev/null 2>&1 || true",
             $"cp -R \"{payloadDir}/.\" \"{appDir}/\"",

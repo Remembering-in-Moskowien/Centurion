@@ -52,7 +52,15 @@ public static class MetadataJsonLoader
         {
             try
             {
-                return LoadFromFile(path);
+                var catalog = LoadFromFile(path);
+                var merged = MergeMissingDefaults(catalog);
+                if (merged.Changed)
+                {
+                    // 程序升级引入的新工具/模型条目补入本地配置，保留用户自定义部分
+                    System.Console.Error.WriteLine("[Centurion] New default entries merged into metadata config.");
+                    WriteCatalogFile(path, merged.Catalog);
+                }
+                return merged.Catalog;
             }
             catch (Exception ex)
             {
@@ -134,6 +142,7 @@ public static class MetadataJsonLoader
                     ?? throw new InvalidOperationException($"Tool '{key}' is missing 'executableRelativePath'."),
                 Version = dto.Version,
                 ModelBaseUrl = dto.ModelBaseUrl,
+                FileHash = dto.FileHash,
                 Variants = BuildVariants(dto.Variants)
             };
         }
@@ -154,7 +163,8 @@ public static class MetadataJsonLoader
                 DownloadUrl = dto.DownloadUrl,
                 ArchiveType = dto.ArchiveType,
                 ExecutableRelativePath = dto.ExecutableRelativePath,
-                Description = dto.Description
+                Description = dto.Description,
+                FileHash = dto.FileHash
             };
         }
         return result;
@@ -193,15 +203,24 @@ public static class MetadataJsonLoader
             ModelDownloadType.Directory => new ModelMeta(
                 dto.DownloadUrl ?? throw new InvalidOperationException($"Model '{key}' is missing 'downloadUrl'."),
                 dto.Files ?? throw new InvalidOperationException($"Model '{key}' (directory) requires a non-empty 'files' list."),
-                dto.Subdirectory),
+                dto.Subdirectory)
+            {
+                FileHash = dto.FileHash
+            },
             ModelDownloadType.OnnxModelDirectory => new ModelMeta(
                 dto.DownloadUrl ?? throw new InvalidOperationException($"Model '{key}' is missing 'downloadUrl'."),
                 dto.Files ?? throw new InvalidOperationException($"Model '{key}' (onnx-directory) requires a non-empty 'files' list."),
                 dto.OnnxModelType ?? throw new InvalidOperationException($"Model '{key}' (onnx-directory) requires 'onnxModelType'."),
-                dto.Subdirectory),
+                dto.Subdirectory)
+            {
+                FileHash = dto.FileHash
+            },
             _ => new ModelMeta(
                 dto.FileName ?? throw new InvalidOperationException($"Model '{key}' is missing 'fileName'."),
                 dto.DownloadUrl ?? throw new InvalidOperationException($"Model '{key}' is missing 'downloadUrl'."))
+            {
+                FileHash = dto.FileHash
+            }
         };
     }
 
@@ -212,6 +231,94 @@ public static class MetadataJsonLoader
         "onnx-directory" or "onnx" => ModelDownloadType.OnnxModelDirectory,
         _ => throw new InvalidOperationException($"Unknown model download type: '{value}'.")
     };
+
+    // ---------- 缺失条目合并 ----------
+
+    /// <summary>
+    /// 把内置默认注册表中有、而本地配置缺失的工具/模型条目补入，
+    /// 使用户自定义条目保留的同时，随程序升级自动获得新增能力。
+    /// </summary>
+    /// <param name="catalog">已加载的本地注册表。</param>
+    /// <returns>合并结果（是否发生补充 + 合并后的注册表）。</returns>
+    private static (bool Changed, MetadataCatalog Catalog) MergeMissingDefaults(MetadataCatalog catalog)
+    {
+        var changed = false;
+        var tools = new Dictionary<string, ToolMeta>(catalog.Tools.Tools, StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in ToolRegistry.Default.Tools)
+        {
+            if (!tools.ContainsKey(key))
+            {
+                tools[key] = value;
+                changed = true;
+            }
+        }
+
+        var models = BuildMergedModels(catalog.Models, ref changed);
+        return (changed, new MetadataCatalog
+        {
+            Tools = new ToolRegistry(tools),
+            Models = models
+        });
+    }
+
+    private static ModelRegistry BuildMergedModels(ModelRegistry local, ref bool changed)
+    {
+        var whisper = MergeModelDict(local.WhisperModels, ModelRegistry.Default.WhisperModels, ref changed);
+        var faster = MergeModelDict(local.FasterWhisperModels, ModelRegistry.Default.FasterWhisperModels, ref changed);
+        var qwen = MergeModelDict(local.Qwen3AsrModels, ModelRegistry.Default.Qwen3AsrModels, ref changed);
+        var aligner = MergeModelDict(local.Qwen3ForcedAlignerModels, ModelRegistry.Default.Qwen3ForcedAlignerModels, ref changed);
+        var diar = MergeModelDict(local.DiarizationModels, ModelRegistry.Default.DiarizationModels, ref changed);
+        var bert = MergeModelDict(local.BertOnnxModels, ModelRegistry.Default.BertOnnxModels, ref changed);
+        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert);
+    }
+
+    private static Dictionary<string, ModelMeta> MergeModelDict(
+        IReadOnlyDictionary<string, ModelMeta> local,
+        IReadOnlyDictionary<string, ModelMeta> defaults,
+        ref bool changed)
+    {
+        var result = new Dictionary<string, ModelMeta>(local, StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in defaults)
+        {
+            if (!result.ContainsKey(key))
+            {
+                result[key] = value;
+                changed = true;
+            }
+        }
+        return result;
+    }
+
+    /// <summary>把注册表对象序列化写回配置文件。</summary>
+    /// <param name="path">目标 JSON 路径。</param>
+    /// <param name="catalog">待写入的注册表。</param>
+    private static void WriteCatalogFile(string path, MetadataCatalog catalog)
+    {
+        try
+        {
+            var seed = new MetadataFileDto
+            {
+                Tools = catalog.Tools.Tools.ToDictionary(
+                    kv => kv.Key, kv => ToDto(kv.Value), StringComparer.OrdinalIgnoreCase),
+                Models = new Dictionary<string, Dictionary<string, ModelMetaDto>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["whisper"] = ToDtoDict(catalog.Models.WhisperModels),
+                    ["fasterWhisper"] = ToDtoDict(catalog.Models.FasterWhisperModels),
+                    ["qwen3Asr"] = ToDtoDict(catalog.Models.Qwen3AsrModels),
+                    ["qwen3ForcedAligner"] = ToDtoDict(catalog.Models.Qwen3ForcedAlignerModels),
+                    ["diarization"] = ToDtoDict(catalog.Models.DiarizationModels),
+                    ["bertOnnx"] = ToDtoDict(catalog.Models.BertOnnxModels)
+                }
+            };
+
+            File.WriteAllText(path, JsonSerializer.Serialize(seed, JsonOptions));
+        }
+        catch (Exception ex)
+        {
+            // 写回失败不影响本次运行（内存中已合并）
+            System.Console.Error.WriteLine($"[Centurion] Could not persist merged metadata at '{path}': {ex.Message}");
+        }
+    }
 
     // ---------- 种子文件 ----------
 
@@ -259,6 +366,7 @@ public static class MetadataJsonLoader
         ExecutableRelativePath = meta.ExecutableRelativePath,
         Version = meta.Version,
         ModelBaseUrl = meta.ModelBaseUrl,
+        FileHash = meta.FileHash,
         Variants = meta.Variants?.ToDictionary(
             kv => kv.Key, kv => ToDto(kv.Value), StringComparer.OrdinalIgnoreCase)
     };
@@ -268,13 +376,15 @@ public static class MetadataJsonLoader
         DownloadUrl = variant.DownloadUrl,
         ArchiveType = variant.ArchiveType,
         ExecutableRelativePath = variant.ExecutableRelativePath,
-        Description = variant.Description
+        Description = variant.Description,
+        FileHash = variant.FileHash
     };
 
     private static ModelMetaDto ToDto(ModelMeta meta) => new()
     {
         FileName = meta.FileName,
         DownloadUrl = meta.DownloadUrl,
+        FileHash = meta.FileHash,
         DownloadType = meta.DownloadType switch
         {
             ModelDownloadType.Directory => "directory",
@@ -312,6 +422,8 @@ public static class MetadataJsonLoader
         public string? Version { get; set; }
         /// <summary>工具运行所需模型/权重的基础下载地址，可为空。</summary>
         public string? ModelBaseUrl { get; set; }
+        /// <summary>可选：下载包 SHA256 校验值（十六进制小写），为空时不校验。</summary>
+        public string? FileHash { get; set; }
         /// <summary>按设备键的下载变体字典。</summary>
         public Dictionary<string, ToolVariantDto>? Variants { get; set; }
     }
@@ -327,6 +439,8 @@ public static class MetadataJsonLoader
         public string? ExecutableRelativePath { get; set; }
         /// <summary>面向用户的变体说明（如 "CUDA 12.4 build"）。</summary>
         public string? Description { get; set; }
+        /// <summary>可选：该变体下载包 SHA256 校验值（十六进制小写），为空回退到工具基础值。</summary>
+        public string? FileHash { get; set; }
     }
 
     /// <summary>模型条目 JSON 结构。</summary>
@@ -336,6 +450,8 @@ public static class MetadataJsonLoader
         public string? FileName { get; set; }
         /// <summary>模型下载 URL。</summary>
         public string? DownloadUrl { get; set; }
+        /// <summary>可选：下载文件 SHA256 校验值（十六进制小写），为空时不校验。</summary>
+        public string? FileHash { get; set; }
         /// <summary>下载类型字符串（"single-file" / "directory" / "onnx-directory"）。</summary>
         public string? DownloadType { get; set; }
         /// <summary>目录/ONNX 模型需下载的文件相对路径列表。</summary>

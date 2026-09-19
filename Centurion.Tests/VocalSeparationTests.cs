@@ -11,10 +11,7 @@ public sealed class VocalSeparationTests
         var args = VocalSeparationOperator.BuildArguments(
             "htdemucs", "C:\\tmp\\pre.wav", "C:\\tmp\\out");
 
-        Assert.Contains("-m htdemucs", args);
-        Assert.Contains("-s vocals", args);
-        Assert.Contains("-o \"C:\\tmp\\out\"", args);
-        Assert.Contains("\"C:\\tmp\\pre.wav\"", args);
+        Assert.Equal(["-m", "htdemucs", "-s", "vocals", "-o", "C:\\tmp\\out", "C:\\tmp\\pre.wav"], args);
     }
 
     [Fact]
