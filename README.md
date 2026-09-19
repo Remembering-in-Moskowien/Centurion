@@ -3,7 +3,7 @@
 > **Speech → Subtitles, done properly.** 🎬
 > Centurion is a **.NET 10** command-line powerhouse that turns audio/video into **polished ASS subtitles**: transcribe → diarize → split → clean → force-align, all in one automatic pipeline. Sit back, relax, let it cook. ✨
 
-![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
+![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-96%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
 
 ---
 
@@ -32,6 +32,10 @@
 | 📜 Script timing | Have a script + media? `from-script` aligns them instantly | ✅ |
 | 🛠️ Subtitle calibration | Existing subs slightly off? `correct` straightens them out | ✅ |
 | 🔄 Format conversion | SRT/VTT/… → ASS, no fuss | ✅ |
+| 🌐 Machine translation | Translate existing subtitles with **LLM (OpenAI / Ollama)**, glossary & target-script alignment | ✅ |
+| 📝 Translated karaoke | Word-level `\K` timestamps for translations — time interpolation, long syllables get more time | ✅ |
+| 🈶 Non-Latin script support | Chinese, Japanese, Korean, Cyrillic, Arabic & more — no more space-joined gibberish | ✅ |
+| 🧾 Rich context JSON | Every run dumps a `.context.json` with config, results & diagnostics | ✅ |
 | 🔄 Self-update | One command pulls the latest release from GitHub | ✅ |
 
 ---
@@ -103,6 +107,7 @@ Run it directly:
 | `correct` | 🛠️ Calibrate existing subtitles | `correct <SUBTITLE_FILE>` |
 | `from-script` | 📜 Script timing: media + script → ASS | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
 | `convert` | 🔄 Subtitle format conversion | `convert <INPUT_FILE>` |
+| `translate` | 🌐 Translate existing subtitles (LLM, glossary, target-script) | `translate <SUBTITLE_FILE> -t <LANG>` |
 | `update` | 🔄 Self-update from GitHub releases | `update [options]` |
 
 ---
@@ -170,7 +175,9 @@ Centurion correct <SUBTITLE_FILE> [options]
 - `--fuzzy-threshold <T>` — minimum text similarity 0..1, default `0.72`
 - `--vocal-separation` / `--vocal-separation-model <MODEL>` — Demucs before alignment 🎤
 - `--device <DEVICE>` — inference device 🖥️
-- `--disable-audio-*` — preprocess toggles
+- `-l, --language <LANG>` — audio language, default `en` (pass `zh` / `ja` for CJK media)
+- `--audio-noise-reduction` / `--audio-snr-threshold <DB>` — conditional noise reduction
+- `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
 - `-k, --karaoke` — karaoke mode 🎵
 
 ### Example 🧪
@@ -199,6 +206,8 @@ Centurion from-script <INPUT_FILE> <SCRIPT_FILE> [options]
 - `--tm, --transcriber-model <MODEL>` — model, default `base`
 - `--vocal-separation` / `--vocal-separation-model <MODEL>` — Demucs vocal separation 🎤
 - `--device <DEVICE>` — inference device 🖥️
+- `--audio-noise-reduction` / `--audio-snr-threshold <DB>` — conditional noise reduction
+- `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
 - `-a, --align` — forced alignment (default on) 📏
 - `--am, --alignment-model <MODEL>` — aligner model
 - `--max-cps <CPS>` — max characters per second, default `5.0`
@@ -264,6 +273,72 @@ Centurion update --check
 # Check + download + apply in one go (program restarts itself)
 Centurion update --apply
 ```
+
+---
+
+## 6️⃣ `translate` — Translation, Without the Timeline Drama 🌐
+
+Got a subtitle file in a language you don't want? `translate` rewrites the **text only** — the timeline, the word details, everything spatial stays untouched. It's text alignment, not a remix. 🎯
+
+```bash
+Centurion translate <SUBTITLE_FILE> -t <LANG> [options]
+```
+
+### Options
+
+- `<SUBTITLE_FILE>` — input subtitle file (SRT/VTT/ASS…) 📄
+- `-t, --target-language <LANG>` — target language code, e.g. `zh`, `en`, `ja` (required)
+- `-o, --output <OUTPUT_FILE>` — output ASS path (defaults to `<input>.translated.ass`)
+- `--source-language <LANG>` — source language (auto-detected when omitted)
+- `-s, --strategy <STRATEGY>` — translation strategy, `llm` (default)
+- `--model <MODEL>` — LLM model (OpenAI default `gpt-4o-mini`, Ollama default `llama3.1`)
+- `--api-key <KEY>` — OpenAI API key; **omit it to fall back to local Ollama**
+- `--glossary <FILE>` — glossary JSON: `{ "source": "target" }` or `[{ "source":…, "target":… }]` 📚
+- `--target-script <FILE>` — target-language script (one line per subtitle) 📝
+- `-b, --bilingual` — output bilingual subtitles (source on top, translation below) 🈳
+- `-k, --karaoke` — word-level `\K` timestamps for translations 🎵
+
+### The magic of target-script alignment ✨
+
+Hand it an **official target-language script** (subtitles count matching) and `translate` performs **pure 1:1 text alignment** — line N of the script becomes line N of the subtitles, no LLM involved. Official wording, guaranteed. If the counts don't match, it warns you and translates with the script as a wording reference instead.
+
+### Translated karaoke timestamps ⏱️
+
+No word-level timing exists for a translation — so Centurion **builds one**:
+- **Time interpolation**: the sentence's `[start, end]` is redistributed across the translated words
+- **Long-syllable bias**: longer words (more syllables / more characters) get proportionally more time — no more "a" and "extraordinary" fighting over the same millisecond 😄
+- A lead-in pause (`\K`) opens each line, matching the classic karaoke rhythm
+
+### Examples 🧪
+
+```bash
+# OpenAI backend
+Centurion translate subtitles.srt -t zh --api-key sk-xxx --model gpt-4o-mini
+
+# Local Ollama (no key needed)
+Centurion translate subtitles.srt -t ja
+
+# Glossary + official script + bilingual + karaoke
+Centurion translate subs.srt -t zh --glossary terms.json --target-script official.txt -b -k
+```
+
+> 💡 **Bilingual layout**: source line rides on top (`Default` style), translation hugs the bottom (`Sub` style) — a layout borrowed from classic dual-language fansubs.
+
+> 🧾 Every run also drops a `<output>.context.json` next to the subtitles — full config, per-sentence translations, glossary & script load state, and any warnings. Perfect for debugging "why did *that* line come out like that".
+
+---
+
+## 🎨 Subtitle Styles (Batteries Included)
+
+The default ASS template ships with **two ready-made styles**, tuned for dual-language subtitles:
+
+| Style | Role | Font | Size | Position |
+|---|---|---|---|---|
+| `Default` | 🎬 Main line (source language) | **Arial** (bold) | 84 | Top-ish, `MarginV 100` |
+| `Sub` | 🈳 Secondary line (translation) | **Microsoft YaHei** | 81 | Bottom, `MarginV 28` |
+
+- Both share the classic look: white text, semi-transparent outline (3.3px) + shadow (2.5px), bottom-center aligned
+- 🖥️ **Zero-install fonts**: every font is a system default — Arial ships with Windows/macOS (Linux auto-substitutes the metric-compatible Liberation Sans); Microsoft YaHei ships with Windows Chinese (macOS falls back to PingFang SC, Linux to Noto Sans CJK SC — all modern sans-serif CJK, visually near-identical)
 
 ---
 
@@ -347,6 +422,24 @@ Tools & models live in an **external JSON registry**, loaded at startup — edit
     }
   }
 }
+```
+
+---
+
+## 🈶 Non-Latin Language Support
+
+Centurion no longer assumes your audio speaks English with spaces. 🎉
+
+- **CJK & spacing-aware text**: Chinese & Japanese are joined without spaces (correct for 无空格语系), Korean keeps its word spaces — the old `string.Join(" ")` nightmare is dead 💀
+- **Language-aware punctuation**: sentence splitting recognizes `。！？，；：、…` plus Devanagari `।॥` and Arabic `؟`
+- **Per-language transcription**: pass `-l zh` / `-l ja` / `-l ko` — Whisper & CrispASR obey; Whisper auto-detects when no language is given
+- **Cross-lingual alignment**: the default aligner (`qwen3-forced-aligner-0.6b`) works for Chinese, Japanese, English & more
+- **LLM splitting**: Chinese/Japanese use a CJK prompt branch; Korean rides the English branch (its punctuation matches anyway)
+- **Model-agnostic stages**: diarization & vocal separation don't care about language at all
+
+```bash
+Centurion spawn 讲座.wav -l zh --transcriber qwen3-asr-1.7b
+Centurion spawn anime.mkv -l ja
 ```
 
 ---
