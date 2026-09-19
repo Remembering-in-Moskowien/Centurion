@@ -15,12 +15,21 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
 {
     private bool _disposed;
 
+    /// <summary>
+    /// 健康检查；本算子不再依赖外部二进制，始终直接返回成功。
+    /// </summary>
     public Task CheckHealthAsync()
     {
         // 不再依赖外部二进制，直接返回成功
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 按请求多线程下载文件，显示下载进度，并在提供哈希值时进行 SHA256 校验。
+    /// </summary>
+    /// <param name="request">包含下载 URL、保存路径以及线程数、重试等配置的请求。</param>
+    /// <param name="cancellationToken">取消下载操作的取消令牌。</param>
+    /// <returns>下载结果，包含是否成功与保存文件路径。</returns>
     public async Task<DownloaderResponse> ProcessAsync(
         OperatorsRequest<AriaDownloadRequest> request,
         CancellationToken cancellationToken = default)
@@ -111,17 +120,27 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
         };
     }
 
+    /// <summary>
+    /// 释放资源并抑制终结器。
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// 终结器，在对象回收时调用 <see cref="Dispose(bool)"/>。
+    /// </summary>
     ~Downloader()
     {
         Dispose(false);
     }
 
+    /// <summary>
+    /// 释放资源；本类无需要释放的非托管资源。
+    /// </summary>
+    /// <param name="disposing">为 <see langword="true"/> 时同时释放托管资源。</param>
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;

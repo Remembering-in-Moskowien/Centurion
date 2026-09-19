@@ -9,14 +9,26 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
 
+/// <summary>
+/// 校正报告算子：基于工作流状态与校正元数据汇总句子总数、文本覆盖率、时间漂移等指标，
+/// 输出到控制台并写入 <see cref="SubtitleWorkflowContext"/> 状态中的 Report。
+/// </summary>
 public sealed class CorrectionReportOperator : PipelineOperatorBase<CorrectionReportOperator>
 {
+    /// <summary>创建校正报告算子实例。</summary>
+    /// <param name="logger">记录报告输出日志的记录器。</param>
     public CorrectionReportOperator(ILogger<CorrectionReportOperator> logger) : base(logger)
     {
     }
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Correction Report";
 
+    /// <summary>
+    /// 汇总并输出校正报告：统计句子总数、文本覆盖率、时间漂移与耗时，写入 Report 并打印。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供句子、元数据与报告对象。</param>
+    /// <param name="cancellationToken">用于取消报告生成的取消标记。</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();

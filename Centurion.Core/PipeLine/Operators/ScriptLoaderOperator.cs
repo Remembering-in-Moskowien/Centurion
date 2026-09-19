@@ -6,17 +6,29 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
 
+/// <summary>
+/// 脚本加载算子：从配置的脚本文件逐行读取文本，每行作为一个 <see cref="Sentence"/>，
+/// 写入工作流状态，供"带脚本"工作流作为字幕分段的唯一依据。
+/// </summary>
 public sealed class ScriptLoaderOperator : PipelineOperatorBase<ScriptLoaderOperator>
 {
     private readonly ILogger<ScriptLoaderOperator> _logger;
 
+    /// <summary>创建脚本加载算子实例。</summary>
+    /// <param name="logger">记录脚本加载日志的记录器。</param>
     public ScriptLoaderOperator(ILogger<ScriptLoaderOperator> logger) : base(logger)
     {
         _logger = logger;
     }
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Script Loading";
 
+    /// <summary>
+    /// 读取脚本文件并按非空行切分为句子，写入工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供脚本文件路径。</param>
+    /// <param name="cancellationToken">用于取消读取过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var path = context.Config.ScriptFilePath;

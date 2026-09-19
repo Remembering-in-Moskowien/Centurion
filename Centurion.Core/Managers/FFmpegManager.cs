@@ -47,6 +47,9 @@ public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager t
     }
 
     // ---------- 资源释放 ----------
+    /// <summary>
+    /// 释放由本管理器占用的资源，包括回收专用的 FFmpeg 临时目录句柄。
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;

@@ -1,16 +1,15 @@
 using Centurion.Core.Factories;
 using Centurion.Models.Workflow;
-// Centurion.Core/Strategies/Transcription/CrispAsrBaseStrategy.cs
 
 using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Strategy;
 using Centurion.Core.Managers;
 using Centurion.Models;
+using Centurion.Models.Transcript;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Centurion.Core.Strategy.Transcribe;
 
@@ -19,14 +18,21 @@ namespace Centurion.Core.Strategy.Transcribe;
 /// </summary>
 public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 {
+    /// <summary>按设备创建 CrispASR 工具管理器的工厂。</summary>
     protected readonly IToolManagerFactory _toolManagerFactory;
+    /// <summary>负责启动并管理外部 CLI 进程的执行器。</summary>
     protected readonly ProcessManager _processManager;
+    /// <summary>用于解析模型文件本地路径的解析器。</summary>
     protected readonly IModelPathResolver _modelResolver;
+    /// <summary>记录转录过程日志的记录器。</summary>
     protected readonly ILogger<CrispAsrBaseStrategy> _logger;
     private ToolManager? _toolManager;
 
+    /// <summary>策略的显示名称。</summary>
     public abstract string StrategyName { get; }
 
+    /// <summary>从依赖注入容器解析所需服务，初始化基类共享依赖。</summary>
+    /// <param name="serviceProvider">用于解析工具工厂、进程管理器、模型解析器与日志记录器的容器。</param>
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)
     {
         _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
@@ -76,6 +82,16 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         return args;
     }
 
+    /// <summary>
+    /// 执行转录：确保 CrispASR 就绪、解析模型与可选对齐器、构建并运行 CLI，
+    /// 解析输出 JSON 为词级时间戳列表。
+    /// </summary>
+    /// <param name="audioPath">待转录音频文件路径。</param>
+    /// <param name="language">音频语言代码；为空时由模型自动判断。</param>
+    /// <param name="modelName">转录模型名；为空时使用实现的默认模型。</param>
+    /// <param name="initialPrompt">可选的初始提示词。</param>
+    /// <param name="cancellationToken">用于取消转录过程的取消标记。</param>
+    /// <param name="device">推理设备，决定选用 CPU/GPU 变体工具。</param>
     public async Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
@@ -120,39 +136,35 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     }
 
     /// <summary>
-    /// Common JSON parser for all CrispASR backends.
+    /// 解析 CrispASR 输出 JSON（实体模型反序列化），提取词级时间戳列表。
+    /// 同时兼容 whisper 与 qwen3 后端：两者均输出 words（text/offsets），仅 tokens 时间戳可能缺失。
     /// </summary>
+    /// <param name="json">CrispASR -ojf 格式的 JSON 字符串。</param>
+    /// <returns>解析得到的词级时间戳列表。</returns>
     private List<Word> ParseJsonOutput(string json)
     {
-        var root = JsonParser.Deserialize<JObject>(json);
+        var root = JsonParser.Deserialize<CrispAsrTranscriptJson>(json);
 
-        if (root["transcription"] is not JArray transcriptionArray)
+        if (root.Transcription is null)
             throw new InvalidOperationException("Missing 'transcription' array in CrispASR JSON output.");
 
         var words = new List<Word>();
-        foreach (var segment in transcriptionArray.OfType<JObject>())
+        foreach (var segment in root.Transcription)
         {
-            if (segment["words"] is not JArray wordArray)
+            if (segment.Words is null)
                 continue;
 
-            foreach (var wordElement in wordArray.OfType<JObject>())
+            foreach (var wordElement in segment.Words)
             {
-                var text = wordElement["text"]?.Value<string>() ?? string.Empty;
+                var text = wordElement.Text;
                 if (string.IsNullOrWhiteSpace(text))
                     continue;
-
-                var offsets = wordElement["offsets"] as JObject
-                    ?? throw new InvalidOperationException("Missing 'offsets' in CrispASR word output.");
-                var fromMs = offsets["from"]?.Value<long>()
-                    ?? throw new InvalidOperationException("Missing 'from' in CrispASR word offsets.");
-                var toMs = offsets["to"]?.Value<long>()
-                    ?? throw new InvalidOperationException("Missing 'to' in CrispASR word offsets.");
 
                 words.Add(new Word
                 {
                     Text = text,
-                    Start = fromMs,
-                    End = toMs,
+                    Start = wordElement.Offsets.From,
+                    End = wordElement.Offsets.To,
                     Speaker = "SPEAKER_00"
                 });
             }

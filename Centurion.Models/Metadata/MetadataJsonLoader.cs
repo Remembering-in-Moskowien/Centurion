@@ -1,5 +1,3 @@
-// Centurion.Core/Models/Metadata/MetadataJsonLoader.cs
-
 using System.Text.Json;
 
 namespace Centurion.Models.Metadata;
@@ -9,7 +7,9 @@ namespace Centurion.Models.Metadata;
 /// </summary>
 public sealed class MetadataCatalog
 {
+    /// <summary>已加载的工具注册表，按工具名索引。</summary>
     public required ToolRegistry Tools { get; init; }
+    /// <summary>已加载的模型注册表，按模型类别索引。</summary>
     public required ModelRegistry Models { get; init; }
 }
 
@@ -291,39 +291,58 @@ public static class MetadataJsonLoader
     /// <summary>元数据 JSON 根结构。</summary>
     public sealed class MetadataFileDto
     {
+        /// <summary>工具条目字典，键为工具标识名。</summary>
         public Dictionary<string, ToolMetaDto>? Tools { get; set; }
+        /// <summary>模型条目字典，外层键为类别（whisper/fasterWhisper/qwen3Asr 等），内层键为模型名。</summary>
         public Dictionary<string, Dictionary<string, ModelMetaDto>>? Models { get; set; }
     }
 
     /// <summary>工具条目 JSON 结构。</summary>
     public sealed class ToolMetaDto
     {
+        /// <summary>工具标识名（如 whispercpp）。</summary>
         public string? ToolName { get; set; }
+        /// <summary>默认下载包 URL（zip 或 tar.gz）。</summary>
         public string? DownloadUrl { get; set; }
+        /// <summary>压缩包类型（"zip" 或 "tar.gz"）。</summary>
         public string? ArchiveType { get; set; }
+        /// <summary>解压后可执行文件相对包根目录的路径。</summary>
         public string? ExecutableRelativePath { get; set; }
+        /// <summary>工具版本号。</summary>
         public string? Version { get; set; }
+        /// <summary>工具运行所需模型/权重的基础下载地址，可为空。</summary>
         public string? ModelBaseUrl { get; set; }
+        /// <summary>按设备键的下载变体字典。</summary>
         public Dictionary<string, ToolVariantDto>? Variants { get; set; }
     }
 
     /// <summary>工具按设备变体的 JSON 结构。</summary>
     public sealed class ToolVariantDto
     {
+        /// <summary>该变体的下载包 URL，为空则回退到工具基础值。</summary>
         public string? DownloadUrl { get; set; }
+        /// <summary>该变体的压缩包类型。</summary>
         public string? ArchiveType { get; set; }
+        /// <summary>该变体解压后可执行文件相对路径。</summary>
         public string? ExecutableRelativePath { get; set; }
+        /// <summary>面向用户的变体说明（如 "CUDA 12.4 build"）。</summary>
         public string? Description { get; set; }
     }
 
     /// <summary>模型条目 JSON 结构。</summary>
     public sealed class ModelMetaDto
     {
+        /// <summary>单文件模型的本地文件名（单文件类型时使用）。</summary>
         public string? FileName { get; set; }
+        /// <summary>模型下载 URL。</summary>
         public string? DownloadUrl { get; set; }
+        /// <summary>下载类型字符串（"single-file" / "directory" / "onnx-directory"）。</summary>
         public string? DownloadType { get; set; }
+        /// <summary>目录/ONNX 模型需下载的文件相对路径列表。</summary>
         public List<string>? Files { get; set; }
+        /// <summary>ONNX 模型任务类型（如 token_classification、embedding）。</summary>
         public string? OnnxModelType { get; set; }
+        /// <summary>模型在下载目录中的子目录，可为空。</summary>
         public string? Subdirectory { get; set; }
     }
 }

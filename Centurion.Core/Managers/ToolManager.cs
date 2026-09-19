@@ -1,5 +1,4 @@
 using Centurion.Models.Workflow;
-// Centurion.Core/Managers/ToolManager.cs
 
 using Centurion.Abstractions;
 using Centurion.Models.Metadata;
@@ -21,7 +20,9 @@ public class ToolManager : IDisposable
     private readonly string _toolsRoot;
     private readonly ToolMeta _toolMeta;
 
+    /// <summary>工具解压后所在的根目录。</summary>
     public string ToolDirectory { get; private set; }
+    /// <summary>工具主可执行文件的完整路径。</summary>
     public string ExecutablePath { get; private set; }
 
     /// <summary>工具运行时模型/权重的下载基础地址（可为空，为空时使用工具内置默认）。</summary>
@@ -30,6 +31,13 @@ public class ToolManager : IDisposable
     /// <summary>实际选用的设备变体（null 表示基础构建）。</summary>
     public string? ActiveVariantDescription { get; }
 
+    /// <summary>
+    /// 根据工具名称与目标推理设备，从注册表解析对应下载变体并初始化路径。
+    /// </summary>
+    /// <param name="toolName">要管理的工具名称。</param>
+    /// <param name="registry">包含全部可用工具元数据的注册表。</param>
+    /// <param name="device">目标推理设备，用于选择 CUDA/Vulkan/DirectML/CPU 等变体。</param>
+    /// <param name="serviceProvider">服务提供者，用于解析日志等依赖。</param>
     public ToolManager(string toolName, ToolRegistry registry, InferenceDevice device, IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -265,5 +273,8 @@ public class ToolManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// 释放资源；本管理器无需释放非托管资源。
+    /// </summary>
     public void Dispose() { }
 }

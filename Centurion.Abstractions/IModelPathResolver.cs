@@ -1,5 +1,3 @@
-// Centurion.Core/Abstractions/IModelPathResolver.cs
-
 namespace Centurion.Abstractions;
 
 /// <summary>

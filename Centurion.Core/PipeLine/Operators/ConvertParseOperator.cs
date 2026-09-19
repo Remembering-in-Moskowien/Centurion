@@ -1,4 +1,3 @@
-// File: Centurion.Core/Pipeline/Operators/ConvertParseOperator.cs
 using System.Text.RegularExpressions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Models;
@@ -13,8 +12,14 @@ namespace Centurion.Core.Pipeline.Operators;
 /// </summary>
 public partial class ConvertParseOperator : IPipelineOperator
 {
+    /// <summary>算子在管道中的显示名称。</summary>
     public string Name => "ConvertParse";
 
+    /// <summary>
+    /// 解析输入字幕文件并将每个字幕条目转换为 <see cref="Sentence"/>，写入工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供字幕文件路径。</param>
+    /// <param name="cancellationToken">用于取消解析过程的取消标记。</param>
     public async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken = default)
     {
         var inputPath = context.Config.SubtitleFilePath ?? context.Config.InputFilePath;

@@ -8,6 +8,9 @@ namespace Centurion.Abstractions;
 /// </summary>
 public class TempDirectoryHandle : IDisposable, IAsyncDisposable
 {
+    /// <summary>
+    /// 临时目录的完整路径。
+    /// </summary>
     public string Path { get; }
     private readonly bool _autoDelete;
 
@@ -17,6 +20,9 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
         _autoDelete = autoDelete;
     }
 
+    /// <summary>
+    /// 释放句柄：若开启自动删除，则同步删除临时目录。
+    /// </summary>
     public void Dispose()
     {
         if (_autoDelete)
@@ -24,6 +30,9 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// 异步释放句柄：若开启自动删除，则异步删除临时目录。
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_autoDelete)

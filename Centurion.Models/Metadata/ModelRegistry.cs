@@ -1,23 +1,35 @@
-// Centurion.Core/Models/Metadata/ModelRegistry.cs
-
 namespace Centurion.Models.Metadata;
 
+/// <summary>描述模型资源的下载与组织形式。</summary>
 public enum ModelDownloadType
 {
+    /// <summary>单个模型文件（如 .bin / .gguf），直接按文件名落盘。</summary>
     SingleFile,
+    /// <summary>整个目录包（如 faster-whisper 目录），按文件列表下载。</summary>
     Directory,
+    /// <summary>ONNX 模型目录包，附带 ONNX 任务类型（如 embedding、token_classification）。</summary>
     OnnxModelDirectory
 }
 
+/// <summary>单个模型的下载元数据，根据下载类型携带不同字段组合。</summary>
 public record ModelMeta
 {
+    /// <summary>单文件模型的本地文件名（仅单文件类型时有值）。</summary>
     public string? FileName { get; init; }
+    /// <summary>模型下载 URL。</summary>
     public string? DownloadUrl { get; init; }
+    /// <summary>下载与组织形式，默认 <see cref="ModelDownloadType.SingleFile"/>。</summary>
     public ModelDownloadType DownloadType { get; init; } = ModelDownloadType.SingleFile;
+    /// <summary>目录/ONNX 类型需要下载的文件相对路径列表。</summary>
     public List<string>? Files { get; init; }
+    /// <summary>ONNX 模型任务类型（如 token_classification、embedding），仅 ONNX 目录类型时有值。</summary>
     public string? OnnxModelType { get; init; }
+    /// <summary>模型在下载根目录中的子目录，可为空。</summary>
     public string? Subdirectory { get; init; }
 
+    /// <summary>构造单文件模型元数据。</summary>
+    /// <param name="fileName">本地文件名。</param>
+    /// <param name="downloadUrl">下载 URL。</param>
     public ModelMeta(string fileName, string downloadUrl)
     {
         FileName = fileName;
@@ -25,6 +37,10 @@ public record ModelMeta
         DownloadType = ModelDownloadType.SingleFile;
     }
 
+    /// <summary>构造目录型模型元数据。</summary>
+    /// <param name="downloadUrl">下载 URL。</param>
+    /// <param name="files">需要下载的文件相对路径列表。</param>
+    /// <param name="subdirectory">模型子目录，可为空。</param>
     public ModelMeta(string downloadUrl, List<string> files, string? subdirectory = null)
     {
         DownloadUrl = downloadUrl;
@@ -33,6 +49,11 @@ public record ModelMeta
         DownloadType = ModelDownloadType.Directory;
     }
 
+    /// <summary>构造 ONNX 目录型模型元数据。</summary>
+    /// <param name="downloadUrl">下载 URL。</param>
+    /// <param name="files">需要下载的文件相对路径列表。</param>
+    /// <param name="onnxModelType">ONNX 任务类型。</param>
+    /// <param name="subdirectory">模型子目录，可为空。</param>
     public ModelMeta(string downloadUrl, List<string> files, string onnxModelType, string? subdirectory = null)
     {
         DownloadUrl = downloadUrl;
@@ -61,13 +82,26 @@ public sealed class ModelRegistry
         BuildDefaultDict(BuildDefaultDiarizationModels()),
         BuildDefaultDict(BuildDefaultBertOnnxModels()));
 
+    /// <summary>Whisper.cpp 单文件模型字典，键为模型规格名（tiny/base/.../large）。</summary>
     public IReadOnlyDictionary<string, ModelMeta> WhisperModels { get; }
+    /// <summary>Faster-Whisper 目录模型字典，键为模型规格名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> FasterWhisperModels { get; }
+    /// <summary>Qwen3-ASR 模型字典（供 CrispASR 使用），键为模型规格名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3AsrModels { get; }
+    /// <summary>Qwen3 强制对齐模型字典，键为模型规格名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3ForcedAlignerModels { get; }
+    /// <summary>说话人分割（diarization）模型字典，键为模型名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> DiarizationModels { get; }
+    /// <summary>BERT ONNX 模型字典（如 NER、句向量），键为模型名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> BertOnnxModels { get; }
 
+    /// <summary>用六类模型字典构造注册表。</summary>
+    /// <param name="whisperModels">Whisper.cpp 模型字典。</param>
+    /// <param name="fasterWhisperModels">Faster-Whisper 模型字典。</param>
+    /// <param name="qwen3AsrModels">Qwen3-ASR 模型字典。</param>
+    /// <param name="qwen3ForcedAlignerModels">Qwen3 强制对齐模型字典。</param>
+    /// <param name="diarizationModels">说话人分割模型字典。</param>
+    /// <param name="bertOnnxModels">BERT ONNX 模型字典。</param>
     public ModelRegistry(
         IReadOnlyDictionary<string, ModelMeta> whisperModels,
         IReadOnlyDictionary<string, ModelMeta> fasterWhisperModels,

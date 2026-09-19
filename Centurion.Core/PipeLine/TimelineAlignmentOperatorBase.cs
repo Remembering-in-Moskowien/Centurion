@@ -24,9 +24,13 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
     where TSelf : TimelineAlignmentOperatorBase<TSelf>
 {
     // ===== NW 打分 =====
+    /// <summary>两词完全相同时的 NW 对角线得分。</summary>
     protected const int NwExactMatch = 3;
+    /// <summary>两词相似度达到阈值但不完全相同时的 NW 对角线得分。</summary>
     protected const int NwFuzzyMatch = 2;
+    /// <summary>两词不匹配时的 NW 对角线得分。</summary>
     protected const int NwMismatch = -1;
+    /// <summary>在 NW 对齐中插入空隙（gap）时的得分。</summary>
     protected const int NwGap = -1;
 
     /// <summary>判定两词"模糊匹配"的最低相似度。</summary>
@@ -41,6 +45,10 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
     /// <summary>稀疏模式下每个脚本词的搜索窗口大小。</summary>
     protected const int SparseSearchWindow = 200;
 
+    /// <summary>
+    /// 初始化基类，并将日志器传给管线算子基类。
+    /// </summary>
+    /// <param name="logger">派生类使用的日志器。</param>
     protected TimelineAlignmentOperatorBase(ILogger<TSelf> logger) : base(logger) { }
 
     // ===== 正则（GeneratedRegex）=====

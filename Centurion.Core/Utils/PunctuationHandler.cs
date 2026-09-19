@@ -3,6 +3,9 @@ using System.Text.RegularExpressions;
 
 namespace Centurion.Core.Utils;
 
+/// <summary>
+/// 标点处理工具：去除标点符号，以及根据意群边界为无标点文本重写句读标点。
+/// </summary>
 public static class PunctuationHandler
 {
     private static readonly Regex PunctuationRegex = new(@"[^\w\s]", RegexOptions.Compiled);

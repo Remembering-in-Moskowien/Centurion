@@ -10,6 +10,12 @@ namespace Centurion.Core.Factories;
 /// </summary>
 public class DiarizationStrategyFactory(IServiceProvider serviceProvider) : IDiarizationStrategyFactory
 {
+    /// <summary>
+    /// 按后端名称创建说话人分割策略。
+    /// </summary>
+    /// <param name="backend">说话人分割后端名称，支持 "crispasr" 或 "pyannote"。</param>
+    /// <returns>对应后端的说话人分割策略实例。</returns>
+    /// <exception cref="NotSupportedException">当后端名称不受支持时抛出。</exception>
     public IDiarizationStrategy Create(string backend)
     {
         return backend.ToLowerInvariant() switch

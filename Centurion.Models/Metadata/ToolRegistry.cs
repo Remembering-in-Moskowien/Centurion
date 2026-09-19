@@ -1,4 +1,3 @@
-// Centurion.Core/Models/Metadata/ToolRegistry.cs
 namespace Centurion.Models.Metadata;
 
 /// <summary>
@@ -7,18 +6,28 @@ namespace Centurion.Models.Metadata;
 /// </summary>
 public class ToolVariant
 {
+    /// <summary>该变体的下载包 URL，为空回退到工具基础值。</summary>
     public string? DownloadUrl { get; set; }
+    /// <summary>该变体的压缩包类型（"zip" 或 "tar.gz"）。</summary>
     public string? ArchiveType { get; set; }
+    /// <summary>该变体解压后可执行文件相对包根目录的路径。</summary>
     public string? ExecutableRelativePath { get; set; }
+    /// <summary>面向用户的变体说明（如所需 GPU 型号）。</summary>
     public string? Description { get; set; }
 }
 
+/// <summary>外部工具的下载与安装元数据。</summary>
 public class ToolMeta
 {
-    public required string ToolName { get; set; }          // 标识，如 "whispercpp", "fasterwhisperxxl"
-    public required string DownloadUrl { get; set; }       // 默认（回退）下载包URL（zip或tar）
-    public required string ArchiveType { get; set; }       // "zip" 或 "tar.gz"
-    public required string ExecutableRelativePath { get; set; } // 解压后可执行文件相对路径
+    /// <summary>工具标识名（如 "whispercpp", "fasterwhisperxxl"）。</summary>
+    public required string ToolName { get; set; }
+    /// <summary>默认（回退）下载包 URL（zip 或 tar.gz）。</summary>
+    public required string DownloadUrl { get; set; }
+    /// <summary>压缩包类型（"zip" 或 "tar.gz"）。</summary>
+    public required string ArchiveType { get; set; }
+    /// <summary>解压后可执行文件相对包根目录的路径。</summary>
+    public required string ExecutableRelativePath { get; set; }
+    /// <summary>工具版本号，可为空。</summary>
     public string? Version { get; set; }
     /// <summary>
     /// 工具运行时所需的模型/权重基础下载地址（如 demucs-rs 的 safetensors 仓库）。
@@ -44,8 +53,11 @@ public sealed class ToolRegistry
     /// </summary>
     public static ToolRegistry Default { get; } = new(BuildDefaultTools());
 
+    /// <summary>已注册工具字典，键为工具标识名。</summary>
     public IReadOnlyDictionary<string, ToolMeta> Tools { get; }
 
+    /// <summary>用工具字典构造注册表。</summary>
+    /// <param name="tools">工具元数据字典，键为工具标识名。</param>
     public ToolRegistry(IReadOnlyDictionary<string, ToolMeta> tools)
     {
         Tools = tools ?? throw new ArgumentNullException(nameof(tools));

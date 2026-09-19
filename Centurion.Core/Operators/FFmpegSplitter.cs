@@ -15,11 +15,20 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
 {
     private const int SilencePaddingMs = 100;
 
+    /// <summary>
+    /// 健康检查，确保 FFmpeg 二进制与运行环境就绪。
+    /// </summary>
     public async Task CheckHealthAsync()
     {
         await ffmpegManager.CheckHealthAsync();
     }
 
+    /// <summary>
+    /// 按请求中的时间段对音频进行分割，每段前后自动补 100ms 静音。
+    /// </summary>
+    /// <param name="request">包含输入文件路径与分段时间段列表的请求。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>各分段输出文件路径的列表。</returns>
     public async Task<FFmpegSplitResponse> ProcessAsync(
         OperatorsRequest<FFmpegSplitRequest> request,
         CancellationToken cancellationToken = default)
@@ -108,11 +117,18 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
         return new FFmpegSplitResponse { OutputFiles = results };
     }
 
+    /// <summary>
+    /// 释放资源。
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
     }
 
+    /// <summary>
+    /// 释放资源；本类无可释放资源。
+    /// </summary>
+    /// <param name="disposing">为 <see langword="true"/> 时同时释放托管资源。</param>
     protected virtual void Dispose(bool disposing)
     {
     }

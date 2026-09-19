@@ -1,5 +1,4 @@
 using Centurion.Models.Workflow;
-// Centurion.Core/Infrastructure/DeviceDetector.cs
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -17,6 +16,10 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
 {
     private DeviceCapabilities? _cached;
 
+    /// <summary>
+    /// 探测本机 GPU、系统内存与平台能力并推荐推理设备；首次探测后结果会被缓存，后续调用直接返回缓存值。
+    /// </summary>
+    /// <returns>描述本机设备能力与推荐推理设备的对象。</returns>
     public DeviceCapabilities Detect()
     {
         if (_cached is not null)

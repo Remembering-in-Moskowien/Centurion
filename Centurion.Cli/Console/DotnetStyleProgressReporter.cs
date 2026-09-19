@@ -10,6 +10,11 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
 {
     private static readonly string[] Frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+    /// <summary>
+    /// 启动单行 spinner 进度，执行给定动作后停止并清行。
+    /// </summary>
+    /// <param name="title">spinner 前缀标题文本。</param>
+    /// <param name="action">在 spinner 运行期间执行的进度动作，可通过上下文更新进度。</param>
     public void StartProgress(string title, Action<IProgressContext> action)
     {
         var spinner = new SpinnerState(title);

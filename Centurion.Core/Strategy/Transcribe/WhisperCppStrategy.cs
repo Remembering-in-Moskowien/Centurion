@@ -1,6 +1,5 @@
 using Centurion.Core.Factories;
 using Centurion.Models.Workflow;
-// Centurion.Core/Strategies/Transcription/WhisperCppStrategy.cs
 
 using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
@@ -14,6 +13,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Strategy.Transcribe;
 
+/// <summary>
+/// 基于 whisper.cpp 的转录策略：调用 whisper.cpp 可执行文件转录音频，
+/// 解析其 JSON 输出提取词级时间戳。
+/// </summary>
 public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscriptionStrategy
 {
     private readonly IToolManagerFactory _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
@@ -22,12 +25,23 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
     private readonly ILogger<WhisperCppStrategy> _logger = serviceProvider.GetRequiredService<ILogger<WhisperCppStrategy>>();
     private ToolManager? _toolManager;
 
+    /// <summary>策略的显示名称。</summary>
     public string StrategyName => "Whisper.cpp";
 
     /// <summary>按推理设备创建（懒加载）whisper.cpp 工具管理器（GPU 可用时自动选用 CUDA 构建）。</summary>
     private ToolManager GetToolManager(InferenceDevice device) =>
         _toolManager ??= _toolManagerFactory.Create("whispercpp", device);
 
+    /// <summary>
+    /// 执行转录：确保 whisper.cpp 工具就绪、解析模型、构建并运行 CLI，
+    /// 读取输出 JSON 提取词级时间戳。
+    /// </summary>
+    /// <param name="audioPath">待转录音频文件路径。</param>
+    /// <param name="language">音频语言代码。</param>
+    /// <param name="modelName">转录模型名。</param>
+    /// <param name="initialPrompt">可选的初始提示词。</param>
+    /// <param name="cancellationToken">用于取消转录过程的取消标记。</param>
+    /// <param name="device">推理设备，决定选用 CPU/GPU 变体工具。</param>
     public async Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
@@ -46,7 +60,10 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
             throw new FileNotFoundException($"Whisper model file not found: {modelPath}");
 
         // 3. 构建参数：使用 -oj 强制输出 JSON，输出文件自动生成在音频同目录下
-        var args = $"-m \"{modelPath}\" -f \"{audioPath}\" -l {language} -oj";
+        //    语言为空时不传 -l，由模型自动检测（对中文等非英语音更稳健）
+        var args = $"-m \"{modelPath}\" -f \"{audioPath}\" -oj";
+        if (!string.IsNullOrWhiteSpace(language))
+            args += $" -l {language}";
         if (!string.IsNullOrEmpty(initialPrompt))
             args += $" -p \"{initialPrompt}\"";
 

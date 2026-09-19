@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Centurion.Abstractions.Strategy;
 using Centurion.Models;
 using Centurion.Core.Utils;
+using Centurion.Models.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -21,12 +22,22 @@ public class LLMSplitStrategy : BaseSplitStrategy
     // 用于提取 JSON 数组的正则表达式（支持纯数组或 Markdown 代码块）
     private static readonly Regex JsonArrayRegex = new(@"\[\s*""(?:[^""\\]|\\.)*""\s*(?:,\s*""(?:[^""\\]|\\.)*""\s*)*\]", RegexOptions.Compiled);
 
+    /// <summary>创建基于 LLM 的分句策略实例。</summary>
+    /// <param name="chatClient">用于调用大语言模型的对话客户端。</param>
+    /// <param name="logger">可选的日志记录器，为 null 时不记录日志。</param>
     public LLMSplitStrategy(IChatClient chatClient, ILogger<LLMSplitStrategy>? logger = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
         _logger = logger;
     }
 
+    /// <summary>
+    /// 调用 LLM 对去标点小写后的词流恢复标点并断句；
+    /// LLM 输出异常时依次尝试数量映射、模糊对齐，最终降级到规则分句。
+    /// </summary>
+    /// <param name="words">待切分的词流。</param>
+    /// <param name="options">分句长度与语言等配置选项。</param>
+    /// <returns>切分得到的句子列表。</returns>
     public override async Task<List<Sentence>> Split(List<Word> words, SplitOptions options)
     {
         if (words.Count == 0)
@@ -36,7 +47,7 @@ public class LLMSplitStrategy : BaseSplitStrategy
         var cleanWords = words.Select(w => new string(w.Text.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant())
                               .Where(w => !string.IsNullOrEmpty(w))
                               .ToList();
-        var cleanText = string.Join(" ", cleanWords);
+        var cleanText = LanguageSupport.JoinWords(cleanWords, options.Language);
         if (string.IsNullOrWhiteSpace(cleanText))
             return [];
 
@@ -74,7 +85,8 @@ public class LLMSplitStrategy : BaseSplitStrategy
     {
         var lang = options.Language?.ToLowerInvariant() ?? "en";
 
-        if (lang == "zh" || lang == "zh-cn" || lang == "zh-tw")
+        // 中文与日文连续书写、句读相同；韩语使用英文标点（. , ? !），走英文提示词分支即可
+        if (lang == "zh" || lang == "zh-cn" || lang == "zh-tw" || lang == "ja" || lang == "ja-jp")
         {
             return $@"
 你是一位专业字幕分句与文本规范化专家。输入文本为**无标点、全小写**的纯文本。
@@ -149,14 +161,14 @@ Output (JSON array only):
         if (totalLlmWords == wordList.Count)
         {
             _logger?.LogDebug("LLM word count matches original, using direct mapping.");
-            return BuildSentencesByCount(wordList, sentenceTexts);
+            return BuildSentencesByCount(wordList, sentenceTexts, options);
         }
 
         _logger?.LogWarning("LLM word count ({TotalLlmWords}) differs from original ({TotalOriginal}). Attempting fuzzy alignment.",
             totalLlmWords, wordList.Count);
 
         // 策略2：模糊匹配对齐
-        var aligned = TryFuzzyAlignment(wordList, sentenceTexts);
+        var aligned = TryFuzzyAlignment(wordList, sentenceTexts, options);
         if (aligned != null)
         {
             _logger?.LogDebug("Fuzzy alignment succeeded, returning {Count} sentences.", aligned.Count);
@@ -169,7 +181,7 @@ Output (JSON array only):
     }
 
     // ---------- 直接按数量切分 ----------
-    private List<Sentence> BuildSentencesByCount(List<Word> wordList, List<string> sentenceTexts)
+    private List<Sentence> BuildSentencesByCount(List<Word> wordList, List<string> sentenceTexts, SplitOptions options)
     {
         var result = new List<Sentence>();
         var wordIndex = 0;
@@ -206,7 +218,7 @@ Output (JSON array only):
             var remaining = wordList.Skip(wordIndex).ToList();
             result.Add(new Sentence
             {
-                Text = string.Join(" ", remaining.Select(w => w.Text)),
+                Text = LanguageSupport.JoinWords(remaining.Select(w => w.Text), options.Language),
                 Start = remaining.First().Start,
                 End = remaining.Last().End,
                 Words = remaining
@@ -217,7 +229,7 @@ Output (JSON array only):
     }
 
     // ---------- 模糊匹配（滑动窗口） ----------
-    private List<Sentence>? TryFuzzyAlignment(List<Word> wordList, List<string> sentenceTexts)
+    private List<Sentence>? TryFuzzyAlignment(List<Word> wordList, List<string> sentenceTexts, SplitOptions options)
     {
         var result = new List<Sentence>();
         var wordIndex = 0;
@@ -295,7 +307,7 @@ Output (JSON array only):
             var remaining = wordList.Skip(wordIndex).ToList();
             result.Add(new Sentence
             {
-                Text = string.Join(" ", remaining.Select(w => w.Text)),
+                Text = LanguageSupport.JoinWords(remaining.Select(w => w.Text), options.Language),
                 Start = remaining.First().Start,
                 End = remaining.Last().End,
                 Words = remaining
@@ -328,7 +340,7 @@ Output (JSON array only):
                 var slice = wordList.Skip(start).Take(i - start).ToList();
                 result.Add(new Sentence
                 {
-                    Text = string.Join(" ", slice.Select(x => x.Text)),
+                    Text = LanguageSupport.JoinWords(slice.Select(x => x.Text), options.Language),
                     Start = slice.First().Start,
                     End = slice.Last().End,
                     Words = slice
@@ -344,7 +356,7 @@ Output (JSON array only):
             var slice = wordList.Skip(start).ToList();
             result.Add(new Sentence
             {
-                Text = string.Join(" ", slice.Select(x => x.Text)),
+                Text = LanguageSupport.JoinWords(slice.Select(x => x.Text), options.Language),
                 Start = slice.First().Start,
                 End = slice.Last().End,
                 Words = slice

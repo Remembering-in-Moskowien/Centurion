@@ -9,10 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
 
+/// <summary>
+/// 文本清洗算子：按配置移除标点、展开数字与缩写、统一小写，
+/// 为每句生成用于对齐的 CleanedText。
+/// </summary>
 public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingOperator>
 {
     private readonly ILogger<TextPreprocessingOperator> _logger;
 
+    /// <summary>创建文本清洗算子实例。</summary>
+    /// <param name="logger">记录清洗过程日志的记录器。</param>
     public TextPreprocessingOperator(ILogger<TextPreprocessingOperator> logger) : base(logger)
     {
         _logger = logger;
@@ -34,8 +40,14 @@ public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingO
         ["St."] = "Street"
     };
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Text Cleaning for Alignment";
 
+    /// <summary>
+    /// 执行文本清洗：对当前句子逐句生成 CleanedText，支持加载自定义缩写词典。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供句子与清洗配置。</param>
+    /// <param name="cancellationToken">用于取消清洗过程的取消标记。</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -123,8 +135,10 @@ public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingO
         if (config.RemovePunctuation)
             result = PunctuationPattern.Replace(result, string.Empty);
 
-        if (config.ExpandNumbers)
+        if (config.ExpandNumbers && !Centurion.Models.Text.LanguageSupport.IsSpaceless(config.Language))
         {
+            // 数字展开仅在拉丁语系下有意义（展开为英文单词）；
+            // 中文等无空格语系保留数字原文，避免引入无关英文文本干扰对齐。
             // 匹配带千位分隔符的整数（如 500,000）或普通整数（如 123）
             result = NumberPattern.Replace(result, match =>
             {

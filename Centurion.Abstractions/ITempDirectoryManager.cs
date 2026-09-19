@@ -1,5 +1,3 @@
-// Centurion.Core/Abstractions/ITempDirectoryManager.cs
-
 namespace Centurion.Abstractions;
 
 /// <summary>

@@ -12,12 +12,22 @@ using SubtitlesParserV2;
 
 namespace Centurion.Core.Strategy.Alignment;
 
+/// <summary>
+/// 基于 CrispASR 的强制对齐策略：逐句裁剪音频片段，用 Qwen3 强制对齐模型细化词级时间戳，
+/// 再把时间戳映射回原句。单句失败时保留其粗时间。
+/// </summary>
 public sealed class CrispAsrAlignmentStrategy(
     IModelPathResolver modelPathResolver,
     IServiceProvider serviceProvider,
     ILogger<CrispAsrAlignmentStrategy> logger,
     string modelName) : IAlignmentStrategy
 {
+    /// <summary>
+    /// 对给定句子执行强制对齐，返回时间戳细化后的句子列表。
+    /// </summary>
+    /// <param name="sentences">待对齐的句子集合（就地更新时间戳）。</param>
+    /// <param name="audioPath">对应的音频文件路径。</param>
+    /// <param name="cancellationToken">用于取消对齐过程的取消标记。</param>
     public async Task<List<Sentence>> AlignAsync(List<Sentence> sentences, string audioPath, CancellationToken cancellationToken)
     {
         if (sentences.Count == 0)

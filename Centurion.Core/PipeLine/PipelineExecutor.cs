@@ -1,5 +1,4 @@
 using Centurion.Models.Console;
-// File: Centurion.Core/Pipeline/PipelineExecutor.cs
 
 using System.Diagnostics;
 using Centurion.Abstractions;
@@ -20,6 +19,10 @@ public class PipelineExecutor
 {
     private readonly ILogger<PipelineExecutor> _logger;
 
+    /// <summary>
+    /// 创建管线执行器实例。
+    /// </summary>
+    /// <param name="logger">用于记录执行过程的日志器。</param>
     public PipelineExecutor(ILogger<PipelineExecutor> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));

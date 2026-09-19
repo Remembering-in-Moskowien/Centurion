@@ -63,5 +63,6 @@ public interface IUpdateService
     /// </summary>
     /// <param name="check"><see cref="CheckAsync"/> 返回的、确认存在更新的结果。</param>
     /// <param name="assetName">手动指定的资产文件名；为空时按平台自动匹配。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
     Task<UpdateStageResult> StageAsync(UpdateCheckResult check, string? assetName, CancellationToken cancellationToken);
 }

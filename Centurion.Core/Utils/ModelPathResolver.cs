@@ -1,4 +1,3 @@
-// Centurion.Core/Utils/ModelPathResolver.cs
 using Centurion.Abstractions;
 using Centurion.Core.Managers;
 using Centurion.Models.Metadata;
@@ -6,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Utils;
 
+/// <summary>
+/// 按模型类别从注册表解析并按需下载模型，返回各后端模型文件的本地路径。
+/// </summary>
 public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry modelRegistry) : IModelPathResolver
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
@@ -24,6 +26,12 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
             categoryFolder);
     }
 
+    /// <summary>
+    /// 确保指定的 whisper.cpp 模型就绪并返回其本地文件路径。
+    /// </summary>
+    /// <param name="modelName">模型名称。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>模型文件的本地路径。</returns>
     public async Task<string> GetWhisperModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
         var manager = CreateManager(modelName, _modelRegistry.WhisperModels, "whispercpp");
@@ -31,6 +39,12 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
         return manager.ModelFilePath;
     }
 
+    /// <summary>
+    /// 确保指定的 faster-whisper 模型就绪并返回其本地文件路径。
+    /// </summary>
+    /// <param name="modelName">模型名称。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>模型文件的本地路径。</returns>
     public async Task<string> GetFasterWhisperModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
         var manager = CreateManager(modelName, _modelRegistry.FasterWhisperModels, "fasterwhisper");
@@ -38,6 +52,12 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
         return manager.ModelFilePath;
     }
 
+    /// <summary>
+    /// 确保指定的 Qwen3 ASR 模型就绪并返回其本地文件路径。
+    /// </summary>
+    /// <param name="modelName">模型名称。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>模型文件的本地路径。</returns>
     public async Task<string> GetQwen3AsrModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
         var manager = CreateManager(modelName, _modelRegistry.Qwen3AsrModels, "qwen3asr");
@@ -45,6 +65,12 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
         return manager.ModelFilePath;
     }
 
+    /// <summary>
+    /// 确保指定的说话人分割（diarization）模型就绪并返回其本地文件路径。
+    /// </summary>
+    /// <param name="modelName">模型名称。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>模型文件的本地路径。</returns>
     public async Task<string> GetDiarizationModelPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
         var manager = CreateManager(modelName, _modelRegistry.DiarizationModels, "diarization");
@@ -52,6 +78,12 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
         return manager.ModelFilePath;
     }
 
+    /// <summary>
+    /// 确保指定的 Qwen3 强制对齐模型就绪并返回其本地文件路径。
+    /// </summary>
+    /// <param name="modelName">模型名称。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>模型文件的本地路径。</returns>
     public async Task<string> GetQwen3ForcedAlignerPathAsync(string modelName, CancellationToken cancellationToken = default)
     {
         var manager = CreateManager(modelName, _modelRegistry.Qwen3ForcedAlignerModels, "qwen3aligner");

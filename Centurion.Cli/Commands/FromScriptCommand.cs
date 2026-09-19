@@ -7,6 +7,7 @@ using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
@@ -29,6 +30,12 @@ public sealed class FromScriptCommand(
     PipelineExecutor pipelineExecutor,
     ILogger<FromScriptCommand> logger) : AsyncCommand<FromScriptSettings>
 {
+    /// <summary>
+    /// 执行脚本对齐流程：转录、说话人分割、脚本映射与对齐，写出带时间轴的 ASS 字幕。
+    /// </summary>
+    /// <param name="context">Spectre 命令上下文。</param>
+    /// <param name="settings">脚本对齐命令选项。</param>
+    /// <param name="ct">取消令牌。</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, FromScriptSettings settings, CancellationToken ct)
     {
         try
@@ -90,7 +97,11 @@ public sealed class FromScriptCommand(
 
             var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
+
+            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
+            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "from-script", outputPath, ct);
             ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
+            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
             return 0;
         }
         catch (Exception ex)

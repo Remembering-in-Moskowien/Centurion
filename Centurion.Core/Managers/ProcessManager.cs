@@ -1,5 +1,4 @@
-﻿// File: Centurion.Core/Managers/ProcessManager.cs
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 

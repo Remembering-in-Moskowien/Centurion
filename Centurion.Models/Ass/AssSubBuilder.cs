@@ -21,14 +21,23 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     private List<AssStyle> _styles = [];
     private List<AssSubLine> _lines = [];
 
+    /// <summary>字幕标题，写入 Script Info 的 Title 字段。</summary>
     public string Title => _title;
+    /// <summary>脚本版本标识（如 v4.00+）。</summary>
     public string ScriptType => _scriptType;
+    /// <summary>自动换行规则（WrapStyle 编号）。</summary>
     public string WrapStyle => _wrapStyle;
+    /// <summary>字幕时间重叠时的处理策略（Normal 或 Reverse）。</summary>
     public string Collisions => _collisions;
+    /// <summary>基准播放分辨率宽度。</summary>
     public string PlayResX => _playResX;
+    /// <summary>基准播放分辨率高度。</summary>
     public string PlayResY => _playResY;
+    /// <summary>时间轴缩放系数（百分比，100 为正常速）。</summary>
     public float Timer => _timer;
+    /// <summary>文档中定义的样式集合。</summary>
     public List<AssStyle> Styles => _styles;
+    /// <summary>对话/注释字幕行集合。</summary>
     public List<AssSubLine> Lines => _lines;
 
     /// <summary>设置字幕标题</summary>
@@ -91,7 +100,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         return WithStyles([new AssStyleBuilder().WithDefaultValues().Build()]);
     }
 
-    /// <summary>填充一套标准ASS默认脚本配置</summary>
+    /// <summary>填充一套标准ASS默认脚本配置（含主字幕 Default 与次字幕 Sub 两套样式）。</summary>
     public AssSubBuilder WithDefaultValues()
     {
         return WithTitle("Default AssSub file")
@@ -101,9 +110,12 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             .WithPlayResX("1920")
             .WithPlayResY("1080")
             .WithTimer(100.0f)
-            .WithStyles([])
-            .WithLines([])
-            .WithAddDefaultStyle();
+            .WithStyles(
+            [
+                new AssStyleBuilder().WithDefaultValues().Build(),
+                new AssStyleBuilder().WithSubtitleStyle().Build()
+            ])
+            .WithLines([]);
     }
 
     /// <summary>从完整ASS文本解析生成文档构建器</summary>
@@ -222,24 +234,66 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             if (tokens.Count == 0)
                 tokens = [new DisplayToken(sentence.Text, [])];
 
+            // 翻译输出：TranslatedText 非空时优先显示译文。
+            // 单语：一行（主字幕 Default 样式）；双语：两行——主行原文（Default，上方 MarginV 100）、
+            // 次行译文（Sub 样式，贴底 MarginV 28），参照 Theme.ass 的 eng/chi 主次布局。
+            // KaraokeMode 下翻译句不再跳过：译文用时间插值 + 长音节词多分配构建词级 \K 时间戳。
+            if (!string.IsNullOrWhiteSpace(sentence.TranslatedText))
+            {
+                var targetLanguage = string.IsNullOrWhiteSpace(context.Config.TargetLanguage)
+                    ? "zh"
+                    : context.Config.TargetLanguage;
+
+                if (context.Config.Bilingual)
+                {
+                    var mainText = context.Config.KaraokeMode
+                        ? string.Join(" ", tokens.Select(FormatKaraokeToken))
+                        : Centurion.Models.Text.LanguageSupport.JoinWords(
+                            tokens.Select(token => token.Text), context.Config.Language);
+                    lines.Add(BuildLine(sentence, mainText, "Default"));
+
+                    var subText = context.Config.KaraokeMode
+                        ? TranslationKaraokeBuilder.Build(
+                            sentence.TranslatedText, sentence.Start, sentence.End, targetLanguage)
+                        : sentence.TranslatedText;
+                    lines.Add(BuildLine(sentence, subText, "Sub"));
+                }
+                else
+                {
+                    var translated = context.Config.KaraokeMode
+                        ? TranslationKaraokeBuilder.Build(
+                            sentence.TranslatedText, sentence.Start, sentence.End, targetLanguage)
+                        : sentence.TranslatedText;
+                    lines.Add(BuildLine(sentence, translated, "Default"));
+                }
+
+                continue;
+            }
+
             var dialogue = context.Config.KaraokeMode
                 ? string.Join(" ", tokens.Select(FormatKaraokeToken))
-                : string.Join(" ", tokens.Select(token => token.Text));
-            lines.Add(new AssSubLineBuilder().WithComment(false)
-                .WithLayer(0)
-                .WithStart((long)sentence.Start)
-                .WithEnd((long)sentence.End)
-                .WithStyle("Default")
-                .WithName(string.Empty)
-                .WithMarginL(0)
-                .WithMarginR(0)
-                .WithMarginV(0)
-                .WithEffect(string.Empty)
-                .WithText(dialogue)
-                .Build());
+                : Centurion.Models.Text.LanguageSupport.JoinWords(
+                    tokens.Select(token => token.Text), context.Config.Language);
+            lines.Add(BuildLine(sentence, dialogue, "Default"));
         }
 
         return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
+    }
+
+    private static AssSubLine BuildLine(Sentence sentence, string text, string style)
+    {
+        return new AssSubLineBuilder().WithComment(false)
+            .WithLayer(0)
+            .WithStart((long)sentence.Start)
+            .WithEnd((long)sentence.End)
+            .WithStyle(style)
+            .WithName(string.Empty)
+            .WithMarginL(0)
+            .WithMarginR(0)
+            .WithMarginV(0)
+            .WithEffect(string.Empty)
+            .WithText(text)
+            .Build();
     }
 
     private sealed record DisplayToken(string Text, IReadOnlyList<Word> Words);
