@@ -23,7 +23,7 @@ public sealed class DeviceVariantTests
     {
         var meta = BuildMeta();
 
-        var (url, archive, exe, description) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+        var (url, archive, exe, description, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
 
         Assert.Equal("https://example.com/base.zip", url);
         Assert.Equal("zip", archive);
@@ -44,7 +44,7 @@ public sealed class DeviceVariantTests
             }
         });
 
-        var (url, archive, exe, description) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+        var (url, archive, exe, description, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
 
         Assert.Equal("https://example.com/cuda.zip", url);
         Assert.Equal("zip", archive); // 未覆盖字段回退基础值
@@ -60,7 +60,7 @@ public sealed class DeviceVariantTests
             ["default"] = new() { DownloadUrl = "https://example.com/default.zip" }
         });
 
-        var (url, archive, exe, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+        var (url, archive, exe, _, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
 
         Assert.Equal("https://example.com/default.zip", url);
         Assert.Equal("zip", archive);
@@ -75,7 +75,7 @@ public sealed class DeviceVariantTests
             ["vulkan"] = new() { DownloadUrl = "https://example.com/vulkan.zip" }
         });
 
-        var (url, archive, exe, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+        var (url, archive, exe, _, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
 
         Assert.Equal("https://example.com/base.zip", url);
         Assert.Equal("zip", archive);
@@ -90,7 +90,7 @@ public sealed class DeviceVariantTests
             ["cpu"] = new() { DownloadUrl = "https://example.com/cpu.zip" }
         });
 
-        var (url, _, _, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cpu);
+        var (url, _, _, _, _) = ToolManager.ResolveVariant(meta, InferenceDevice.Cpu);
         Assert.Equal("https://example.com/cpu.zip", url);
     }
 
@@ -102,7 +102,7 @@ public sealed class DeviceVariantTests
         Assert.NotNull(whisper.Variants);
         Assert.True(whisper.Variants!.ContainsKey("cuda"));
 
-        var (url, _, exe, description) = ToolManager.ResolveVariant(whisper, InferenceDevice.Cuda);
+        var (url, _, exe, description, _) = ToolManager.ResolveVariant(whisper, InferenceDevice.Cuda);
         Assert.Contains("cublas", url);
         Assert.Equal("whisper-cli.exe", exe);
         Assert.NotNull(description);
@@ -113,7 +113,39 @@ public sealed class DeviceVariantTests
     {
         var whisper = ToolRegistry.Default.Tools["whispercpp"];
 
-        var (url, _, _, _) = ToolManager.ResolveVariant(whisper, InferenceDevice.Cpu);
+        var (url, _, _, _, _) = ToolManager.ResolveVariant(whisper, InferenceDevice.Cpu);
         Assert.Contains("whisper-bin-x64.zip", url);
+    }
+
+    [Fact]
+    public void ResolveVariant_FileHash_FallsBackToBase()
+    {
+        var meta = BuildMeta(new Dictionary<string, ToolVariant>
+        {
+            ["cuda"] = new() { DownloadUrl = "https://example.com/cuda.zip" }
+        });
+        meta.FileHash = "abc123";
+
+        var (_, _, _, _, fileHash) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+
+        Assert.Equal("abc123", fileHash);
+    }
+
+    [Fact]
+    public void ResolveVariant_FileHash_VariantWinsOverBase()
+    {
+        var meta = BuildMeta(new Dictionary<string, ToolVariant>
+        {
+            ["cuda"] = new()
+            {
+                DownloadUrl = "https://example.com/cuda.zip",
+                FileHash = "variant-hash"
+            }
+        });
+        meta.FileHash = "base-hash";
+
+        var (_, _, _, _, fileHash) = ToolManager.ResolveVariant(meta, InferenceDevice.Cuda);
+
+        Assert.Equal("variant-hash", fileHash);
     }
 }

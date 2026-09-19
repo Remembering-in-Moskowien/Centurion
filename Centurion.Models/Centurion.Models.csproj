@@ -12,7 +12,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- 允许测试程序集与实现层访问 internal 成员 -->
         <InternalsVisibleTo Include="Centurion.Tests" />
         <InternalsVisibleTo Include="Centurion.Core" />
     </ItemGroup>

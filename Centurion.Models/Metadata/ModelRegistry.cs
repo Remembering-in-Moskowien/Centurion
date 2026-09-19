@@ -26,6 +26,11 @@ public record ModelMeta
     public string? OnnxModelType { get; init; }
     /// <summary>模型在下载根目录中的子目录，可为空。</summary>
     public string? Subdirectory { get; init; }
+    /// <summary>
+    /// 可选：下载文件/包的 SHA256 校验值（十六进制小写）。
+    /// 为空时不校验；填写后下载完成即校验，不匹配则删除文件并报错。
+    /// </summary>
+    public string? FileHash { get; init; }
 
     /// <summary>构造单文件模型元数据。</summary>
     /// <param name="fileName">本地文件名。</param>

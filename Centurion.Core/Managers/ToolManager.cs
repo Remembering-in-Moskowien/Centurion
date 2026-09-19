@@ -50,7 +50,7 @@ public class ToolManager : IDisposable
             throw new ArgumentException($"Unsupported tool: {toolName}", nameof(toolName));
 
         // 按设备选择变体（精确匹配 → default → 基础字段）
-        var (url, archiveType, exeRelative, description) = ResolveVariant(baseMeta, device);
+        var (url, archiveType, exeRelative, description, fileHash) = ResolveVariant(baseMeta, device);
         _toolMeta = new ToolMeta
         {
             ToolName = baseMeta.ToolName,
@@ -58,7 +58,8 @@ public class ToolManager : IDisposable
             ArchiveType = archiveType,
             ExecutableRelativePath = exeRelative,
             Version = baseMeta.Version,
-            ModelBaseUrl = baseMeta.ModelBaseUrl
+            ModelBaseUrl = baseMeta.ModelBaseUrl,
+            FileHash = fileHash
         };
         ModelBaseUrl = baseMeta.ModelBaseUrl;
         ActiveVariantDescription = description;
@@ -71,12 +72,12 @@ public class ToolManager : IDisposable
     /// 解析工具在指定设备下应使用的下载信息（internal，便于单元测试）。
     /// 匹配顺序：设备键（cuda/vulkan/directml/cpu）→ "default" → 基础字段。
     /// </summary>
-    internal static (string Url, string ArchiveType, string ExecutableRelativePath, string? Description) ResolveVariant(
+    internal static (string Url, string ArchiveType, string ExecutableRelativePath, string? Description, string? FileHash) ResolveVariant(
         ToolMeta meta, InferenceDevice device)
     {
         var variants = meta.Variants;
         if (variants is null || variants.Count == 0)
-            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null);
+            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null, meta.FileHash);
 
         var deviceKey = device switch
         {
@@ -94,13 +95,14 @@ public class ToolManager : IDisposable
             variant = fallback;
 
         if (variant is null)
-            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null);
+            return (meta.DownloadUrl, meta.ArchiveType, meta.ExecutableRelativePath, null, meta.FileHash);
 
         return (
             variant.DownloadUrl ?? meta.DownloadUrl,
             variant.ArchiveType ?? meta.ArchiveType,
             variant.ExecutableRelativePath ?? meta.ExecutableRelativePath,
-            variant.Description);
+            variant.Description,
+            variant.FileHash ?? meta.FileHash);
     }
 
     /// <summary>
@@ -137,6 +139,7 @@ public class ToolManager : IDisposable
                 {
                     Url = _toolMeta.DownloadUrl,
                     FullSavePath = tempFile,
+                    FileHash = _toolMeta.FileHash ?? string.Empty,
                     SplitThread = 8,
                     ServerConnection = 8,
                     MaxRetry = 5,
@@ -158,12 +161,18 @@ public class ToolManager : IDisposable
             {
                 using var stream = File.OpenRead(tempFile);
                 using var reader = ArchiveFactory.OpenArchive(stream);
+                var root = Path.GetFullPath(ToolDirectory);
                 foreach (var entry in reader.Entries)
                 {
                     if (entry.IsDirectory)
                         continue;
                     if (entry.Key == null) continue;
-                    var fullPath = Path.Combine(ToolDirectory, entry.Key);
+
+                    // 防 zip-slip：拒绝任何会逃逸出工具目录的条目路径
+                    var fullPath = Path.GetFullPath(Path.Combine(root, entry.Key));
+                    if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                        throw new InvalidDataException($"Unsafe archive entry path rejected: {entry.Key}");
+
                     Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
                     using var entryStream = entry.OpenEntryStream();
                     using var fileStream = File.Create(fullPath);

@@ -63,22 +63,40 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
     /// <summary>
     /// Build the command-line arguments. Override if needed.
+    /// 返回参数列表（不含引号），由 <see cref="ProcessManager"/> 以 ArgumentList 方式
+    /// 安全传递，避免路径/提示词中的引号破坏参数边界。
     /// </summary>
-    protected virtual string BuildArguments(string audioPath, string language, string modelPath, string? alignerPath, string? initialPrompt)
+    protected virtual IReadOnlyList<string> BuildArguments(string audioPath, string language, string modelPath, string? alignerPath, string? initialPrompt)
     {
-        // Determine output JSON path (same base as audio)
+        // Determine output JSON base path (same base as audio)
         var jsonOutputPath = Path.ChangeExtension(audioPath, ".json");
         var jsonBasePath = Path.Combine(
             Path.GetDirectoryName(jsonOutputPath) ?? string.Empty,
             Path.GetFileNameWithoutExtension(jsonOutputPath));
 
-        var args = $"--backend {GetBackendName()} -m \"{modelPath}\" -f \"{audioPath}\" -ojf -of \"{jsonBasePath}\"";
+        var args = new List<string>
+        {
+            "--backend", GetBackendName(),
+            "-m", modelPath,
+            "-f", audioPath,
+            "-ojf",
+            "-of", jsonBasePath
+        };
         if (!string.IsNullOrEmpty(language))
-            args += $" -l {language}";
+        {
+            args.Add("-l");
+            args.Add(language);
+        }
         if (!string.IsNullOrEmpty(alignerPath))
-            args += $" -am \"{alignerPath}\"";
+        {
+            args.Add("-am");
+            args.Add(alignerPath);
+        }
         if (!string.IsNullOrEmpty(initialPrompt))
-            args += $" --prompt \"{initialPrompt}\"";
+        {
+            args.Add("--prompt");
+            args.Add(initialPrompt);
+        }
         return args;
     }
 
@@ -119,7 +137,7 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
         // 4. Build arguments
         var args = BuildArguments(audioPath, language, modelPath, alignerPath, initialPrompt);
-        _logger.LogDebug("Executing CrispASR: {Exe} {Args}", toolManager.ExecutablePath, args);
+        _logger.LogDebug("Executing CrispASR: {Exe} {Args}", toolManager.ExecutablePath, string.Join(' ', args));
 
         // 5. Execute process
         await _processManager.ExecuteAsync(toolManager.ExecutablePath, args, cancellationToken: cancellationToken);

@@ -59,15 +59,22 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
         if (!File.Exists(modelPath))
             throw new FileNotFoundException($"Whisper model file not found: {modelPath}");
 
-        // 3. 构建参数：使用 -oj 强制输出 JSON，输出文件自动生成在音频同目录下
+        // 3. 构建参数数组：使用 -oj 强制输出 JSON，输出文件自动生成在音频同目录下
         //    语言为空时不传 -l，由模型自动检测（对中文等非英语音更稳健）
-        var args = $"-m \"{modelPath}\" -f \"{audioPath}\" -oj";
+        //    使用 ArgumentList 传递，避免路径/提示词中的引号破坏参数边界
+        var args = new List<string> { "-m", modelPath, "-f", audioPath, "-oj" };
         if (!string.IsNullOrWhiteSpace(language))
-            args += $" -l {language}";
+        {
+            args.Add("-l");
+            args.Add(language);
+        }
         if (!string.IsNullOrEmpty(initialPrompt))
-            args += $" -p \"{initialPrompt}\"";
+        {
+            args.Add("-p");
+            args.Add(initialPrompt);
+        }
 
-        _logger.LogDebug("Executing: {Exe} {Args}", toolManager.ExecutablePath, args);
+        _logger.LogDebug("Executing: {Exe} {Args}", toolManager.ExecutablePath, string.Join(' ', args));
 
         // 4. 执行进程（输出会生成 JSON 文件，标准输出可能只是进度或日志）
         var output = await _processManager.ExecuteAsync(

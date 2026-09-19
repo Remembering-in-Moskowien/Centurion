@@ -71,4 +71,20 @@ app.Configure(config =>
 });
 
 // ----- Run -----
-return await app.RunAsync(args);
+try
+{
+    return await app.RunAsync(args);
+}
+catch (OperationCanceledException)
+{
+    AnsiConsole.MarkupLine("[yellow]Operation cancelled by user.[/]");
+    return 130;
+}
+catch (Exception ex)
+{
+    // 顶层兜底：任何未捕获异常都以明确的错误与退出码结束，避免裸栈崩溃
+    AnsiConsole.MarkupLine($"[red]Fatal: {MarkupEscape(ex.Message)}[/]");
+    return 1;
+}
+
+static string MarkupEscape(string text) => text.Replace("[", "[[").Replace("]", "]]");

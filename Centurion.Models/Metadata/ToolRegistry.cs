@@ -14,6 +14,8 @@ public class ToolVariant
     public string? ExecutableRelativePath { get; set; }
     /// <summary>面向用户的变体说明（如所需 GPU 型号）。</summary>
     public string? Description { get; set; }
+    /// <summary>可选：该变体下载包的 SHA256 校验值，为空回退到工具基础值。</summary>
+    public string? FileHash { get; set; }
 }
 
 /// <summary>外部工具的下载与安装元数据。</summary>
@@ -39,6 +41,11 @@ public class ToolMeta
     /// 设备匹配优先于 "default"，"default" 优先于基础字段。
     /// </summary>
     public IReadOnlyDictionary<string, ToolVariant>? Variants { get; set; }
+    /// <summary>
+    /// 可选：下载包 SHA256 校验值（十六进制小写）。
+    /// 为空时不校验；填写后下载完成即校验，不匹配则删除文件并报错。
+    /// </summary>
+    public string? FileHash { get; set; }
 }
 
 /// <summary>
@@ -89,7 +96,7 @@ public sealed class ToolRegistry
                 DownloadUrl = "https://github.com/CrispStrobe/CrispASR/releases/download/v0.8.30/crispasr-windows-x86_64-cpu.zip",
                 ArchiveType = "zip",
                 ExecutableRelativePath = "crispasr.exe", // Linux/macOS 下为 "crispasr"
-                Version = "v0.8.29"
+                Version = "v0.8.30"
             },
             ["demucsrs"] = new()
             {

@@ -23,6 +23,28 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         string executablePath,
         string arguments,
         CancellationToken cancellationToken = default)
+        => await ExecuteCoreAsync(executablePath, arguments, null, cancellationToken);
+
+    /// <summary>
+    /// 执行外部程序（参数数组形式），返回标准输出字符串。
+    /// 使用 <see cref="ProcessStartInfo.ArgumentList"/> 传递参数，由系统负责正确转义，
+    /// 调用方无需手工加引号，也避免路径/提示词中的引号破坏参数边界。
+    /// </summary>
+    /// <param name="executablePath">可执行文件完整路径</param>
+    /// <param name="arguments">按顺序排列的参数列表（不含引号）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>进程的标准输出内容</returns>
+    public async Task<string> ExecuteAsync(
+        string executablePath,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken = default)
+        => await ExecuteCoreAsync(executablePath, null, arguments, cancellationToken);
+
+    private async Task<string> ExecuteCoreAsync(
+        string executablePath,
+        string? arguments,
+        IReadOnlyList<string>? argumentList,
+        CancellationToken cancellationToken)
     {
         if (!File.Exists(executablePath))
             throw new FileNotFoundException($"Executable not found: {executablePath}");
@@ -30,7 +52,6 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         var startInfo = new ProcessStartInfo
         {
             FileName = executablePath,
-            Arguments = arguments,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -38,6 +59,15 @@ public class ProcessManager(ILogger<ProcessManager> logger)
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
+        if (argumentList is not null)
+        {
+            foreach (var arg in argumentList)
+                startInfo.ArgumentList.Add(arg);
+        }
+        else
+        {
+            startInfo.Arguments = arguments!;
+        }
 
         using var process = new Process();
         process.StartInfo = startInfo;
@@ -81,6 +111,5 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
             executablePath, process.ExitCode, error);
         throw new InvalidOperationException($"Process failed with exit code {process.ExitCode}. Details: {error}");
-
     }
 }

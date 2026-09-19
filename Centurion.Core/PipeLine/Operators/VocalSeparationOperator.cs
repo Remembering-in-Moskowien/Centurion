@@ -195,8 +195,8 @@ public sealed class VocalSeparationOperator(
     /// 真实 CLI：demucs.exe -m &lt;model&gt; -s vocals -o &lt;outputDir&gt; &lt;input&gt;
     /// 输出布局：&lt;outputDir&gt;/&lt;model&gt;/&lt;input-basename&gt;/vocals.wav（由 FindVocalsFile 递归定位）。
     /// </summary>
-    internal static string BuildArguments(string model, string inputPath, string outputDir) =>
-        $"-m {model} -s vocals -o \"{outputDir}\" \"{inputPath}\"";
+    internal static IReadOnlyList<string> BuildArguments(string model, string inputPath, string outputDir) =>
+        ["-m", model, "-s", "vocals", "-o", outputDir, inputPath];
 
     /// <summary>
     /// 在 Demucs 输出目录中递归查找人声轨文件（兼容不同版本/布局差异）。
