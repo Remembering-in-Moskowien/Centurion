@@ -1,5 +1,4 @@
 using Centurion.Models.Console;
-// File: Centurion.Cli/Commands/SpawnCommand.cs
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
@@ -8,11 +7,15 @@ using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
+/// <summary>
+/// <c>spawn</c> 命令：从音视频媒体自动转录、说话人分割、分句与对齐，生成字幕。
+/// </summary>
 public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
     FFmpegConvertOperator ffmpegOp,
@@ -27,6 +30,12 @@ public sealed class SpawnCommand(
     ILogger<SpawnCommand> logger)
     : AsyncCommand<SpawnSettings>
 {
+    /// <summary>
+    /// 执行自动字幕生成流程：组装并运行管道，写出 ASS 字幕文件。
+    /// </summary>
+    /// <param name="context">Spectre 命令上下文。</param>
+    /// <param name="settings">spawn 命令选项。</param>
+    /// <param name="ct">取消令牌。</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, SpawnSettings settings, CancellationToken ct)
     {
         try
@@ -106,7 +115,11 @@ public sealed class SpawnCommand(
 
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
 
+            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
+            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "spawn", outputPath, ct);
+
             ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
+            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
             return 0;
         }
         catch (Exception ex)

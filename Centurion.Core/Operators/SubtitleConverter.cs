@@ -16,6 +16,10 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     private readonly Dictionary<string, ISubtitleParser> _parserMap;
     private bool _disposed;
 
+    /// <summary>
+    /// 用一组按扩展名注册的字幕解析器初始化转换算子。
+    /// </summary>
+    /// <param name="parsers">支持不同字幕格式的解析器集合。</param>
     public SubtitleConverter(IEnumerable<ISubtitleParser> parsers)
     {
         _parsers = parsers ?? throw new ArgumentNullException(nameof(parsers));
@@ -24,11 +28,20 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
             .ToDictionary(p => p.SupportedExtension.ToLowerInvariant(), p => p, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// 健康检查；本算子无外部依赖，始终直接返回成功。
+    /// </summary>
     public Task CheckHealthAsync()
     {
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 根据目标格式选择对应解析器读取字幕文件，并转换为 ASS 文档。
+    /// </summary>
+    /// <param name="request">包含字幕文件路径与目标格式的请求。</param>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <returns>转换得到的 ASS 字幕文档。</returns>
     public async Task<SubtitleConvertResponse> ProcessAsync(
         OperatorsRequest<SubtitleConvertRequest> request,
         CancellationToken cancellationToken = default)
@@ -79,11 +92,17 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     }
 
     // ---------- 资源释放 ----------
+    /// <summary>
+    /// 同步释放资源，内部转调 <see cref="DisposeAsync"/>。
+    /// </summary>
     public void Dispose()
     {
         DisposeAsync().GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// 异步释放资源，并释放实现了 <see cref="IDisposable"/> 的解析器。
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;

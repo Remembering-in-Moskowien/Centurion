@@ -17,6 +17,9 @@ public sealed record SpeakerSegment(double StartSeconds, double EndSeconds, stri
 /// </summary>
 public interface IDiarizationStrategy
 {
+    /// <summary>
+    /// 策略名称，用于日志标识当前使用的说话人分割后端。
+    /// </summary>
     string StrategyName { get; }
 
     /// <summary>

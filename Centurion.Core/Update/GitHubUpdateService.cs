@@ -21,6 +21,10 @@ public sealed class GitHubUpdateService : IUpdateService
     private readonly ILogger<GitHubUpdateService> _logger;
     private readonly string? _localVersion;
 
+    /// <summary>
+    /// 创建服务实例，初始化 GitHub HTTP 客户端并读取本地版本号。
+    /// </summary>
+    /// <param name="logger">用于记录更新过程的日志器。</param>
     public GitHubUpdateService(ILogger<GitHubUpdateService> logger)
     {
         _logger = logger;
@@ -31,6 +35,7 @@ public sealed class GitHubUpdateService : IUpdateService
         _localVersion = ReadLocalVersion();
     }
 
+    /// <summary>当前本地应用版本号；无法读取时回退为 "0.0.0"。</summary>
     public string LocalVersion => _localVersion ?? "0.0.0";
 
     /// <inheritdoc />

@@ -1,5 +1,3 @@
-// Centurion.Core/Strategy/Diarization/PyannoteTitaNetDiarizationStrategy.cs
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Strategy.Diarization;
@@ -12,13 +10,15 @@ namespace Centurion.Core.Strategy.Diarization;
 public sealed class PyannoteTitaNetDiarizationStrategy(IServiceProvider serviceProvider)
     : CrispAsrDiarizationBase(serviceProvider)
 {
+    /// <summary>策略的显示名称。</summary>
     public override string StrategyName => "Pyannote + TitaNet Diarization";
 
+    /// <summary>传给 --diarize-method 的方法名，固定为 pyannote。</summary>
     protected override string DiarizeMethod => "pyannote";
 
-    // TitaNet 嵌入器（"auto" = 自动下载 TitaNet GGUF）
+    /// <summary>传给 --diarize-embedder 的嵌入器，固定为 auto（自动下载 TitaNet GGUF）。</summary>
     protected override string? DiarizeEmbedder => "auto";
 
-    // pyannote 分割模型（可由 DiarizationModel 配置覆盖）
+    /// <summary>pyannote 默认分割模型名（可由 DiarizationModel 配置覆盖）。</summary>
     protected override string? DefaultSegmentModel => "pyannote-seg-3.0";
 }

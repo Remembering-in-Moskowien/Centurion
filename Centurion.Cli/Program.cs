@@ -1,5 +1,4 @@
 using Centurion.Models.Console;
-// File: Program.cs
 using System.Globalization;
 using Centurion.Cli.Commands;
 using Centurion.Cli.Console;
@@ -66,6 +65,7 @@ app.Configure(config =>
     config.AddCommand<SpawnCommand>("spawn");
     config.AddCommand<FromScriptCommand>("from-script");
     config.AddCommand<CorrectCommand>("correct");
+    config.AddCommand<TranslateCommand>("translate");
     config.AddCommand<ConvertCommand>("convert");
     config.AddCommand<UpdateCommand>("update");
 });

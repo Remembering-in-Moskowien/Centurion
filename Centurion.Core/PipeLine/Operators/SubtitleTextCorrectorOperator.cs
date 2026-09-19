@@ -6,11 +6,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
 
+/// <summary>
+/// 字幕文本校正算子：将当前字幕句与脚本句做模糊相似度匹配，
+/// 命中后用脚本文本覆盖字幕文本，未命中则保留原文并计入报告。
+/// </summary>
 public sealed class SubtitleTextCorrectorOperator(ILogger<SubtitleTextCorrectorOperator> logger)
     : PipelineOperatorBase<SubtitleTextCorrectorOperator>(logger)
 {
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Subtitle Text Correction";
 
+    /// <summary>
+    /// 执行文本校正：逐句在脚本中按滑动窗口找最佳匹配，覆盖命中文本并记录匹配比例与统计。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供字幕句、脚本句与配置阈值。</param>
+    /// <param name="cancellationToken">用于取消校正过程的取消标记。</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var scripts = context.State.ScriptSentences;

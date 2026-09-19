@@ -62,6 +62,7 @@ public class AssSubLine(
     /// <summary>字幕正文</summary>
     private readonly string _text = string.IsNullOrWhiteSpace(text) ? string.Empty : text;
 
+    /// <summary>获取该行字幕的起始时间（毫秒）。</summary>
     public long GetStart()
     {
         return _start;

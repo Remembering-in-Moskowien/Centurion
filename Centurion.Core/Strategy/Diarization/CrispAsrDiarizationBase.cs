@@ -1,6 +1,5 @@
 using Centurion.Core.Factories;
 using Centurion.Models.Workflow;
-// Centurion.Core/Strategy/Diarization/CrispAsrDiarizationBase.cs
 
 using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
@@ -20,9 +19,13 @@ namespace Centurion.Core.Strategy.Diarization;
 /// </summary>
 public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
 {
+    /// <summary>按设备创建 CrispASR 工具管理器的工厂。</summary>
     protected readonly IToolManagerFactory _toolManagerFactory;
+    /// <summary>负责启动并管理外部 CLI 进程的执行器。</summary>
     protected readonly ProcessManager _processManager;
+    /// <summary>用于解析模型文件本地路径的解析器。</summary>
     protected readonly IModelPathResolver _modelResolver;
+    /// <summary>记录说话人分割过程日志的记录器。</summary>
     protected readonly ILogger _logger;
     private ToolManager? _toolManager;
 
@@ -35,6 +38,8 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
     /// <summary>pyannote 方法所需的分割模型名（如 "pyannote-seg-3.0"，由 CrispASR 自动下载）。</summary>
     protected virtual string? DefaultSegmentModel => null;
 
+    /// <summary>从依赖注入容器解析所需服务，初始化基类共享依赖。</summary>
+    /// <param name="serviceProvider">用于解析工具工厂、进程管理器、模型解析器与日志记录器的容器。</param>
     protected CrispAsrDiarizationBase(IServiceProvider serviceProvider)
     {
         _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
@@ -47,8 +52,18 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
     protected ToolManager GetToolManager(InferenceDevice device) =>
         _toolManager ??= _toolManagerFactory.Create("crispasr", device);
 
+    /// <summary>策略的显示名称。</summary>
     public abstract string StrategyName { get; }
 
+    /// <summary>
+    /// 对音频执行说话人分割：确保 CrispASR 就绪、解析模型、构建并运行 CLI，
+    /// 解析输出 JSON 为说话人片段列表。
+    /// </summary>
+    /// <param name="audioPath">待分割音频文件路径。</param>
+    /// <param name="numSpeakers">预期说话人数；大于 0 时作为最大说话人限制传入。</param>
+    /// <param name="segmentModel">分割模型名；为 null 时回退到实现的默认模型。</param>
+    /// <param name="cancellationToken">用于取消分割过程的取消标记。</param>
+    /// <param name="device">推理设备，决定选用 CPU/GPU 变体工具。</param>
     public virtual async Task<IReadOnlyList<SpeakerSegment>> DiarizeAsync(
         string audioPath,
         int numSpeakers,
@@ -68,7 +83,7 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         if (!File.Exists(modelPath))
             throw new FileNotFoundException($"Whisper tiny model not found: {modelPath}");
 
-        // 3. 构建参数并执行（-ojf 输出 diarized JSON）
+        // 3. 构建参数并执行（--diarize-speakers 将说话人标签写入 transcription 条目的 speaker 字段）
         var jsonBasePath = Path.Combine(
             Path.GetDirectoryName(audioPath) ?? string.Empty,
             Path.GetFileNameWithoutExtension(audioPath) + "_diar");
@@ -88,6 +103,9 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
 
     /// <summary>
     /// 构建 CrispASR 说话人分割命令行参数（internal，便于单元测试）。
+    /// 使用 --diarize-speakers 使说话人标签写入 transcription 条目的 speaker 字段；
+    /// --diarize-method 仍可选用 foxnose（WeSpeaker 嵌入）或 pyannote（TitaNet 嵌入）。
+    /// 分割模型（如 pyannote-seg-3.0.gguf）由 CrispASR 自动下载并缓存，无需 --sherpa-segment-model。
     /// </summary>
     internal static string BuildArguments(
         string audioPath,
@@ -99,18 +117,25 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         string? embedder,
         string? defaultSegmentModel)
     {
-        var effectiveSegmentModel = segmentModel ?? defaultSegmentModel;
+        _ = segmentModel;
+        _ = defaultSegmentModel;
         var args = $"--backend whisper -m \"{modelPath}\" -f \"{audioPath}\" " +
-                   $"--diarize --diarize-method {method} -ojf -of \"{jsonBasePath}\"";
+                   $"--diarize-speakers --diarize-method {method} -ojf -of \"{jsonBasePath}\"";
         if (!string.IsNullOrEmpty(embedder))
             args += $" --diarize-embedder {embedder}";
-        if (!string.IsNullOrEmpty(effectiveSegmentModel))
-            args += $" --sherpa-segment-model {effectiveSegmentModel}";
         if (numSpeakers > 0)
             args += $" --diarize-max-speakers {numSpeakers}";
         return args;
     }
 
+    /// <summary>
+    /// 使用当前实现的方法与嵌入器构建 CLI 参数（供派生类调用）。
+    /// </summary>
+    /// <param name="audioPath">待分割音频文件路径。</param>
+    /// <param name="modelPath">CrispASR CLI 所需的 ASR 模型路径。</param>
+    /// <param name="jsonBasePath">输出 JSON 的基础路径（不含扩展名）。</param>
+    /// <param name="numSpeakers">预期说话人数；大于 0 时作为最大说话人限制。</param>
+    /// <param name="segmentModel">预留的分割模型名（由 CrispASR 自动下载管理，当前不参与命令行）。</param>
     protected string BuildArguments(
         string audioPath, string modelPath, string jsonBasePath, int numSpeakers, string? segmentModel) =>
         BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel,

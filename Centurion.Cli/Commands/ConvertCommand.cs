@@ -1,5 +1,4 @@
 using Centurion.Models.Console;
-// File: Centurion.Cli/Commands/ConvertCommand.cs
 
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
@@ -13,11 +12,19 @@ using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
+/// <summary>
+/// <c>convert</c> 命令：解析现有字幕文件并转换输出为 ASS 格式。
+/// </summary>
 public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 {
     private readonly PipelineExecutor _executor;
     private readonly Func<IEnumerable<IPipelineOperator>> _convertOperatorsFactory;
 
+    /// <summary>
+    /// 使用管道执行器与转换算子工厂初始化命令。
+    /// </summary>
+    /// <param name="executor">负责按顺序执行算子管道的执行器。</param>
+    /// <param name="convertOperatorsFactory">创建转换管道所需算子集合的工厂委托。</param>
     public ConvertCommand(
         PipelineExecutor executor,
         Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory)
@@ -26,6 +33,12 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
         _convertOperatorsFactory = convertOperatorsFactory ?? throw new ArgumentNullException(nameof(convertOperatorsFactory));
     }
 
+    /// <summary>
+    /// 执行转换：解析输入字幕、运行转换算子管道并写出 ASS 文件。
+    /// </summary>
+    /// <param name="context">Spectre 命令上下文。</param>
+    /// <param name="settings">转换命令选项。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, ConvertSettings settings, CancellationToken cancellationToken)
     {
         try

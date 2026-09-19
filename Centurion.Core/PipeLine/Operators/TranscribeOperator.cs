@@ -19,8 +19,15 @@ public class TranscribeOperator(
 {
     private readonly ITranscriptionStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Transcription";
 
+    /// <summary>
+    /// 执行转录：经工厂创建转录策略，对音频做语音识别得到词流，
+    /// 清理非法字符后聚合成句并写回工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供音频路径与转录配置。</param>
+    /// <param name="cancellationToken">用于取消转录过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         // 检查点：若已转录则跳过
@@ -91,8 +98,9 @@ public class TranscribeOperator(
             if (cleanedWords.Count == 0)
                 throw new Exception("After cleaning, no words remain.");
 
-            // 聚合成一个句子（后续分句会拆分）
-            var aggregatedText = string.Join(" ", cleanedWords.Select(w => w.Text));
+            // 聚合成一个句子（后续分句会拆分）；中文等无空格语系不插入空格
+            var aggregatedText = Centurion.Models.Text.LanguageSupport.JoinWords(
+                cleanedWords.Select(w => w.Text), config.Language);
             var sentence = new Sentence
             {
                 Text = aggregatedText,

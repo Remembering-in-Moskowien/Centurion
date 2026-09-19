@@ -5,6 +5,12 @@ namespace Centurion.Core.Utils;
 /// </summary>
 public static class WavSnrEstimator
 {
+    /// <summary>
+    /// 估计指定 16 位 PCM WAV 文件的信噪比（dB）：按帧计算 RMS，以低能量帧均方作为噪声、高能量段均方作为信号估算。
+    /// </summary>
+    /// <param name="path">WAV 文件路径。</param>
+    /// <returns>估计的信噪比（dB）；数据帧过少时返回 40。</returns>
+    /// <exception cref="FormatException">文件不是受支持的 PCM WAV 格式时抛出。</exception>
     public static double Estimate(string path)
     {
         using var stream = File.OpenRead(path);

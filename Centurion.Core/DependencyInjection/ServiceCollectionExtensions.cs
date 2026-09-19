@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAlignmentStrategyFactory, AlignmentStrategyFactory>();
         services.AddSingleton<IDiarizationStrategyFactory, DiarizationStrategyFactory>();
         services.AddSingleton<IToolManagerFactory, ToolManagerFactory>();
+        services.AddSingleton<ITranslationStrategyFactory, TranslationStrategyFactory>();
 
         // ---------- 4. 转录策略（具体实现） ----------
         services.AddTransient<WhisperCppStrategy>();
@@ -83,6 +84,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ScriptLoaderOperator>();
         services.AddTransient<ScriptTimelineMapperOperator>();
         services.AddTransient<SubtitleTextCorrectorOperator>();
+        services.AddTransient<OverlapResolutionOperator>();
         services.AddTransient<CorrectionReportOperator>();
 
         // ---------- 转换管道专用算子（使用 SubtitlesParserV2） ----------

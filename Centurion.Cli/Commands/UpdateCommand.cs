@@ -15,6 +15,12 @@ public sealed class UpdateCommand(
     IUpdateService updateService,
     ILogger<UpdateCommand> logger) : AsyncCommand<UpdateSettings>
 {
+    /// <summary>
+    /// 执行自更新：检查新版本、按选项下载并可选择立即应用更新。
+    /// </summary>
+    /// <param name="context">Spectre 命令上下文。</param>
+    /// <param name="settings">更新命令选项。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, UpdateSettings settings, CancellationToken cancellationToken)
     {
         try

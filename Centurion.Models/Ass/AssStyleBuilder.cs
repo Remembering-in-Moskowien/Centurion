@@ -31,28 +31,51 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
     private int _marginV;
     private int _encoding;
 
+    /// <summary>样式名称，用于在文档中引用该样式。</summary>
     public string Name => _name;
+    /// <summary>字体名称。</summary>
     public string FontName => _fontName;
+    /// <summary>字号（像素）。</summary>
     public int FontSize => _fontSize;
+    /// <summary>主文字颜色，ASS 格式如 &amp;H00FFFFFF。</summary>
     public string PrimaryColour => _primaryColour;
+    /// <summary>次要填充色，卡拉OK 未演唱段使用的颜色。</summary>
     public string SecondaryColour => _secondaryColour;
+    /// <summary>描边颜色。</summary>
     public string OutlineColour => _outlineColour;
+    /// <summary>阴影（背景）颜色。</summary>
     public string BackColour => _backColour;
+    /// <summary>是否加粗。</summary>
     public bool Bold => _bold;
+    /// <summary>是否斜体。</summary>
     public bool Italic => _italic;
+    /// <summary>是否下划线。</summary>
     public bool Underline => _underline;
+    /// <summary>是否删除线。</summary>
     public bool StrikeOut => _strikeOut;
+    /// <summary>横向缩放百分比。</summary>
     public float ScaleX => _scaleX;
+    /// <summary>纵向缩放百分比。</summary>
     public float ScaleY => _scaleY;
+    /// <summary>字符间距（像素）。</summary>
     public float Spacing => _spacing;
+    /// <summary>文字旋转角度（度，逆时针为正）。</summary>
     public float Angle => _angle;
+    /// <summary>描边渲染模式（1=描边+不透明底，3=不透明框）。</summary>
     public int BorderStyle => _borderStyle;
+    /// <summary>描边粗细。</summary>
     public float Outline => _outline;
+    /// <summary>阴影深度。</summary>
     public float Shadow => _shadow;
+    /// <summary>对齐方式（ASS 对齐编号，1-9 对应九宫格）。</summary>
     public int Alignment => _alignment;
+    /// <summary>左侧安全边距。</summary>
     public int MarginL => _marginL;
+    /// <summary>右侧安全边距。</summary>
     public int MarginR => _marginR;
+    /// <summary>垂直安全边距。</summary>
     public int MarginV => _marginV;
+    /// <summary>文本编码 ID（如 1 表示默认系统编码）。</summary>
     public int Encoding => _encoding;
 
     /// <summary>设置样式名称</summary>
@@ -193,17 +216,21 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
         return Set(ref _encoding, value);
     }
 
-    /// <summary>填充一套默认标准字幕样式</summary>
+    /// <summary>
+    /// 填充一套默认主字幕样式（黑体风格，参照 Theme.ass 的视频语言 eng 样式）：
+    /// 使用 Arial 粗体（Windows/macOS 原生自带；Linux 由 Liberation Sans 度量兼容替代），
+    /// 半透明描边 + 阴影，底部居中、垂直边距 100。
+    /// </summary>
     public AssStyleBuilder WithDefaultValues()
     {
         return WithName("Default")
             .WithFontName("Arial")
-            .WithFontSize(55)
+            .WithFontSize(84)
             .WithPrimaryColour("&H00FFFFFF")
-            .WithSecondaryColour("&H000000FF")
-            .WithOutlineColour("&H00000000")
-            .WithBackColour("&H00000000")
-            .WithBold(false)
+            .WithSecondaryColour("&H00FFFFFF")
+            .WithOutlineColour("&H37000000")
+            .WithBackColour("&H370E0807")
+            .WithBold(true)
             .WithItalic(false)
             .WithUnderline(false)
             .WithStrikeOut(false)
@@ -212,12 +239,44 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
             .WithSpacing(0.0f)
             .WithAngle(0.0f)
             .WithBorderStyle(1)
-            .WithOutline(2.0f)
-            .WithShadow(0.0f)
+            .WithOutline(3.3f)
+            .WithShadow(2.5f)
             .WithAlignment(2)
-            .WithMarginL(10)
-            .WithMarginR(10)
-            .WithMarginV(35)
+            .WithMarginL(9)
+            .WithMarginR(9)
+            .WithMarginV(100)
+            .WithEncoding(1);
+    }
+
+    /// <summary>
+    /// 填充一套次字幕样式（中文黑体风格，参照 Theme.ass 的目标语言 chi 样式）：
+    /// 使用微软雅黑（Windows 中文系统自带；macOS 回退苹方 PingFang SC、Linux 回退 Noto Sans CJK SC，
+    /// 均为现代黑体观感接近），贴底显示（垂直边距 28），用于双语字幕的译文行。
+    /// </summary>
+    public AssStyleBuilder WithSubtitleStyle()
+    {
+        return WithName("Sub")
+            .WithFontName("Microsoft YaHei")
+            .WithFontSize(81)
+            .WithPrimaryColour("&H00FFFFFF")
+            .WithSecondaryColour("&H00FFFFFF")
+            .WithOutlineColour("&H37000000")
+            .WithBackColour("&H370E0807")
+            .WithBold(true)
+            .WithItalic(false)
+            .WithUnderline(false)
+            .WithStrikeOut(false)
+            .WithScaleX(100.0f)
+            .WithScaleY(100.0f)
+            .WithSpacing(0.0f)
+            .WithAngle(0.0f)
+            .WithBorderStyle(1)
+            .WithOutline(3.3f)
+            .WithShadow(2.5f)
+            .WithAlignment(2)
+            .WithMarginL(9)
+            .WithMarginR(9)
+            .WithMarginV(28)
             .WithEncoding(1);
     }
 

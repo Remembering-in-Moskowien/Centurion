@@ -20,6 +20,7 @@ namespace Centurion.Core.Pipeline.Operators;
 /// （Windows: %LOCALAPPDATA%\demucs-rs\，Linux: ~/.cache/demucs-rs\，macOS: ~/Library/Caches/demucs-rs\），
 /// 官方源下载失败时自动回退 hf-mirror.com 镜像，保证国内网络可用。
 /// 模型基础地址可通过 metadata.json 中 demucsrs 条目的 modelBaseUrl 覆盖。
+/// </para>
 /// </summary>
 public sealed class VocalSeparationOperator(
     IToolManagerFactory toolFactory,
@@ -34,8 +35,15 @@ public sealed class VocalSeparationOperator(
     private readonly ProcessManager _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
     private readonly Centurion.Core.Operators.Downloader _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Vocal Separation";
 
+    /// <summary>
+    /// 执行人声分离：在开关开启且无既有产物时，用 demucs-rs 将输入音频分离出人声轨，
+    /// 并将结果写入 <see cref="SubtitleWorkflowContext"/> 状态；分离失败为非致命错误，仅记录警告并回退原始音频。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供配置、状态与输入音频路径。</param>
+    /// <param name="cancellationToken">用于取消人声分离过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var config = context.Config;

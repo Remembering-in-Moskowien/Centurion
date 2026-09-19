@@ -17,9 +17,13 @@ public class ModelManager : IDisposable
     private readonly string _modelName;
     private readonly ModelMeta _targetMeta;
 
+    /// <summary>模型文件路径；单文件模式为文件路径，目录模式为目录路径。</summary>
     public string ModelFilePath { get; } // 单文件模式为文件路径，目录模式为目录路径
+    /// <summary>模型所在文件夹路径。</summary>
     public string ModelFolder { get; }
+    /// <summary>当前模型对应的元数据；未启用管理时为 <see langword="null"/>。</summary>
     public ModelMeta? TargetMeta => _targetMeta;
+    /// <summary>是否启用模型管理（模型名称为空时为 <see langword="false"/>）。</summary>
     public bool ManagementEnabled { get; }
 
     /// <summary>
@@ -70,6 +74,10 @@ public class ModelManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// 检查模型完整性；缺失或不完整时自动下载所需模型文件，未启用管理时直接返回。
+    /// </summary>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
     public async Task CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
@@ -155,6 +163,9 @@ public class ModelManager : IDisposable
         ConsoleServices.Output.WriteLine($"Model '{_modelName}' downloaded successfully.");
     }
 
+    /// <summary>
+    /// 释放资源；本管理器无需释放任何非托管资源。
+    /// </summary>
     public void Dispose()
     {
         // 无需释放

@@ -25,13 +25,22 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
 {
     private readonly ILogger<ScriptTimelineMapperOperator> _logger;
 
+    /// <summary>创建脚本时间轴映射算子实例。</summary>
+    /// <param name="logger">记录映射过程日志的记录器。</param>
     public ScriptTimelineMapperOperator(ILogger<ScriptTimelineMapperOperator> logger) : base(logger)
     {
         _logger = logger;
     }
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Script Timeline Mapping";
 
+    /// <summary>
+    /// 执行脚本句与转录词流的对齐：以脚本句为分段骨架，经词级全局对齐与空隙回填，
+    /// 为每句脚本注入带时间戳的词并写回工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供脚本句与转录词流。</param>
+    /// <param name="cancellationToken">用于取消映射过程的取消标记。</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         // ====== 脚本句：输出的唯一分段依据 ======

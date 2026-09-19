@@ -8,8 +8,20 @@ namespace Centurion.Core.Strategy.SentenceSplit;
 /// </summary>
 public abstract class BaseSplitStrategy : ISentenceSplitStrategy
 {
+    /// <summary>
+    /// 把输入词流切分为若干句子。
+    /// </summary>
+    /// <param name="words">待切分的词流。</param>
+    /// <param name="options">分句长度与语言等配置选项。</param>
+    /// <returns>切分得到的句子列表。</returns>
     public abstract Task<List<Sentence>> Split(List<Word> words, SplitOptions options);
 
+    /// <summary>
+    /// 按相邻词之间的时间间隙把词流切分为若干词组（通用辅助方法）。
+    /// </summary>
+    /// <param name="words">待分组的词流（按时间排序后处理）。</param>
+    /// <param name="gapMs">触发切分的最小时间间隙（毫秒）。</param>
+    /// <returns>按时间间隙切分得到的词组列表。</returns>
     protected List<List<Word>> SplitByTimeGap(List<Word> words, double gapMs)
     {
         if (words == null || words.Count == 0) return [];

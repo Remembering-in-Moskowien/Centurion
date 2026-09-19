@@ -7,6 +7,7 @@ using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 
@@ -25,10 +26,17 @@ public sealed class CorrectCommand(
     SubtitleTextCorrectorOperator textCorrectorOp,
     DiarizationOperator diarizationOp,
     AlignmentOperator alignmentOp,
+    OverlapResolutionOperator overlapOp,
     CorrectionReportOperator reportOp,
     PipelineExecutor pipelineExecutor,
     ILogger<CorrectCommand> logger) : AsyncCommand<CorrectSettings>
 {
+    /// <summary>
+    /// 执行校正：按所选策略组装并运行校正管道，写出校正后的 ASS 字幕。
+    /// </summary>
+    /// <param name="context">Spectre 命令上下文。</param>
+    /// <param name="settings">校正命令选项。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, CorrectSettings settings, CancellationToken cancellationToken)
     {
         try
@@ -46,6 +54,7 @@ public sealed class CorrectCommand(
                 OutputFilePath = outputPath,
                 ScriptFilePath = settings.ScriptFile?.FullName,
                 CorrectStrategy = strategy,
+                Language = settings.Language,
                 MaxDriftMs = settings.MaxDrift,
                 FuzzyThreshold = settings.FuzzyThreshold,
                 KaraokeMode = settings.Karaoke,
@@ -78,6 +87,7 @@ public sealed class CorrectCommand(
                 operators.Add(vocalSepOp);
                 operators.Add(diarizationOp);
                 operators.Add(alignmentOp);
+                operators.Add(overlapOp);
             }
 
             operators.Add(reportOp);
@@ -85,7 +95,11 @@ public sealed class CorrectCommand(
 
             var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
             await File.WriteAllTextAsync(outputPath, assDoc.ToString(), cancellationToken);
+
+            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
+            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "correct", outputPath, cancellationToken);
             ConsoleServices.Output.WriteMarkupLine($"[green]Correction completed: {outputPath}[/]");
+            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
             return 0;
         }
         catch (OperationCanceledException)

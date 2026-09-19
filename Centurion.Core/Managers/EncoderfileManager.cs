@@ -8,6 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Managers;
 
+/// <summary>
+/// 管理 encoderfile 命令行工具：负责按需下载 CLI、依据 ONNX 模型构建编码产物并执行推理。
+/// </summary>
 public sealed class EncoderfileManager(
     IServiceProvider serviceProvider,
     ILogger<EncoderfileManager> logger,
@@ -17,9 +20,18 @@ public sealed class EncoderfileManager(
     private readonly ILogger<EncoderfileManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ProcessManager _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
 
+    /// <summary>encoderfile 工具所在目录（位于程序基目录下 tools/encoderfile）。</summary>
     public string ToolDirectory => Path.Combine(AppContext.BaseDirectory, "tools", "encoderfile");
+    /// <summary>encoderfile 可执行文件的完整路径，按操作系统选择 encoderfile.exe 或 encoderfile。</summary>
     public string EncoderfileCliPath => Path.Combine(ToolDirectory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "encoderfile.exe" : "encoderfile");
 
+    /// <summary>
+    /// 依据 ONNX 模型目录与模型类型构建 encoderfile 编码模型产物。
+    /// </summary>
+    /// <param name="modelDir">ONNX 模型目录。</param>
+    /// <param name="outputPath">构建产物的输出路径。</param>
+    /// <param name="modelType">模型类型标识。</param>
+    /// <param name="ct">取消操作的取消令牌。</param>
     public async Task BuildAsync(string modelDir, string outputPath, string modelType, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelDir);
@@ -47,6 +59,13 @@ public sealed class EncoderfileManager(
         }
     }
 
+    /// <summary>
+    /// 使用指定的 encoderfile 模型对输入文本执行推理，返回命令行标准输出结果。
+    /// </summary>
+    /// <param name="encoderfilePath">已构建好的 encoderfile 模型路径。</param>
+    /// <param name="input">待推理的输入文本。</param>
+    /// <param name="ct">取消操作的取消令牌。</param>
+    /// <returns>推理命令的标准输出。</returns>
     public async Task<string> InferAsync(string encoderfilePath, string input, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(encoderfilePath);

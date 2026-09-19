@@ -19,8 +19,15 @@ public sealed class DiarizationOperator(
 {
     private readonly IDiarizationStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Speaker Diarization";
 
+    /// <summary>
+    /// 执行说话人分割：按配置创建策略，对音频做说话人分离，
+    /// 并把每个词按时间中点标注对应说话人。失败为非致命错误，仅记录警告。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供音频、句子与配置。</param>
+    /// <param name="cancellationToken">用于取消说话人分割过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var config = context.Config;

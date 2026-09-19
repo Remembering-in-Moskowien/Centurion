@@ -11,6 +11,11 @@ public class TempDirectoryManager(string? basePath = null, bool autoDelete = tru
     private readonly List<TempDirectoryHandle> _handles = [];
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    /// <summary>
+    /// 创建一个带前缀与唯一 GUID 名称的临时目录，并返回其句柄以便后续清理。
+    /// </summary>
+    /// <param name="prefix">目录名前缀；未提供时使用 "centurion_"。</param>
+    /// <returns>指向新建临时目录的句柄。</returns>
     public async Task<TempDirectoryHandle> CreateTempDirectoryAsync(string? prefix = null)
     {
         prefix ??= "centurion_";

@@ -18,8 +18,14 @@ public class SentenceSplitOperator(
 {
     private readonly ISentenceSplitStrategyFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Sentence Splitting";
 
+    /// <summary>
+    /// 执行分句：按配置经工厂创建分句策略，把当前词流切分为句子并写回工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供输入词流与分句配置。</param>
+    /// <param name="cancellationToken">用于取消分句过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.IsSplit)

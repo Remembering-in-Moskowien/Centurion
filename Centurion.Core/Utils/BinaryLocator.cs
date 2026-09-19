@@ -13,6 +13,13 @@ public class BinaryLocator() : IBinaryLocator
     // localization removed
     private readonly Dictionary<string, string> _binaryCache = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// 按名称查找可执行文件：先在本地相对目录与程序基目录下检索，再回退到 PATH 环境变量；命中结果会被缓存。
+    /// </summary>
+    /// <param name="binaryName">可执行文件名。</param>
+    /// <param name="localSearchRelativeDirs">相对于程序基目录优先检索的子目录。</param>
+    /// <returns>找到的可执行文件完整路径。</returns>
+    /// <exception cref="BinaryNotFoundException">在本地与 PATH 中均未找到时抛出。</exception>
     public string Locate(string binaryName, params string[] localSearchRelativeDirs)
     {
         // 命中缓存直接返回
@@ -60,6 +67,9 @@ public class BinaryLocator() : IBinaryLocator
             $"Binary '{binaryName}' not found.", binaryName);
     }
 
+    /// <summary>
+    /// 清空已缓存的二进制查找结果。
+    /// </summary>
     public void ClearCache()
     {
         _binaryCache.Clear();

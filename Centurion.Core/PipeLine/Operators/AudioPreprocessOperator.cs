@@ -11,14 +11,25 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
 
+/// <summary>
+/// 音频预处理算子：估算信噪比、按需降噪与响度归一化，并重采样为下游处理所需格式，
+/// 结果写入 <see cref="SubtitleWorkflowContext"/> 状态中的 PreprocessedAudioPath。
+/// </summary>
 public sealed class AudioPreprocessOperator(
     IBinaryLocator binaryLocator,
     ILogger<AudioPreprocessOperator> logger) : PipelineOperatorBase<AudioPreprocessOperator>(logger)
 {
     private readonly IBinaryLocator _binaryLocator = binaryLocator ?? throw new ArgumentNullException(nameof(binaryLocator));
 
+    /// <summary>算子在管道中的显示名称。</summary>
     public override string Name => "Audio Preprocessing";
 
+    /// <summary>
+    /// 执行音频预处理：探测音频信息、估算信噪比，按配置应用降噪与响度归一化，
+    /// 输出预处理后的音频文件并写回工作流状态。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文，提供配置与输入音频路径。</param>
+    /// <param name="cancellationToken">用于取消预处理过程的取消标记。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.PreprocessedAudioPath is { } existing && File.Exists(existing))

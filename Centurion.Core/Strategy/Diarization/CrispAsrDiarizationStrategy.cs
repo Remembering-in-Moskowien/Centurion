@@ -1,5 +1,3 @@
-// Centurion.Core/Strategy/Diarization/CrispAsrDiarizationStrategy.cs
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Strategy.Diarization;
@@ -11,10 +9,12 @@ namespace Centurion.Core.Strategy.Diarization;
 public sealed class CrispAsrDiarizationStrategy(IServiceProvider serviceProvider)
     : CrispAsrDiarizationBase(serviceProvider)
 {
+    /// <summary>策略的显示名称。</summary>
     public override string StrategyName => "CrispASR Diarization";
 
     /// <summary>默认使用 foxnose（WeSpeaker 嵌入 + 谱聚类，无外部依赖）。</summary>
     public string Method { get; set; } = "foxnose";
 
+    /// <summary>传给 --diarize-method 的方法名，取可配置的 <see cref="Method"/>。</summary>
     protected override string DiarizeMethod => Method;
 }
