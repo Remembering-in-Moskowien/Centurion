@@ -48,7 +48,7 @@ public class LLMSplitStrategy : BaseSplitStrategy
         var cleanWords = words.Select(w => new string(w.Text.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant())
                               .Where(w => !string.IsNullOrEmpty(w))
                               .ToList();
-        var cleanText = LanguageSupport.JoinWords(cleanWords, options.Language);
+        var cleanText = LanguageSupport.JoinMixed(cleanWords);
         if (string.IsNullOrWhiteSpace(cleanText))
             return [];
 
@@ -219,7 +219,7 @@ Output (JSON array only):
             var remaining = wordList.Skip(wordIndex).ToList();
             result.Add(new Sentence
             {
-                Text = LanguageSupport.JoinWords(remaining.Select(w => w.Text), options.Language),
+                Text = LanguageSupport.JoinMixed(remaining.Select(w => w.Text)),
                 Start = remaining.First().Start,
                 End = remaining.Last().End,
                 Words = remaining
@@ -308,7 +308,7 @@ Output (JSON array only):
             var remaining = wordList.Skip(wordIndex).ToList();
             result.Add(new Sentence
             {
-                Text = LanguageSupport.JoinWords(remaining.Select(w => w.Text), options.Language),
+                Text = LanguageSupport.JoinMixed(remaining.Select(w => w.Text)),
                 Start = remaining.First().Start,
                 End = remaining.Last().End,
                 Words = remaining
@@ -341,7 +341,7 @@ Output (JSON array only):
                 var slice = wordList.Skip(start).Take(i - start).ToList();
                 result.Add(new Sentence
                 {
-                    Text = LanguageSupport.JoinWords(slice.Select(x => x.Text), options.Language),
+                    Text = LanguageSupport.JoinMixed(slice.Select(x => x.Text)),
                     Start = slice.First().Start,
                     End = slice.Last().End,
                     Words = slice
@@ -357,7 +357,7 @@ Output (JSON array only):
             var slice = wordList.Skip(start).ToList();
             result.Add(new Sentence
             {
-                Text = LanguageSupport.JoinWords(slice.Select(x => x.Text), options.Language),
+                Text = LanguageSupport.JoinMixed(slice.Select(x => x.Text)),
                 Start = slice.First().Start,
                 End = slice.Last().End,
                 Words = slice

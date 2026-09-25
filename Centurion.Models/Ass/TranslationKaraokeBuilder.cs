@@ -18,14 +18,14 @@ public static class TranslationKaraokeBuilder
     /// <param name="text">译文文本。</param>
     /// <param name="startMs">句子起始时间（毫秒）。</param>
     /// <param name="endMs">句子结束时间（毫秒）。</param>
-    /// <param name="language">目标语言代码（zh/ja 按字符分词，其余按空白分词）。</param>
+    /// <param name="language">目标语言代码（保留用于兼容；分词以文本实际字符为准）。</param>
     /// <returns>带 \K 标签的 ASS 文本。</returns>
     public static string Build(string? text, double startMs, double endMs, string? language)
     {
         if (string.IsNullOrWhiteSpace(text))
             return string.Empty;
 
-        var tokens = Tokenize(text, language);
+        var tokens = Tokenize(text);
         if (tokens.Count == 0)
             return text;
 
@@ -33,7 +33,7 @@ public static class TranslationKaraokeBuilder
         var leadMs = (int)Math.Clamp(totalMs * 0.12, 300, 1000);
         var availableMs = Math.Max(1.0, totalMs - leadMs);
 
-        var weights = tokens.Select(token => WeightOf(token, language)).ToList();
+        var weights = tokens.Select(WeightOf).ToList();
         var weightSum = Math.Max(1, weights.Sum());
 
         var sb = new StringBuilder();
@@ -49,29 +49,22 @@ public static class TranslationKaraokeBuilder
     }
 
     /// <summary>
-    /// 语言感知分词：中日韩无空格语系按单个字符切分，其余语言按空白切分为词。
+    /// 混合感知分词：中日韩表意/假名逐字拆分，拉丁语按空白拆词，中英混写共存；
+    /// CJK 标点附着到前一词。例如 "hello 世界" → hello / 世 / 界。
     /// </summary>
     /// <param name="text">译文文本。</param>
-    /// <param name="language">语言代码。</param>
     /// <returns>分词结果列表。</returns>
-    internal static List<string> Tokenize(string text, string? language)
-    {
-        if (LanguageSupport.IsSpaceless(language))
-            return text.Where(char.IsLetterOrDigit).Select(c => c.ToString()).ToList();
-
-        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).ToList();
-    }
+    internal static List<string> Tokenize(string text) => LanguageSupport.TokenizeMixed(text);
 
     /// <summary>
-    /// 词权重：中日韩每字符权重 1；拉丁语系按音节估算（元音字母串计数，至少 1）。
-    /// 长音节词因此获得更多时间分配。
+    /// 词权重：含中日韩表意/假名的词（或单字符）每字符权重 1；
+    /// 拉丁语系按音节估算（元音字母串计数，至少 1）。长音节词因此获得更多时间分配。
     /// </summary>
     /// <param name="token">单个词或字符。</param>
-    /// <param name="language">语言代码。</param>
     /// <returns>权重值（≥1）。</returns>
-    internal static int WeightOf(string token, string? language)
+    internal static int WeightOf(string token)
     {
-        if (LanguageSupport.IsSpaceless(language))
+        if (token.Any(LanguageSupport.IsCjkIdeograph))
             return Math.Max(1, token.Length);
 
         // 音节粗估：连续元音字母串的数量（"adventure" → 4，"strength" → 1）

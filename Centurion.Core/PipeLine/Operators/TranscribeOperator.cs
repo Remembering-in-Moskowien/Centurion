@@ -108,9 +108,9 @@ public class TranscribeOperator(
             // ---- 词级时间戳健康化：排序/钳制/补零时长，稳定下游分句与说话人标注 ----
             var sanitizedWords = WordTimingSanitizer.Sanitize(cleanedWords);
 
-            // 聚合成一个句子（后续分句会拆分）；中文等无空格语系不插入空格
-            var aggregatedText = Centurion.Models.Text.LanguageSupport.JoinWords(
-                sanitizedWords.Select(w => w.Text), config.Language);
+            // 聚合成一个句子（后续分句会拆分）；混合感知：类 CJK 词直连，其余词间单空格
+            var aggregatedText = Centurion.Models.Text.LanguageSupport.JoinMixed(
+                sanitizedWords.Select(w => w.Text));
             var sentence = new Sentence
             {
                 Text = aggregatedText,
