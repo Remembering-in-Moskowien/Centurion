@@ -3,7 +3,7 @@
 > **Speech → Subtitles, done properly.** 🎬
 > Centurion is a **.NET 10** command-line powerhouse that turns audio/video into **polished ASS subtitles**: transcribe → diarize → split → clean → force-align, all in one automatic pipeline. Sit back, relax, let it cook. ✨
 
-![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-214%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
+![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-261%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
 
 ---
 
@@ -172,12 +172,46 @@ Centurion convert episode.ass -o episode.centurion.json
 
 ---
 
-## 2️⃣ `spawn` — Standard Transcription 🎬
+## 2️⃣ `spawn` — Transcription & OCR 🎬🔤
 
 The bread and butter: media file in, intermediate file out (then `build` renders the ASS). Easy peasy.
 
 ```bash
 Centurion spawn <INPUT_FILE> [options]
+```
+
+`spawn` has **two modes**:
+
+| Mode | Flag | What it does |
+|---|---|---|
+| `asr` (default) | `-m asr` | Speech recognition — the classic pipeline: audio conversion → preprocessing → vocal separation (optional) → transcription → diarization → splitting → cleaning → alignment 📣 |
+| `ocr` | `-m ocr` | **GLM-OCR** — extracts subtitle text from video frames or images (burned-in subtitles / video-game dialogue / sign text). Skips audio steps entirely 🔤 |
+
+OCR runs on **cloud or local** inference — pick with `--ocr-backend`:
+
+| Backend | What it is | Key? |
+|---|---|---|
+| `zhipu` (default) | [Zhipu AI](https://open.bigmodel.cn) GLM-OCR in the cloud | `--ocr-api-key` required |
+| `ollama` | **Local** Ollama vision model (`qwen2.5vl`, `llava`…) | none 🏠 |
+| `llamacpp` | **Local** llama-server with a vision GGUF | none 🏠 |
+
+It extracts frames at a fixed interval, OCRs each one, and merges consecutive identical lines into timed sentences — then the usual `split → clean → quality` stages take over. You can point it at a single image too. 🖼️
+
+```bash
+# Cloud GLM-OCR
+Centurion spawn episode.mkv -m ocr --ocr-api-key <KEY> --language zh
+
+# Local Ollama — no key, just a running `ollama serve`
+Centurion spawn episode.mkv -m ocr --ocr-backend ollama --ocr-model qwen2.5vl:7b
+
+# Local llama-server — bring your own vision GGUF
+Centurion spawn movie.mp4 -m ocr --ocr-backend llamacpp --ocr-base-url http://127.0.0.1:8080/v1
+
+# A screenshot / subtitle image
+Centurion spawn frame.png -m ocr --ocr-backend ollama
+
+# Tune the frame interval or swap the model
+Centurion spawn movie.mp4 -m ocr --ocr-api-key <KEY> --ocr-interval 1.5 --ocr-model glm-4v-plus
 ```
 
 ### Common Options
@@ -187,9 +221,12 @@ Centurion spawn <INPUT_FILE> [options]
 - `-l, --language <LANG>` — audio language, default `en`
 - `--num-speakers <NUM>` — speaker count for diarization, `0` = auto-detect (default)
 - `-k, --karaoke` — karaoke mode with `\K` tags 🎵
-- `-t, --transcriber <ENGINE>` — engine: `crispasr` (default) / `whisper`
-- `--tm, --transcriber-model <MODEL>` — model, e.g. `qwen3-asr-1.7b`, `base`, `large`
+- `-t, --transcriber <ENGINE>` — engine: `crispasr` (default) / `whisper` / **`openai` / `groq` / `dashscope` / `deepgram`** (cloud ASR ☁️)
+- `--tm, --transcriber-model <MODEL>` — model, e.g. `qwen3-asr-1.7b`, `base`, `large` (cloud defaults: `whisper-1`, `whisper-large-v3`, `paraformer-realtime-v2`, `nova-2`)
 - `--tp, --transcriber-prompt <PROMPT>` — initial prompt 🧠
+- `--asr-provider <PROVIDER>` — cloud ASR provider name (`openai` / `groq` / `dashscope` / `deepgram`), default `crispasr`
+- `--asr-api-key <KEY>` — cloud ASR API key (**required** for cloud engines)
+- `--asr-base-url <URL>` — custom cloud ASR endpoint
 - `--vocal-separation` — separate vocals with Demucs first (great for BGM-heavy media) 🎤
 - `--vocal-separation-model <MODEL>` — Demucs model, default `htdemucs`
 - `--device <DEVICE>` — inference device: `auto` (default) / `cpu` / `cuda` / `vulkan` / `directml` 🖥️
@@ -198,8 +235,14 @@ Centurion spawn <INPUT_FILE> [options]
 - `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
 - `-s, --splitter <STRATEGY>` — `rule` / `rule-aggressive` (default, fast-paced dialogue) / `rule-passive` (monologue, uniform speech) / `llm`
 - `--splitter-*` — sentence-splitting knobs (length, granularity, spread…)
-- `-a, --align` — forced alignment, **on by default** 📏
+- `-a, --align` — forced alignment, **on by default** 📏 (ASR mode only)
 - `--am, --alignment-model <MODEL>` — aligner model, default `qwen3-forced-aligner-0.6b-f16`
+- `-m, --mode <MODE>` — `asr` (default, speech recognition) or `ocr` (GLM-OCR from frames/images) 🔤
+- `--ocr-interval <SECONDS>` — frame interval for OCR mode, default `2`
+- `--ocr-backend <BACKEND>` — `zhipu` (default, cloud) / `ollama` (local) / `llamacpp` (local)
+- `--ocr-model <MODEL>` — OCR model (per backend: `glm-ocr` / `qwen2.5vl:7b` / server-loaded)
+- `--ocr-api-key <KEY>` — GLM-OCR API key — required for `-m ocr` **only with zhipu backend**
+- `--ocr-base-url <URL>` — custom endpoint (per backend default)
 
 ### Examples 🧪
 
@@ -207,6 +250,15 @@ Centurion spawn <INPUT_FILE> [options]
 # The classic: transcribe → build ASS in two steps
 Centurion spawn demo.mp4 --language en
 Centurion build demo.centurion.json
+
+# Cloud ASR: OpenAI Whisper
+Centurion spawn demo.mp4 -t openai --asr-api-key <KEY> --language en
+
+# Cloud ASR: Groq (fast & cheap)
+Centurion spawn demo.mp4 -t groq --asr-api-key <KEY> --language en
+
+# Cloud ASR: Alibaba DashScope (great for Chinese)
+Centurion spawn lecture.wav -t dashscope --asr-api-key <KEY> --language zh
 
 # Chinese lecture, custom output
 Centurion spawn lecture.wav -o lecture.centurion.json --language zh
@@ -552,6 +604,69 @@ Centurion build subs.translated.centurion.json
 
 ---
 
+---
+
+## 🔟 Centurion.Server — REST API for the Whole Pipeline 🚀
+
+**Centurion.Server** is a separate ASP.NET Core service that exposes every packaged command over HTTP — no console, no JSON config files, just `POST` and go. It runs the exact same command kernel as the CLI (same DI container, same `Settings` binding, same operators), so a request behaves identically to a CLI invocation. 🔌
+
+**Why it exists:** the CLI's old `--config <FILE>` flag and the embedded `server` command (HttpListener) are gone. JSON-driven invocation now lives *only* in the Server project — one contract, one place to maintain.
+
+### 🏁 Run it
+
+```bash
+dotnet run --project Centurion.Server            # or run the published exe
+# default: http://localhost:5000 — override with ASPNETCORE_URLS
+```
+
+### 🔗 Endpoints
+
+| Method & Path | What it does |
+|---|---|
+| `GET /` | Service blurb (name + endpoints) |
+| `GET /health` | Liveness check → `{ "status": "ok", "commands": 7 }` |
+| `GET /commands` | List of executable commands |
+| `GET /version` | Name + **build date** (no version numbers, as promised 😉) |
+| `POST /commands/{name}` | Execute a command → `{ command, exitCode, durationMs, startedAt, finishedAt }` |
+
+### 📦 Request body
+
+Either a full `CommandRequest` (`{ "command", "parameters" }`) or a bare parameters object — both are accepted:
+
+```json
+// POST /commands/spawn
+{
+  "parameters": {
+    "language": "zh",
+    "num-speakers": 2,
+    "splitter": { "target-length": 45 }   // nested objects → parent.child
+  }
+}
+```
+
+Key rules (same as the old config contract):
+- Keys match property names in `kebab-case` / `snake_case` / `camelCase` — all equivalent
+- Nested objects expand to `parent.child` (leaf key is also tried)
+- Unknown keys are warned and ignored (forward-compatible)
+- Values auto-convert: `int` / `double` / `bool` / `string` / enums / file paths
+
+### 🧪 Try it
+
+```bash
+curl -X POST http://localhost:5000/commands/build \
+  -H "Content-Type: application/json" \
+  -d '{"centurion-file": "demo.centurion.json"}'
+# → {"command":"build","exitCode":0,"durationMs":296,"startedAt":"...","finishedAt":"..."}
+```
+
+**Adding a command:** register it in `Centurion.Server/Commands/ServerCommandRegistry.cs` and it appears on the API instantly — no other wiring needed. ✨
+
+### 🔀 Relationship to the CLI
+
+- CLI remains the primary human interface; Server is the automation face (CI, web UIs, future JSON-RPC).
+- Errors follow the command kernel: command-level failures return `exitCode != 0` with HTTP 200; contract/routing failures return proper HTTP 4xx/5xx.
+- Command output is routed into Server's `ILogger` (see `Console/LoggerConsoleOutput.cs`), so long-running pipelines stay observable in server logs. 📋
+
 ## 🎨 Subtitle Styles (Batteries Included)
 
 The default ASS template ships with **two ready-made styles**, tuned for dual-language subtitles:
@@ -715,3 +830,5 @@ Before contributing, get familiar with the pipeline/operator structure, and keep
 ## 📜 License
 
 MIT License — see [LICENSE](LICENSE) for details.
+
+---

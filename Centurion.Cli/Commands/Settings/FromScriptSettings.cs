@@ -10,6 +10,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// </summary>
 public sealed class FromScriptSettings : CommandSettings
 {
+
     /// <summary>
     /// 输入音视频媒体文件。
     /// </summary>

@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 using Centurion.Abstractions;
+using Centurion.Abstractions.Strategy;
+using Centurion.Models.Asr;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Exceptions;
@@ -56,12 +58,16 @@ public class TranscribeOperator(
         if (!File.Exists(audioPath))
             throw new FileNotFoundException($"Audio file not found: {audioPath}");
 
-        // 通过工厂创建具体策略
+        // 通过工厂创建具体策略（云端 ASR 附带连接配置；本地引擎忽略）
         var strategy = _factory.Create(
             config.TranscriberEngine,
             config.TranscriberModel,
             config.Language,
-            config.InitialPrompt
+            config.InitialPrompt,
+            new AsrOptions(
+                Centurion.Core.Asr.AsrEndpointParser.Resolve(config.AsrProvider)?.Provider ?? AsrProvider.OpenAI,
+                config.AsrApiKey,
+                config.AsrBaseUrl)
         );
 
         LogInfo($"Using transcription strategy: {strategy.StrategyName}");

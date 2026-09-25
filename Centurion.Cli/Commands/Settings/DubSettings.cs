@@ -1,4 +1,5 @@
 using Spectre.Console.Cli;
+using System.ComponentModel;
 
 namespace Centurion.Cli.Commands.Settings;
 
@@ -8,6 +9,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// </summary>
 public sealed class DubSettings : CommandSettings
 {
+
     /// <summary>输入的 Centurion 中间文件（含句子、翻译与说话人信息）。</summary>
     [CommandArgument(0, "<CENTURION_FILE>")]
     public required FileInfo CenturionFile { get; set; }

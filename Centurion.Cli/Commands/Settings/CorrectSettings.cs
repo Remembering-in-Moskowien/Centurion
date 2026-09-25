@@ -10,6 +10,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// </summary>
 public sealed class CorrectSettings : CommandSettings
 {
+
     /// <summary>
     /// 待校正的 Centurion 中间文件（.centurion.json）。
     /// </summary>

@@ -3,6 +3,8 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Infrastructure;
+using Centurion.Core.Asr;
+using Centurion.Core.Ocr;
 using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Centurion.Core.Pipeline;
@@ -18,6 +20,8 @@ namespace Centurion.Cli.Commands;
 /// <c>spawn</c> 命令：从音视频媒体自动转录、说话人分割、分句与对齐，生成字幕。
 /// </summary>
 public sealed class SpawnCommand(
+    OcrClient ocrClient,
+    OcrExtractOperator ocrExtractOp,
     ITempDirectoryManager tempManager,
     SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
     FFmpegConvertOperator ffmpegOp,
@@ -46,9 +50,35 @@ public sealed class SpawnCommand(
             var inputPath = settings.InputFile.FullName;
             var outputPath = settings.OutputFile?.FullName ?? CenturionFileIO.DefaultOutputPath(inputPath);
 
-            // Validate media file extension
-            if (!MediaFileExtensions.Contains(Path.GetExtension(inputPath).ToLowerInvariant()))
-                throw new ArgumentException($"Unsupported media file type: {Path.GetExtension(inputPath)}");
+            var isOcrMode = settings.Mode.Equals("ocr", StringComparison.OrdinalIgnoreCase);
+            if (!isOcrMode && !settings.Mode.Equals("asr", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"Unsupported spawn mode '{settings.Mode}'. Use 'asr' or 'ocr'.");
+
+            // 云端 ASR 提前校验：缺 API 密钥则在转换/转录前失败
+            if (!isOcrMode && AsrEndpointParser.IsCloud(settings.Transcriber) && string.IsNullOrWhiteSpace(settings.AsrApiKey))
+                throw new ArgumentException(
+                    $"Cloud ASR provider '{settings.Transcriber}' requires an API key. Provide --asr-api-key <KEY>.");
+
+            // OCR 模式提前校验：云端缺 API 密钥则在抽帧前失败；本地后端探测服务在线
+            if (isOcrMode)
+            {
+                var ocrBackend = OcrExtractOperator.ParseBackend(settings.OcrBackend);
+                if (ocrBackend == OcrBackend.Zhipu && string.IsNullOrWhiteSpace(settings.OcrApiKey))
+                    throw new ArgumentException(
+                        "OCR mode with zhipu backend requires a GLM-OCR API key. Provide --ocr-api-key <KEY>, or use --ocr-backend ollama/llamacpp for local inference.");
+                if (ocrBackend != OcrBackend.Zhipu &&
+                    !await ocrClient.ProbeAsync(ocrBackend, settings.OcrBaseUrl, ct))
+                    throw new InvalidOperationException(
+                        "Local OCR backend not reachable. Start the service first: 'ollama serve' (Ollama) or your llama-server, then retry.");
+            }
+
+            // 校验媒体扩展名：OCR 模式额外允许图片（png/jpg 等）
+            var extension = Path.GetExtension(inputPath).ToLowerInvariant();
+            var allowedExtensions = isOcrMode
+                ? MediaFileExtensions.Union(OcrImageExtensions)
+                : MediaFileExtensions;
+            if (!allowedExtensions.Contains(extension))
+                throw new ArgumentException($"Unsupported media file type: {extension}");
 
             // Build workflow configuration
             var config = new WorkflowConfig
@@ -68,6 +98,9 @@ public sealed class SpawnCommand(
                 TranscriberEngine = settings.Transcriber,
                 TranscriberModel = settings.TranscriberModel,
                 InitialPrompt = settings.InitialPrompt,
+                AsrProvider = settings.AsrProvider,
+                AsrApiKey = settings.AsrApiKey,
+                AsrBaseUrl = settings.AsrBaseUrl,
                 AudioPreprocess = new AudioPreprocessConfig
                 {
                     EnableResampling = !settings.DisableAudioResampling,
@@ -92,10 +125,17 @@ public sealed class SpawnCommand(
                 SplitterProvider = settings.LlmProvider,
                 SplitterBaseUrl = settings.LlmBaseUrl,
 
-                EnableAlignment = settings.EnableAlignment,
+                EnableAlignment = isOcrMode ? false : settings.EnableAlignment,
                 AlignmentModel = settings.AlignmentModel,
                 AlignmentChunkGapSeconds = settings.AlignmentChunkGapSeconds,
-                AlignmentMaxChunkSeconds = settings.AlignmentMaxChunkSeconds
+                AlignmentMaxChunkSeconds = settings.AlignmentMaxChunkSeconds,
+
+                // OCR 模式（GLM-OCR）
+                OcrIntervalSeconds = settings.OcrIntervalSeconds > 0 ? settings.OcrIntervalSeconds : 2.0,
+                OcrBackend = settings.OcrBackend,
+                OcrModel = settings.OcrModel,
+                OcrApiKey = settings.OcrApiKey,
+                OcrBaseUrl = settings.OcrBaseUrl
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
@@ -105,19 +145,28 @@ public sealed class SpawnCommand(
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
             // ─── Dynamically build the operator pipeline ───
-            var operators = new List<IPipelineOperator>
-            {
-                subtitleTrackCheckerOp,
-                ffmpegOp,
-                audioPreprocessOp,
-                vocalSepOp,
-                transcribeOp,
-                diarizationOp,
-                splitOp,
-                textCleaningOp,
-                alignmentOp,
-                qualityReportOp
-            };
+            // asr（默认）：完整语音识别管线；ocr：抽帧 + GLM-OCR，跳过音频/说话人/对齐
+            var operators = isOcrMode
+                ? new List<IPipelineOperator>
+                {
+                    ocrExtractOp,
+                    splitOp,
+                    textCleaningOp,
+                    qualityReportOp
+                }
+                : new List<IPipelineOperator>
+                {
+                    subtitleTrackCheckerOp,
+                    ffmpegOp,
+                    audioPreprocessOp,
+                    vocalSepOp,
+                    transcribeOp,
+                    diarizationOp,
+                    splitOp,
+                    textCleaningOp,
+                    alignmentOp,
+                    qualityReportOp
+                };
 
             // Execute the dynamic pipeline
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
@@ -135,6 +184,9 @@ public sealed class SpawnCommand(
             return 1;
         }
     }
+
+    private static readonly HashSet<string> OcrImageExtensions =
+        [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
 
     private static readonly HashSet<string> MediaFileExtensions =
     [

@@ -1,5 +1,6 @@
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Strategy;
+using Centurion.Core.Asr;
 using Centurion.Core.Strategy.Transcribe;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,11 +23,23 @@ public class TranscriptionStrategyFactory(IServiceProvider serviceProvider) : IT
     /// <param name="model">可选的模型名称，供指定模型路径或版本时使用。</param>
     /// <param name="language">目标语言代码。</param>
     /// <param name="initialPrompt">可选的初始提示词，用于引导转录风格或上下文。</param>
+    /// <param name="asrOptions">云端 ASR 连接配置（提供商密钥/端点）；本地引擎忽略。</param>
     /// <returns>对应引擎的转录策略实例。</returns>
     /// <exception cref="NotSupportedException">当引擎名称不受支持时抛出。</exception>
-    public ITranscriptionStrategy Create(string engine, string? model, string language, string? initialPrompt)
+    public ITranscriptionStrategy Create(string engine, string? model, string language, string? initialPrompt, AsrOptions? asrOptions = null)
     {
         var engineLower = engine.ToLowerInvariant();
+
+        // 云端 ASR API 策略
+        var cloud = AsrEndpointParser.Resolve(engineLower);
+        if (cloud is not null)
+        {
+            var strategy = serviceProvider.GetRequiredService<CloudAsrStrategy>();
+            strategy.Provider = cloud.Value.Provider;
+            strategy.ApiKey = asrOptions?.ApiKey;
+            strategy.BaseUrl = asrOptions?.BaseUrl;
+            return strategy;
+        }
 
         return engineLower switch
         {

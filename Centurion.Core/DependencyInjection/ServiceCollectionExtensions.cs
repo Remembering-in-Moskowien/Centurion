@@ -3,7 +3,9 @@ using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Factories;
 using Centurion.Core.Infrastructure;
+using Centurion.Core.Asr;
 using Centurion.Core.Managers;
+using Centurion.Core.Ocr;
 using Centurion.Models.Metadata;
 using Centurion.Core.Operators;
 using Centurion.Core.Pipeline;
@@ -15,6 +17,7 @@ using Centurion.Core.Strategy.Transcribe;
 using Centurion.Core.Update;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.DependencyInjection;
 
@@ -65,6 +68,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MediaSubtitleExtractor>();
         services.AddSingleton<HunspellSpellChecker>();
 
+        // ---------- OCR（spawn --mode ocr / GLM-OCR） ----------
+        services.AddSingleton(sp =>
+            new OcrClient(
+                new HttpClient { Timeout = TimeSpan.FromMinutes(10) },
+                sp.GetRequiredService<ILogger<OcrClient>>()));
+        services.AddTransient<OcrExtractOperator>();
+
         // ---------- 3. 策略工厂 ----------
         services.AddSingleton<ITranscriptionStrategyFactory, TranscriptionStrategyFactory>();
         services.AddSingleton<ISentenceSplitStrategyFactory, SentenceSplitStrategyFactory>();
@@ -77,6 +87,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<WhisperCppStrategy>();
         services.AddTransient<CrispAsrQwenStrategy>();
         services.AddTransient<CrispAsrWhisperStrategy>();
+        services.AddTransient<CloudAsrStrategy>();
 
         // ---------- 4b. 说话人分割策略 ----------
         services.AddTransient<CrispAsrDiarizationStrategy>();
