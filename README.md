@@ -139,6 +139,14 @@ Run it directly:
 | `dub` | 🎙️ Media dubbing: intermediate file → translated WAV audio (Qwen3-TTS) | `dub <CENTURION_FILE> -t <LANG>` |
 | `build` | 🏗️ **Exit point**: intermediate file → polished ASS subtitles | `build <CENTURION_FILE>` |
 | `update` | 🔄 Self-update from GitHub releases | `update [options]` |
+| `transcribe` | 🎙️ Operator only: media/IR → transcribe (convert + preprocess + ASR) | `transcribe <INPUT_FILE>` |
+| `vocalsep` | 🎤 Operator only: media/IR → vocal separation (Demucs) | `vocalsep <INPUT_FILE>` |
+| `diarize` | 👥 Operator only: IR → speaker diarization | `diarize <CENTURION_FILE>` |
+| `split` | ✂️ Operator only: IR → sentence splitting | `split <CENTURION_FILE>` |
+| `clean` | 🧹 Operator only: IR → text cleaning | `clean <CENTURION_FILE>` |
+| `align` | 📏 Operator only: IR → forced alignment | `align <CENTURION_FILE>` |
+| `spellcheck` | ✍️ Operator only: IR → Hunspell spell check | `spellcheck <CENTURION_FILE>` |
+| `quality` | 📊 Operator only: IR → quality report | `quality <CENTURION_FILE>` |
 
 ---
 
@@ -414,7 +422,40 @@ It's your canary in the coal mine — script too dense? CPS way up. Alignment sl
 
 ---
 
-## 7️⃣ `update` — Self-Update 🔄
+## 7️⃣ Operator Micro-Commands 🔬
+
+`spawn`/`from-script`/`correct`/`translate`/`dub` are **packaged** pipelines — they run several operators back to back. Sometimes you only want **one stage**. Every major operator is also exposed as its own micro-command. Input/output stay on the intermediate file (source commands also accept media), so you can drive the pipeline stage by stage, inspect between steps, and re-run a single stage without touching the rest.
+
+```bash
+# Stage-by-stage chain: convert → transcribe → split → clean → align
+Centurion convert subs.srt
+Centurion transcribe subs.centurion.json        # needs the audio file (Config.InputFilePath)
+Centurion split subs.transcribe.centurion.json
+Centurion clean subs.transcribe.split.centurion.json
+Centurion align subs.transcribe.split.clean.centurion.json
+Centurion build subs.transcribe.split.clean.align.centurion.json
+```
+
+### The micro-commands
+
+| Command | Accepts | Runs | Output |
+|---|---|---|---|
+| `transcribe <INPUT>` | media or IR | FFmpegConvert → AudioPreprocess → Transcribe | `<input>.transcribe.centurion.json` |
+| `vocalsep <INPUT>` | media or IR | FFmpegConvert → VocalSeparation | `<input>.vocalsep.centurion.json` + `<input>.vocals.wav` |
+| `diarize <IR>` | IR only | Diarization | `<input>.diarize.centurion.json` |
+| `split <IR>` | IR only | SentenceSplit | `<input>.split.centurion.json` |
+| `clean <IR>` | IR only | TextPreprocessing | `<input>.clean.centurion.json` |
+| `align <IR>` | IR only | Alignment | `<input>.align.centurion.json` |
+| `spellcheck <IR>` | IR only | SpellCheck (Hunspell) | `<input>.spellcheck.centurion.json` + `.spellcheck.json` |
+| `quality <IR>` | IR only | QualityReport | `<input>.quality.centurion.json` + `.quality.json` |
+
+Each stage is checkpointed — re-running `split` on an already-split file skips cleanly instead of double-processing.
+
+> 💡 Every micro-command prints what to run next (e.g. `split` suggests `align`). The packaged commands remain exactly as they were — micro-commands are additive.
+
+---
+
+## 8️⃣ `update` — Self-Update 🔄
 
 Never touch GitHub by hand again. `update` checks `Remembering-in-Moskowien/Centurion` releases, downloads the matching build, and swaps itself out.
 
@@ -445,7 +486,7 @@ Centurion update --apply
 
 ---
 
-## 8️⃣ `translate` — Translation, Without the Timeline Drama 🌐
+## 9️⃣ `translate` — Translation, Without the Timeline Drama 🌐
 
 Got an intermediate file in a language you don't want? `translate` rewrites the **text only** — the timeline, the word details, everything spatial stays untouched. It's text alignment, not a remix. 🎯
 

@@ -13,8 +13,8 @@ public class WorkflowConfig
     public string CommandName { get; init; } = string.Empty;
     /// <summary>作为校正基线的已有字幕文件路径（SRT/ASS 等），可为空。</summary>
     public string? SubtitleFilePath { get; init; }
-    /// <summary>最终输出字幕文件路径，可为空。</summary>
-    public string? OutputFilePath { get; init; }
+    /// <summary>最终输出字幕文件路径，可为空（独立算子命令链中会被更新为当前命令的输出）。</summary>
+    public string? OutputFilePath { get; set; }
     /// <summary>用于校正的脚本/文稿文件路径，可为空。</summary>
     public string? ScriptFilePath { get; init; }
     /// <summary>
@@ -84,11 +84,11 @@ public class WorkflowConfig
     /// 是否启用 Demucs 人声分离（将人声与伴奏/音乐分离后再转录）。
     /// 仅对含明显音乐/BGM 的素材有价值；纯语音素材开启会显著增加耗时。
     /// </summary>
-    public bool VocalSeparation { get; init; } = false;
+    public bool VocalSeparation { get; set; } = false;
     /// <summary>
     /// Demucs 分离模型名（如 htdemucs），由 demucs-rs 首次运行时自动从 HuggingFace 下载缓存。
     /// </summary>
-    public string VocalSeparationModel { get; init; } = "htdemucs";
+    public string VocalSeparationModel { get; set; } = "htdemucs";
 
     // ---------- 说话人分割 ----------
     /// <summary>
