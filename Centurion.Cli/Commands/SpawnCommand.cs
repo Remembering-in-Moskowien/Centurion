@@ -48,7 +48,9 @@ public sealed class SpawnCommand(
         try
         {
             var inputPath = settings.InputFile.FullName;
-            var outputPath = settings.OutputFile?.FullName ?? CenturionFileIO.DefaultOutputPath(inputPath);
+            // -o 为目标 ASS 字幕路径（默认 <input>.spawn.ass）；中间文件与之同名 .centurion.json 一并保留
+            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, null) + ".spawn.ass";
+            var intermediatePath = Path.ChangeExtension(outputPath, CenturionFileIO.Extension);
 
             var isOcrMode = settings.Mode.Equals("ocr", StringComparison.OrdinalIgnoreCase);
             if (!isOcrMode && !settings.Mode.Equals("asr", StringComparison.OrdinalIgnoreCase))
@@ -85,7 +87,7 @@ public sealed class SpawnCommand(
             {
                 CommandName = "spawn",
                 InputFilePath = inputPath,
-                OutputFilePath = outputPath,
+                OutputFilePath = intermediatePath,
                 Language = settings.Language,
                 NumSpeakers = settings.NumSpeakers,
                 DiarizationBackend = settings.DiarizationBackend is not null
@@ -172,9 +174,14 @@ public sealed class SpawnCommand(
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
             // 保存为 Centurion 中间文件（含词级时间戳/说话人/各阶段句子等全部详细信息）
-            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "spawn", ct);
+            await CenturionFileIO.SaveAsync(workflowContext, intermediatePath, "spawn", ct);
+
+            // 2) 渲染 ASS 字幕到 -o（与 help 声明一致：Output ASS subtitle file）
+            var assContent = AssSubBuilder.FromWorkflow(workflowContext).Build().ToString();
+            await File.WriteAllTextAsync(outputPath, assContent, ct);
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed: {0}", outputPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", intermediatePath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }

@@ -38,12 +38,20 @@ public sealed class AudioPreprocessOperator(
             return;
         }
 
-        var inputPath = context.State.ConvertedAudioPath ?? context.Config.InputFilePath;
+                var inputPath = context.State.ConvertedAudioPath ?? context.Config.InputFilePath;
         var tempDir = context.State.PipelineTempDirectory;
+        if (!File.Exists(inputPath))
+        {
+            // 跨命令运行时，先前 transcribe 的临时音频可能已被清理；
+            // 回退到源媒体重新预处理，保证 align/correct 等命令可独立使用。
+            LogWarning($"Converted/preprocessed audio not found ({inputPath}); falling back to source media.");
+            inputPath = context.Config.InputFilePath;
+        }
         if (!File.Exists(inputPath))
             throw new FileNotFoundException($"Audio file not found: {inputPath}");
         if (string.IsNullOrWhiteSpace(tempDir))
             throw new InvalidOperationException("Pipeline temporary directory not set.");
+        Directory.CreateDirectory(tempDir);
 
         var config = context.Config.AudioPreprocess;
         var outputPath = Path.Combine(tempDir, $"preprocessed_{Guid.NewGuid():N}.wav");

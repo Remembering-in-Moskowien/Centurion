@@ -44,6 +44,12 @@ public class AssSubLine(
     /// <summary>绑定样式名</summary>
     private readonly string _style = string.IsNullOrWhiteSpace(style) ? string.Empty : style;
 
+    /// <summary>该行绑定的样式名（转换端映射到 Sentence.Style 使用）。</summary>
+    public string Style => _style;
+
+    /// <summary>该行字幕正文（转换端读取使用）。</summary>
+    public string Text => _text;
+
     /// <summary>角色/说话人名</summary>
     private readonly string _name = string.IsNullOrWhiteSpace(name) ? string.Empty : name;
 
@@ -66,6 +72,12 @@ public class AssSubLine(
     public long GetStart()
     {
         return _start;
+    }
+
+    /// <summary>获取该行字幕的结束时间（毫秒）。</summary>
+    public long GetEnd()
+    {
+        return _end;
     }
 
     /// <summary>
