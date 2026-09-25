@@ -5,21 +5,22 @@ namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
 /// <c>translate</c> 命令的选项：把已有字幕翻译到目标语言，只做文本层翻译对齐（时间轴保持不变）。
+/// 输入/输出均为 Centurion 中间文件。
 /// </summary>
 public sealed class TranslateSettings : CommandSettings
 {
     /// <summary>
-    /// 待翻译的输入字幕文件（SRT/ASS 等）。
+    /// 待翻译的 Centurion 中间文件（.centurion.json）。
     /// </summary>
-    [CommandArgument(0, "<SUBTITLE_FILE>")]
-    [Description("Input subtitle file to translate")]
-    public required FileInfo SubtitleFile { get; init; }
+    [CommandArgument(0, "<CENTURION_FILE>")]
+    [Description("Centurion intermediate file (.centurion.json)")]
+    public required FileInfo CenturionFile { get; init; }
 
     /// <summary>
-    /// 输出字幕文件路径；省略时以输入文件名加 .translated.ass 输出。
+    /// 输出中间文件路径；省略时以输入名加 .translated.centurion.json 输出。
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
-    [Description("Output subtitle file (default: <input>.translated.ass)")]
+    [Description("Output Centurion intermediate file (default: <input>.translated.centurion.json)")]
     public FileInfo? OutputFile { get; init; }
 
     /// <summary>
@@ -54,14 +55,28 @@ public sealed class TranslateSettings : CommandSettings
     /// OpenAI API 密钥；提供时使用 OpenAI 后端，否则回退本地 Ollama。
     /// </summary>
     [CommandOption("--api-key <KEY>")]
-    [Description("OpenAI API key; falls back to local Ollama when omitted")]
+    [Description("API key for the chosen LLM provider; falls back to local Ollama when omitted")]
     public string? ApiKey { get; init; }
+
+    /// <summary>
+    /// LLM 服务提供商名（openai/deepseek/moonshot/zhipu/openrouter/groq/siliconflow/dashscope/ark/azure/ollama）。
+    /// </summary>
+    [CommandOption("--llm-provider <PROVIDER>")]
+    [Description("LLM provider: openai, deepseek, moonshot, zhipu, openrouter, groq, ollama, ...")]
+    public string? LlmProvider { get; init; }
+
+    /// <summary>
+    /// LLM 自定义端点；为空时使用所选提供商默认端点。
+    /// </summary>
+    [CommandOption("--llm-base-url <URL>")]
+    [Description("LLM base URL (defaults to provider endpoint)")]
+    public string? LlmBaseUrl { get; init; }
 
     /// <summary>
     /// 术语表 JSON 文件路径（{源语言术语: 目标语言术语} 或 [{source,target}]）。
     /// </summary>
     [CommandOption("--glossary <FILE>")]
-    [Description("Glossary JSON file: {source: target} or [{source, target}]")]
+    [Description("Glossary JSON file: {source: target} or [[source, target]]")]
     public FileInfo? Glossary { get; init; }
 
     /// <summary>

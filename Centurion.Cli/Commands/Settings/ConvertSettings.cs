@@ -1,10 +1,11 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>convert</c> 命令的选项：将现有字幕文件转换为 ASS 格式。
+/// <c>convert</c> 命令的选项：将现有字幕文件转换为 Centurion 中间文件（*.centurion.json）。
+/// 中间文件包含句子与词级时间轴（ASS karaoke 标签解析）的完整详细信息，供后续命令继续处理。
 /// </summary>
 public sealed class ConvertSettings : CommandSettings
 {
@@ -16,9 +17,9 @@ public sealed class ConvertSettings : CommandSettings
     public required FileInfo InputFile { get; init; }
 
     /// <summary>
-    /// 输出 ASS 文件路径；省略时在当前目录以输入文件名加 .ass 扩展名输出。
+    /// 输出中间文件路径；省略时以输入文件名加 .centurion.json 扩展名输出。
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
-    [Description("Output ASS file path. If omitted, input filename with .ass extension in current directory.")]
+    [Description("Output Centurion intermediate file (.centurion.json). If omitted, input filename with .centurion.json.")]
     public FileInfo? OutputFile { get; init; }
 }

@@ -14,12 +14,11 @@ using Centurion.Abstractions.Utils;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// Translation: translate an existing subtitle file into a target language.
+/// Translation: translate a Centurion intermediate file into a target language.
 /// Only performs text-level translation alignment — the timeline and word details are kept unchanged.
 /// Supports LLM strategy, a glossary file, and a target-language script (1:1 alignment when counts match).
 /// </summary>
 public sealed class TranslateCommand(
-    ConvertParseOperator convertParseOp,
     ITranslationStrategyFactory strategyFactory,
     QualityReportOperator qualityReportOp,
     ILogger<TranslateCommand> logger) : AsyncCommand<TranslateSettings>
@@ -35,36 +34,39 @@ public sealed class TranslateCommand(
     {
         try
         {
-            var subtitlePath = settings.SubtitleFile.FullName;
-            if (!File.Exists(subtitlePath))
-                throw new FileNotFoundException($"Subtitle file not found: {subtitlePath}", subtitlePath);
+            var inputPath = settings.CenturionFile.FullName;
+            if (!File.Exists(inputPath))
+                throw new FileNotFoundException($"Centurion intermediate file not found: {inputPath}", inputPath);
             if (string.IsNullOrWhiteSpace(settings.TargetLanguage))
                 throw new ArgumentException("--target-language is required.");
 
             var outputPath = settings.OutputFile?.FullName ??
-                             Path.ChangeExtension(subtitlePath, ".translated.ass");
+                             CenturionFileIO.DefaultOutputPath(inputPath, "translated");
 
-            var config = new WorkflowConfig
+            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, ct);
+
+            // 更新配置：翻译相关字段
+            workflowContext.Config = new WorkflowConfig
             {
                 CommandName = "translate",
-                InputFilePath = subtitlePath,
-                SubtitleFilePath = subtitlePath,
+                InputFilePath = workflowContext.Config.InputFilePath ?? inputPath,
+                SubtitleFilePath = workflowContext.Config.SubtitleFilePath ?? inputPath,
                 OutputFilePath = outputPath,
                 Language = settings.SourceLanguage ?? "auto",
                 TargetLanguage = settings.TargetLanguage,
                 TranslationStrategy = settings.Strategy,
                 TranslationModel = settings.Model,
                 TranslationApiKey = settings.ApiKey,
+                TranslationProvider = settings.LlmProvider,
+                TranslationBaseUrl = settings.LlmBaseUrl,
                 GlossaryPath = settings.Glossary?.FullName,
                 TargetScriptPath = settings.TargetScript?.FullName,
                 Bilingual = settings.Bilingual,
-                KaraokeMode = settings.Karaoke
+                KaraokeMode = settings.Karaoke,
+                ShowSpeakerLabels = workflowContext.Config.ShowSpeakerLabels,
+                CacheDirectory = workflowContext.Config.CacheDirectory ?? "./cache"
             };
 
-            var workflowContext = new SubtitleWorkflowContext(config);
-
-            // 1) 解析输入字幕（时间轴保持不变）
-            await convertParseOp.ExecuteAsync(workflowContext, ct);
             var sentences = workflowContext.State.CurrentSentences;
 
             // 2) 加载术语表与目标语言台本
@@ -72,7 +74,13 @@ public sealed class TranslateCommand(
             var targetScriptLines = LoadScriptLines(settings.TargetScript?.FullName, logger);
 
             // 3) 创建翻译策略并执行（LLM 分批翻译；台本行数一致时 1:1 对齐采用）
-            var strategy = strategyFactory.Create(settings.Strategy, settings.Model, settings.ApiKey);
+            var strategy = strategyFactory.Create(settings.Strategy, new Centurion.Models.Llm.LlmOptions
+            {
+                Model = settings.Model,
+                ApiKey = settings.ApiKey,
+                ProviderName = settings.LlmProvider,
+                BaseUrl = settings.LlmBaseUrl
+            });
             logger.LogInformation("Using translation strategy: {Strategy}", strategy.StrategyName);
 
             var options = new TranslationOptions
@@ -88,20 +96,16 @@ public sealed class TranslateCommand(
             workflowContext.State.CurrentSentences = sentences;
             workflowContext.State.IsTranslated = true;
 
-            // 4) 输出目标语言（或双语）字幕
-            var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
-
-            // 5) 输出富上下文 JSON（配置 + 翻译结果 + 诊断）
-            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "translate", outputPath, ct);
-
-            // 6) 质量报告（句子数、翻译覆盖率、时间轴统计）
+            // 4) 质量报告（句子数、翻译覆盖率、时间轴统计）
             await qualityReportOp.ExecuteAsync(workflowContext, ct);
+
+            // 5) 保存翻译后的中间文件（译文写入各句 TranslatedText，时间轴保持不变）
+            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "translate", ct);
 
             var translatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText));
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Translation completed: {0}", outputPath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Translated {0}/{1} sentences -> {2}", translatedCount, sentences.Count, settings.TargetLanguage));
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }
         catch (Exception ex)

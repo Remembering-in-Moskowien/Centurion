@@ -3,18 +3,14 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>dub</c> 命令设置：媒体译制（双语字幕 → 译制 wav）。
+/// <c>dub</c> 命令设置：媒体译制（Centurion 中间文件 → 译制 wav + 中间文件）。
 /// Phase 2/3 扩展：伴奏混音（ducking）、响度归一化、TTS 并行、长句分块、重叠降级。
 /// </summary>
 public sealed class DubSettings : CommandSettings
 {
-    /// <summary>字幕文件（主轨；已翻译字幕或原文，配合 --translation 提供译文轨）。</summary>
-    [CommandArgument(0, "<SUBTITLE_FILE>")]
-    public required FileInfo SubtitleFile { get; set; }
-
-    /// <summary>可选译文轨文件（与主字幕按时间窗匹配；缺省时整个输入视为目标语言字幕）。</summary>
-    [CommandOption("--translation <FILE>")]
-    public FileInfo? TranslationFile { get; set; }
+    /// <summary>输入的 Centurion 中间文件（含句子、翻译与说话人信息）。</summary>
+    [CommandArgument(0, "<CENTURION_FILE>")]
+    public required FileInfo CenturionFile { get; set; }
 
     /// <summary>可选：原媒体文件（用于说话人参考音频提取；也作为输入时长基准）。</summary>
     [CommandOption("--media <FILE>")]
@@ -36,7 +32,7 @@ public sealed class DubSettings : CommandSettings
     [CommandOption("--tts-model <MODEL>")]
     public string TtsModel { get; set; } = "1.7b-base-q4";
 
-    /// <summary>输出 wav 文件路径；缺省为输入字幕同名 .dub.wav。</summary>
+    /// <summary>输出中间文件路径；缺省为输入名 .dub.centurion.json（wav 另以 .dub.wav 输出）。</summary>
     [CommandOption("-o|--output <FILE>")]
     public FileInfo? OutputFile { get; set; }
 

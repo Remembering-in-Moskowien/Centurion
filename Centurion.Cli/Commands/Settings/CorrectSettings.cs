@@ -6,29 +6,29 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>correct</c> 命令的选项：对照源音频和/或参考脚本校正已有字幕。
+/// <c>correct</c> 命令的选项：对照源音频和/或参考脚本校正已有字幕（输入为 Centurion 中间文件）。
 /// </summary>
 public sealed class CorrectSettings : CommandSettings
 {
     /// <summary>
-    /// 待校正的输入：字幕文件，或含字幕轨的媒体文件（mkv/mp4/ts…，将自动提取字幕轨）。
+    /// 待校正的 Centurion 中间文件（.centurion.json）。
     /// </summary>
-    [CommandArgument(0, "<INPUT_FILE>")]
-    [Description("Input subtitle file, or a media file whose subtitle track will be extracted")]
-    public FileInfo? SubtitleFile { get; init; }
+    [CommandArgument(0, "<CENTURION_FILE>")]
+    [Description("Centurion intermediate file (.centurion.json)")]
+    public required FileInfo CenturionFile { get; init; }
 
     /// <summary>
-    /// 输出 ASS 字幕文件路径；省略时以输入文件名加 .ass 扩展名输出。
+    /// 输出中间文件路径；省略时以输入名加 .corrected.centurion.json 输出。
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
-    [Description("Output ASS subtitle file")]
+    [Description("Output Centurion intermediate file (default: <input>.corrected.centurion.json)")]
     public FileInfo? OutputFile { get; init; }
 
     /// <summary>
     /// 用于时间轴校正的音频/媒体文件（时间轴类策略时必填；输入为媒体文件时可省略）。
     /// </summary>
     [CommandOption("--audio <AUDIO_FILE>")]
-    [Description("Audio file used for timeline correction (optional when INPUT_FILE is a media file)")]
+    [Description("Audio/media file used for timeline correction (required for timeline strategies)")]
     public FileInfo? AudioFile { get; init; }
 
     /// <summary>

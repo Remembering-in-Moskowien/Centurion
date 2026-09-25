@@ -6,8 +6,8 @@ namespace Centurion.Models.Workflow;
 /// </summary>
 public class SubtitleWorkflowContext(WorkflowConfig config)
 {
-    /// <summary>不可变的用户配置（源自 CLI SubCommand）</summary>
-    public WorkflowConfig Config { get; init; } = config;
+    /// <summary>工作流配置（源自 CLI SubCommand；命令链中间可更新输出路径等字段）</summary>
+    public WorkflowConfig Config { get; set; } = config;
 
     /// <summary>可变的工作流状态（由各 Operator 逐步填充）</summary>
     public WorkflowState State { get; set; } = new();

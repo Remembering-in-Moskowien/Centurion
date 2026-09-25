@@ -19,10 +19,7 @@ namespace Centurion.Cli.Commands;
 /// </summary>
 public sealed class CorrectCommand(
     ITempDirectoryManager tempManager,
-    SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
-    MediaSubtitleExtractor mediaSubtitleExtractor,
     SpellCheckOperator spellCheckOp,
-    ConvertParseOperator convertParseOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
@@ -50,65 +47,59 @@ public sealed class CorrectCommand(
             Validate(settings, strategy);
             var needsAudio = strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both;
 
-            // 输入解析：位置参数可以是字幕文件，也可以是含字幕轨的媒体文件（自动提取字幕轨）
-            var rawInput = settings.SubtitleFile?.FullName;
-            var isMediaInput = rawInput is not null && IsMediaFile(rawInput);
-            var mediaInput = isMediaInput ? rawInput : null;
+            // 输入：Centurion 中间文件（含待校正的句子与词级时间轴）
+            var inputPath = settings.CenturionFile.FullName;
+            if (!File.Exists(inputPath))
+                throw new FileNotFoundException($"Centurion intermediate file not found: {inputPath}", inputPath);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("correct_");
 
-            string subtitlePath;
-            if (rawInput is null || isMediaInput)
-            {
-                var mediaPath = mediaInput ?? settings.AudioFile?.FullName;
-                if (mediaPath is null)
-                    throw new ArgumentException("A subtitle file, or a media file with subtitle tracks, is required.");
+            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, cancellationToken);
+            workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-                var extracted = await mediaSubtitleExtractor.ExtractAsync(mediaPath, tempDir.Path, cancellationToken);
-                if (extracted is null)
-                    throw new InvalidOperationException(
-                        $"No subtitle tracks found in '{mediaPath}'. Provide a subtitle file as INPUT_FILE, or use a media file that contains subtitle tracks.");
-                subtitlePath = extracted;
-            }
-            else
-            {
-                subtitlePath = rawInput;
-            }
-
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(subtitlePath, ".ass");
-            var audioForTimeline = needsAudio ? settings.AudioFile?.FullName ?? mediaInput : null;
+            var outputPath = settings.OutputFile?.FullName
+                ?? CenturionFileIO.DefaultOutputPath(inputPath, "corrected");
+            var audioForTimeline = needsAudio ? settings.AudioFile?.FullName : null;
             if (needsAudio && audioForTimeline is null)
-                throw new ArgumentException("--audio is required for the selected correction strategy (or pass a media file as INPUT_FILE).");
+                throw new ArgumentException("--audio is required for the selected correction strategy.");
 
+            // 重建工作流配置：保留中间文件中的语言/设备/人声分离等设置，覆盖校正相关字段
+            var previous = workflowContext.Config;
             var config = new WorkflowConfig
             {
                 CommandName = "correct",
-                InputFilePath = audioForTimeline ?? subtitlePath,
-                SubtitleFilePath = subtitlePath,
+                InputFilePath = audioForTimeline ?? previous.SubtitleFilePath ?? inputPath,
+                SubtitleFilePath = previous.SubtitleFilePath ?? inputPath,
                 OutputFilePath = outputPath,
-                ScriptFilePath = settings.ScriptFile?.FullName,
+                ScriptFilePath = settings.ScriptFile?.FullName ?? previous.ScriptFilePath,
                 CorrectStrategy = strategy,
                 Language = settings.Language,
                 MaxDriftMs = settings.MaxDrift,
                 FuzzyThreshold = settings.FuzzyThreshold,
                 HunspellDictionary = settings.HunspellDictionary,
-                KaraokeMode = settings.Karaoke,
-                ShowSpeakerLabels = settings.ShowSpeakerLabels,
+                KaraokeMode = settings.Karaoke || previous.KaraokeMode,
+                ShowSpeakerLabels = settings.ShowSpeakerLabels || previous.ShowSpeakerLabels,
                 AudioPreprocess = new AudioPreprocessConfig
                 {
                     EnableResampling = !settings.DisableAudioResampling,
                     EnableHighPass = !settings.DisableAudioHighPass,
                     EnableLoudnessNormalization = !settings.DisableAudioLoudness
                 },
-                VocalSeparation = settings.VocalSeparation,
+                VocalSeparation = settings.VocalSeparation || previous.VocalSeparation,
                 VocalSeparationModel = settings.VocalSeparationModel,
                 Device = settings.Device,
+                SplitStrategy = previous.SplitStrategy,
+                MaxSentenceLength = previous.MaxSentenceLength,
+                TargetSentenceLength = previous.TargetSentenceLength,
+                TranscriberEngine = previous.TranscriberEngine,
+                TranscriberModel = previous.TranscriberModel,
+                EnableAlignment = previous.EnableAlignment,
+                AlignmentModel = previous.AlignmentModel,
+                CacheDirectory = previous.CacheDirectory ?? "./cache"
             };
+            workflowContext.Config = config;
 
-            var workflowContext = new SubtitleWorkflowContext(config);
-            workflowContext.State.PipelineTempDirectory = tempDir.Path;
-
-            var operators = new List<IPipelineOperator> { subtitleTrackCheckerOp, convertParseOp };
+            var operators = new List<IPipelineOperator>();
             if (strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both)
             {
                 operators.Add(scriptLoaderOp);
@@ -132,13 +123,11 @@ public sealed class CorrectCommand(
             operators.Add(qualityReportOp);
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, cancellationToken);
 
-            var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), cancellationToken);
+            // 保存校正后的中间文件（时间轴/文本修正全部写入状态）
+            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "correct", cancellationToken);
 
-            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
-            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "correct", outputPath, cancellationToken);
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed: {0}", outputPath));
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }
         catch (OperationCanceledException)

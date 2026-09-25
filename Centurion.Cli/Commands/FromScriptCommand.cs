@@ -34,7 +34,7 @@ public sealed class FromScriptCommand(
     ILogger<FromScriptCommand> logger) : AsyncCommand<FromScriptSettings>
 {
     /// <summary>
-    /// 执行脚本对齐流程：转录、说话人分割、脚本映射与对齐，写出带时间轴的 ASS 字幕。
+    /// 执行脚本对齐流程：转录、说话人分割、脚本映射与对齐，写出带时间轴的 Centurion 中间文件。
     /// </summary>
     /// <param name="context">Spectre 命令上下文。</param>
     /// <param name="settings">脚本对齐命令选项。</param>
@@ -49,7 +49,7 @@ public sealed class FromScriptCommand(
             if (!File.Exists(settings.ScriptFile.FullName))
                 throw new FileNotFoundException($"Script file not found: {settings.ScriptFile.FullName}", settings.ScriptFile.FullName);
 
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
+            var outputPath = settings.OutputFile?.FullName ?? CenturionFileIO.DefaultOutputPath(inputPath);
             var config = new WorkflowConfig
             {
                 CommandName = "from-script",
@@ -104,13 +104,11 @@ public sealed class FromScriptCommand(
             };
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
-            var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
+            // 保存为 Centurion 中间文件（含词级时间戳/说话人/脚本映射等全部详细信息）
+            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "from-script", ct);
 
-            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
-            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "from-script", outputPath, ct);
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed: {0}", outputPath));
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }
         catch (Exception ex)

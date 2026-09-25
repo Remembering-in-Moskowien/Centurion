@@ -5,3 +5,11 @@ riderModule.iml
 /_ReSharper.Caches/
 /.ideas
 /.proxyai
+
+# IDE user config (keep local, never commit)
+/.idea/
+Centurion.sln.DotSettings.user
+
+# Sample/test artifacts & debug logs
+/samples/
+*.log

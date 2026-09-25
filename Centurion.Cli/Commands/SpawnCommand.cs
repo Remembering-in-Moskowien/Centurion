@@ -44,7 +44,7 @@ public sealed class SpawnCommand(
         try
         {
             var inputPath = settings.InputFile.FullName;
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
+            var outputPath = settings.OutputFile?.FullName ?? CenturionFileIO.DefaultOutputPath(inputPath);
 
             // Validate media file extension
             if (!MediaFileExtensions.Contains(Path.GetExtension(inputPath).ToLowerInvariant()))
@@ -89,6 +89,8 @@ public sealed class SpawnCommand(
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
                 SplitterApiKey = settings.SplitterApiKey,
+                SplitterProvider = settings.LlmProvider,
+                SplitterBaseUrl = settings.LlmBaseUrl,
 
                 EnableAlignment = settings.EnableAlignment,
                 AlignmentModel = settings.AlignmentModel,
@@ -120,18 +122,11 @@ public sealed class SpawnCommand(
             // Execute the dynamic pipeline
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
-            // Generate ASS subtitle file
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Generating ASS subtitle file..."));
-            var assBuilder = AssSubBuilder.FromWorkflow(workflowContext);
-            var assDoc = assBuilder.Build();
-
-            await File.WriteAllTextAsync(outputPath, assDoc.ToString(), ct);
-
-            // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
-            var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "spawn", outputPath, ct);
+            // 保存为 Centurion 中间文件（含词级时间戳/说话人/各阶段句子等全部详细信息）
+            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "spawn", ct);
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed: {0}", outputPath));
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }
         catch (Exception ex)

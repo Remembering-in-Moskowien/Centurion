@@ -5,9 +5,9 @@ public class Word
 {
     /// <summary>词的文本。</summary>
     public required string Text { get; set; }
-    /// <summary>词起始时间（秒）。</summary>
+    /// <summary>词起始时间（毫秒）。</summary>
     public double Start { get; set; }
-    /// <summary>词结束时间（秒）。</summary>
+    /// <summary>词结束时间（毫秒）。</summary>
     public double End { get; set; }
     /// <summary>该词所属的说话人标识，未做说话人分离时可为空串。</summary>
     public required string Speaker { get; set; }
