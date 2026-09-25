@@ -45,8 +45,8 @@ public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
         const double NonCandidatePenalty = 100.0;   // 非候选断点的高额惩罚
         const double LengthDeviationWeight = 0.05;  // 长度偏差的权重（很低，允许大偏移）
 
-        // 中日韩等无空格语系：词间不计空格，长度按字符数直接累计
-        var isSpaceless = LanguageSupport.IsSpaceless(options.Language);
+        // 混合感知长度：类 CJK 词直连，其余词间计空格（预计算前缀分隔，O(1) 增量）
+        var sepBefore = ComputeSeparatorBefore(texts);
 
         var dp = new double[n + 1];
         var prev = new int[n + 1];
@@ -62,10 +62,10 @@ public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
             // 尝试从 j 到 i-1 作为一句
             for (var j = i - 1; j >= 0; j--)
             {
-                // 计算当前子句的字符数（拉丁语系含单词间空格，CJK 无空格）
+                // 计算当前子句的字符数（混合感知：类 CJK 词直连，其余词间计一个空格）
                 var charSum = 0;
                 for (var k = j; k < i; k++)
-                    charSum += lengths[k] + (k > j && !isSpaceless ? 1 : 0);
+                    charSum += lengths[k] + (k > j ? sepBefore[k] : 0);
 
                 // 硬约束：长度不得超过 MaxLength
                 if (charSum > maxLen)

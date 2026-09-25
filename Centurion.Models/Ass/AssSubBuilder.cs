@@ -257,8 +257,8 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                 {
                     var mainText = context.Config.KaraokeMode
                         ? string.Join(" ", tokens.Select(FormatKaraokeToken))
-                        : Centurion.Models.Text.LanguageSupport.JoinWords(
-                            tokens.Select(token => token.Text), context.Config.Language);
+                        : Centurion.Models.Text.LanguageSupport.JoinMixed(
+                            tokens.Select(token => token.Text));
                     lines.Add(BuildLine(sentence, mainText, "Default", speaker, showLabels));
 
                     var subText = context.Config.KaraokeMode
@@ -281,8 +281,8 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
 
             var dialogue = context.Config.KaraokeMode
                 ? string.Join(" ", tokens.Select(FormatKaraokeToken))
-                : Centurion.Models.Text.LanguageSupport.JoinWords(
-                    tokens.Select(token => token.Text), context.Config.Language);
+                : Centurion.Models.Text.LanguageSupport.JoinMixed(
+                    tokens.Select(token => token.Text));
             lines.Add(BuildLine(sentence, dialogue, "Default", speaker, showLabels));
         }
 

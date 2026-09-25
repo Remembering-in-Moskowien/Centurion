@@ -42,7 +42,6 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
             if (pauseBreaks[i])
                 hardBreaks.Add(i);
 
-        var isSpaceless = LanguageSupport.IsSpaceless(options.Language);
         var maxLen = options.MaxLength;
 
         // 4. 按硬断点分段；段内超长时再按长度切分
@@ -53,7 +52,7 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
             if (i == n - 1 || hardBreaks.Contains(i))
             {
                 var slice = wordList.Skip(segStart).Take(i - segStart + 1).ToList();
-                if (SliceCharCount(slice, isSpaceless) <= maxLen)
+                if (SliceCharCount(slice) <= maxLen)
                 {
                     sentences.Add(BuildSentence(slice, options));
                 }
@@ -110,7 +109,7 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
 
         var texts = segment.Select(w => w.Text).ToList();
         var lengths = texts.Select(t => t.Length).ToList();
-        var isSpaceless = LanguageSupport.IsSpaceless(options.Language);
+        var sepBefore = ComputeSeparatorBefore(texts);
         var maxLen = options.MaxLength;
 
         const double NonCandidatePenalty = 100.0;
@@ -129,7 +128,7 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
             {
                 var charSum = 0;
                 for (var k = j; k < i; k++)
-                    charSum += lengths[k] + (k > j && !isSpaceless ? 1 : 0);
+                    charSum += lengths[k] + (k > j ? sepBefore[k] : 0);
                 if (charSum > maxLen) continue;
 
                 var cost = (j == 0 ? 0.0 : NonCandidatePenalty)

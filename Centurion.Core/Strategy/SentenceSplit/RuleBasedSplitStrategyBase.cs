@@ -96,19 +96,32 @@ public abstract class RuleBasedSplitStrategyBase : BaseSplitStrategy
     protected static bool EndsWithBreakPunctuation(string? text) =>
         !string.IsNullOrEmpty(text) && BreakPunctuation.Contains(text[^1]);
 
-    /// <summary>统计一段词流的总字符数（无空格语系不计词间空格）。</summary>
-    protected static int SliceCharCount(List<Word> slice, bool isSpaceless)
+    /// <summary>统计一段词流的显示长度（混合感知：类 CJK 词直连，其余词间计一个空格）。</summary>
+    protected static int SliceCharCount(List<Word> slice) =>
+        LanguageSupport.JoinMixed(slice.Select(w => w.Text)).Length;
+
+    /// <summary>
+    /// 预计算相邻词之间是否插入空格（类 CJK 词之间直连，否则一个空格），
+    /// 供动态规划 O(1) 增量计算子句字符数。
+    /// </summary>
+    /// <param name="texts">按时间排序的词文本。</param>
+    /// <returns>sepBefore[i] = 词 i 前的空格数（i=0 时为 0）。</returns>
+    protected static int[] ComputeSeparatorBefore(List<string> texts)
     {
-        var count = slice.Sum(w => w.Text?.Length ?? 0);
-        if (slice.Count > 1 && !isSpaceless)
-            count += slice.Count - 1;
-        return count;
+        var sepBefore = new int[texts.Count];
+        for (var i = 1; i < texts.Count; i++)
+        {
+            sepBefore[i] = LanguageSupport.IsCjkToken(texts[i - 1]) && LanguageSupport.IsCjkToken(texts[i])
+                ? 0
+                : 1;
+        }
+        return sepBefore;
     }
 
-    /// <summary>从词流片段构建一个句子（文本按语言拼接，时间取首末词）。</summary>
+    /// <summary>从词流片段构建一个句子（文本按混合感知拼接，时间取首末词）。</summary>
     protected static Sentence BuildSentence(List<Word> slice, SplitOptions options)
     {
-        var text = LanguageSupport.JoinWords(slice.Select(w => w.Text), options.Language);
+        var text = LanguageSupport.JoinMixed(slice.Select(w => w.Text));
         return new Sentence
         {
             Text = SubTools.NormalizeSpaces(text),
