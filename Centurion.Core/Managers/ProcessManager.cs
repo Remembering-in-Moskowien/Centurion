@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Managers;
 
@@ -108,7 +109,9 @@ public class ProcessManager(ILogger<ProcessManager> logger)
 
         if (process.ExitCode == 0) return outputBuilder.ToString();
         var error = errorBuilder.ToString();
-        logger.LogError("Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
+        // 进程失败属内部细节：以 warn 记录（异常继续上抛，由最外层统一输出一次 fail）
+        logger.LogWarning(
+            "Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
             executablePath, process.ExitCode, error);
         throw new InvalidOperationException($"Process failed with exit code {process.ExitCode}. Details: {error}");
     }

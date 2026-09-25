@@ -10,6 +10,7 @@ using Centurion.Core.Pipeline.Operators;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Cli.Commands;
 
@@ -18,6 +19,9 @@ namespace Centurion.Cli.Commands;
 /// </summary>
 public sealed class CorrectCommand(
     ITempDirectoryManager tempManager,
+    SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
+    MediaSubtitleExtractor mediaSubtitleExtractor,
+    SpellCheckOperator spellCheckOp,
     ConvertParseOperator convertParseOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
@@ -28,6 +32,7 @@ public sealed class CorrectCommand(
     AlignmentOperator alignmentOp,
     OverlapResolutionOperator overlapOp,
     CorrectionReportOperator reportOp,
+    QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
     ILogger<CorrectCommand> logger) : AsyncCommand<CorrectSettings>
 {
@@ -43,13 +48,42 @@ public sealed class CorrectCommand(
         {
             var strategy = ParseStrategy(settings.Strategy);
             Validate(settings, strategy);
-            var subtitlePath = settings.SubtitleFile.FullName;
-            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(subtitlePath, ".ass");
             var needsAudio = strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both;
+
+            // 输入解析：位置参数可以是字幕文件，也可以是含字幕轨的媒体文件（自动提取字幕轨）
+            var rawInput = settings.SubtitleFile?.FullName;
+            var isMediaInput = rawInput is not null && IsMediaFile(rawInput);
+            var mediaInput = isMediaInput ? rawInput : null;
+
+            await using var tempDir = await tempManager.CreateTempDirectoryAsync("correct_");
+
+            string subtitlePath;
+            if (rawInput is null || isMediaInput)
+            {
+                var mediaPath = mediaInput ?? settings.AudioFile?.FullName;
+                if (mediaPath is null)
+                    throw new ArgumentException("A subtitle file, or a media file with subtitle tracks, is required.");
+
+                var extracted = await mediaSubtitleExtractor.ExtractAsync(mediaPath, tempDir.Path, cancellationToken);
+                if (extracted is null)
+                    throw new InvalidOperationException(
+                        $"No subtitle tracks found in '{mediaPath}'. Provide a subtitle file as INPUT_FILE, or use a media file that contains subtitle tracks.");
+                subtitlePath = extracted;
+            }
+            else
+            {
+                subtitlePath = rawInput;
+            }
+
+            var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(subtitlePath, ".ass");
+            var audioForTimeline = needsAudio ? settings.AudioFile?.FullName ?? mediaInput : null;
+            if (needsAudio && audioForTimeline is null)
+                throw new ArgumentException("--audio is required for the selected correction strategy (or pass a media file as INPUT_FILE).");
 
             var config = new WorkflowConfig
             {
-                InputFilePath = needsAudio ? settings.AudioFile!.FullName : subtitlePath,
+                CommandName = "correct",
+                InputFilePath = audioForTimeline ?? subtitlePath,
                 SubtitleFilePath = subtitlePath,
                 OutputFilePath = outputPath,
                 ScriptFilePath = settings.ScriptFile?.FullName,
@@ -57,7 +91,9 @@ public sealed class CorrectCommand(
                 Language = settings.Language,
                 MaxDriftMs = settings.MaxDrift,
                 FuzzyThreshold = settings.FuzzyThreshold,
+                HunspellDictionary = settings.HunspellDictionary,
                 KaraokeMode = settings.Karaoke,
+                ShowSpeakerLabels = settings.ShowSpeakerLabels,
                 AudioPreprocess = new AudioPreprocessConfig
                 {
                     EnableResampling = !settings.DisableAudioResampling,
@@ -70,10 +106,9 @@ public sealed class CorrectCommand(
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
-            await using var tempDir = await tempManager.CreateTempDirectoryAsync("correct_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            var operators = new List<IPipelineOperator> { convertParseOp };
+            var operators = new List<IPipelineOperator> { subtitleTrackCheckerOp, convertParseOp };
             if (strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both)
             {
                 operators.Add(scriptLoaderOp);
@@ -90,7 +125,11 @@ public sealed class CorrectCommand(
                 operators.Add(overlapOp);
             }
 
+            if (settings.SpellCheck)
+                operators.Add(spellCheckOp);
+
             operators.Add(reportOp);
+            operators.Add(qualityReportOp);
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, cancellationToken);
 
             var assDoc = AssSubBuilder.FromWorkflow(workflowContext).Build();
@@ -98,8 +137,8 @@ public sealed class CorrectCommand(
 
             // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
             var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "correct", outputPath, cancellationToken);
-            ConsoleServices.Output.WriteMarkupLine($"[green]Correction completed: {outputPath}[/]");
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed: {0}", outputPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
             return 0;
         }
         catch (OperationCanceledException)
@@ -108,8 +147,7 @@ public sealed class CorrectCommand(
         }
         catch (Exception ex)
         {
-            ConsoleServices.Output.WriteError(ex.Message);
-            logger.LogError(ex, "Correction pipeline execution failed.");
+            FailLogGate.Log(logger, ex, "Correction pipeline execution failed.");
             return 1;
         }
     }
@@ -124,8 +162,6 @@ public sealed class CorrectCommand(
 
     private static void Validate(CorrectSettings settings, CorrectionStrategy strategy)
     {
-        if ((strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both) && settings.AudioFile is null)
-            throw new ArgumentException("--audio is required for the selected correction strategy.");
         if ((strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both) && settings.ScriptFile is null)
             throw new ArgumentException("--script is required for the selected correction strategy.");
         if (settings.FuzzyThreshold is <= 0 or >= 1)
@@ -133,4 +169,13 @@ public sealed class CorrectCommand(
         if (settings.MaxDrift < 0)
             throw new ArgumentException("--max-drift must be non-negative.");
     }
+
+    private static readonly HashSet<string> MediaFileExtensions =
+    [
+        ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".ts", ".mts", ".webm", ".flv",
+        ".m2ts", ".mpeg", ".mpg", ".dv", ".rmvb", ".rm", ".asf", ".vob", ".ogv", ".mxf"
+    ];
+
+    private static bool IsMediaFile(string path) =>
+        MediaFileExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
 }

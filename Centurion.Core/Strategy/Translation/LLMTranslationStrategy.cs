@@ -5,6 +5,7 @@ using Centurion.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Strategy.Translation;
 
@@ -116,7 +117,7 @@ public class LLMTranslationStrategy : ITranslationStrategy
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger?.LogError(ex, "LLM translation batch failed at offset {Offset}; retrying individually.", offset);
+            _logger?.LogWarning(ex, "LLM translation batch failed at offset {Offset}; retrying individually.", offset);
             await RetryMissingAsync(batch, options, cancellationToken);
         }
     }

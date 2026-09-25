@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Update;
@@ -19,10 +21,10 @@ public sealed class GitHubUpdateService : IUpdateService
 
     private readonly HttpClient _http;
     private readonly ILogger<GitHubUpdateService> _logger;
-    private readonly string? _localVersion;
+    private readonly DateTimeOffset? _buildDate;
 
     /// <summary>
-    /// 创建服务实例，初始化 GitHub HTTP 客户端并读取本地版本号。
+    /// 创建服务实例，初始化 GitHub HTTP 客户端并读取本地构建日期。
     /// </summary>
     /// <param name="logger">用于记录更新过程的日志器。</param>
     public GitHubUpdateService(ILogger<GitHubUpdateService> logger)
@@ -32,11 +34,11 @@ public sealed class GitHubUpdateService : IUpdateService
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Centurion/self-update");
         _http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
-        _localVersion = ReadLocalVersion();
+        _buildDate = ReadBuildDate();
     }
 
-    /// <summary>当前本地应用版本号；无法读取时回退为 "0.0.0"。</summary>
-    public string LocalVersion => _localVersion ?? "0.0.0";
+    /// <summary>当前本地程序的构建日期（UTC）；无法读取时为 null。</summary>
+    public DateTimeOffset? BuildDate => _buildDate;
 
     /// <inheritdoc />
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken)
@@ -45,10 +47,13 @@ public sealed class GitHubUpdateService : IUpdateService
         if (release is null)
             return new UpdateCheckResult(false, null, "No GitHub releases found yet — nothing to update to. 📭");
 
-        if (!IsNewer(LocalVersion, release.TagName))
+        // 以构建日期与 Release 发布时间比较；日期信息缺失时回退语义化版本比较
+        if (!IsNewer(BuildDate, release.PublishedAt, release.TagName))
             return new UpdateCheckResult(false, release, null);
 
-        _logger.LogInformation("Update available: {Local} -> {Remote}", LocalVersion, release.TagName);
+        _logger.LogInformation(
+            "Update available: build {Local} -> {Remote} (released {Published:yyyy-MM-dd})",
+            BuildDate?.ToString("yyyy-MM-dd") ?? "unknown", release.TagName, release.PublishedAt);
         return new UpdateCheckResult(true, release, null);
     }
 
@@ -68,7 +73,8 @@ public sealed class GitHubUpdateService : IUpdateService
         var tagDir = string.Concat(release.TagName.Where(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_'));
         if (tagDir.Length == 0) tagDir = "latest";
 
-        var stagingDir = Path.Combine(Path.GetTempPath(), "CenturionUpdate", tagDir);
+        // 更新暂存目录：放在程序根目录下的 staging（跨运行保留，用户运行应用脚本前不可被自动清理）
+        var stagingDir = Path.Combine(AppContext.BaseDirectory, "staging", "CenturionUpdate", tagDir);
         if (Directory.Exists(stagingDir))
             Directory.Delete(stagingDir, recursive: true);
         Directory.CreateDirectory(stagingDir);
@@ -112,6 +118,16 @@ public sealed class GitHubUpdateService : IUpdateService
 
     private async Task DownloadAsync(string url, string destinationPath, CancellationToken cancellationToken)
     {
+        await GitHubDownloadProxy.DownloadWithFallbackAsync(
+            url,
+            candidate => DownloadCoreAsync(candidate, destinationPath, cancellationToken),
+            IsNetworkFailure,
+            reason => _logger.LogWarning("GitHub mirror download failed ({Reason}); trying next candidate...", reason),
+            cancellationToken);
+    }
+
+    private async Task DownloadCoreAsync(string url, string destinationPath, CancellationToken cancellationToken)
+    {
         using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -120,30 +136,49 @@ public sealed class GitHubUpdateService : IUpdateService
         await source.CopyToAsync(target, cancellationToken);
     }
 
+    private static bool IsNetworkFailure(Exception ex) =>
+        ex is HttpRequestException or TaskCanceledException or OperationCanceledException
+            or System.IO.IOException;
+
+
     // ------------------------------------------------------------------
     // 版本比较
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// 从程序集版本信息读取本地版本（<c>&lt;Version&gt;</c> 配置）。
+    /// 读取本地构建日期：优先取编译时嵌入的 <c>BuildDate</c> 元数据（UTC），
+    /// 缺失时回退为程序集文件的写入时间（转 UTC）。
     /// </summary>
-    private static string? ReadLocalVersion()
+    private static DateTimeOffset? ReadBuildDate()
     {
         try
         {
             var assembly = Assembly.GetEntryAssembly();
-            var info = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (!string.IsNullOrWhiteSpace(info))
+            var metadata = assembly?.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault(attribute => attribute.Key == "BuildDate");
+            if (metadata?.Value is { Length: > 0 } value
+                && DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
             {
-                var plus = info.IndexOf('+');
-                return plus >= 0 ? info[..plus] : info;
+                return parsed;
             }
-            return assembly?.GetName().Version?.ToString(3);
         }
         catch
         {
-            return null;
+            // 忽略并尝试文件时间戳回退
         }
+
+        try
+        {
+            var location = Assembly.GetEntryAssembly()?.Location;
+            if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
+                return new DateTimeOffset(File.GetLastWriteTimeUtc(location));
+        }
+        catch
+        {
+            // 忽略
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -164,6 +199,19 @@ public sealed class GitHubUpdateService : IUpdateService
             return false;
         version = parsed;
         return true;
+    }
+
+    /// <summary>
+    /// 判断远端是否比本地新：本地构建日期与远端发布时间均已知时按日期比较；
+    /// 任一缺失时回退语义化版本比较（<see cref="IsNewer(string, string)"/>）。
+    /// </summary>
+    internal static bool IsNewer(DateTimeOffset? localBuild, DateTimeOffset? remotePublished, string remoteTag)
+    {
+        if (localBuild is { } local && remotePublished is { } remote)
+            return remote > local;
+
+        var localRaw = localBuild?.ToString("yyyy-MM-dd") ?? "0.0.0";
+        return IsNewer(localRaw, remoteTag);
     }
 
     /// <summary>

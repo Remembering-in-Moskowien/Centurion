@@ -6,6 +6,7 @@ using Centurion.Models.Workflow;
 using Centurion.Core.Utils;
 using Humanizer;
 using Microsoft.Extensions.Logging;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Pipeline.Operators;
 
@@ -64,7 +65,7 @@ public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingO
         {
             const string message = "No current sentences are available for text cleaning.";
             context.State.Errors.Add(message);
-            _logger.LogError(message);
+            _logger.LogWarning(message);
             throw new InvalidOperationException(message);
         }
 

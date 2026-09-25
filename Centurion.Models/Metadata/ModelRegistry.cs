@@ -85,7 +85,8 @@ public sealed class ModelRegistry
         BuildDefaultDict(BuildDefaultQwen3AsrModels()),
         BuildDefaultDict(BuildDefaultQwen3ForcedAlignerModels()),
         BuildDefaultDict(BuildDefaultDiarizationModels()),
-        BuildDefaultDict(BuildDefaultBertOnnxModels()));
+        BuildDefaultDict(BuildDefaultBertOnnxModels()),
+        BuildDefaultDict([]));
 
     /// <summary>Whisper.cpp 单文件模型字典，键为模型规格名（tiny/base/.../large）。</summary>
     public IReadOnlyDictionary<string, ModelMeta> WhisperModels { get; }
@@ -99,6 +100,8 @@ public sealed class ModelRegistry
     public IReadOnlyDictionary<string, ModelMeta> DiarizationModels { get; }
     /// <summary>BERT ONNX 模型字典（如 NER、句向量），键为模型名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> BertOnnxModels { get; }
+    /// <summary>Qwen3-TTS 模型字典（供 dub 命令 llama-tts 使用），键为模型规格名。</summary>
+    public IReadOnlyDictionary<string, ModelMeta> Qwen3TtsModels { get; }
 
     /// <summary>用六类模型字典构造注册表。</summary>
     /// <param name="whisperModels">Whisper.cpp 模型字典。</param>
@@ -107,13 +110,15 @@ public sealed class ModelRegistry
     /// <param name="qwen3ForcedAlignerModels">Qwen3 强制对齐模型字典。</param>
     /// <param name="diarizationModels">说话人分割模型字典。</param>
     /// <param name="bertOnnxModels">BERT ONNX 模型字典。</param>
+    /// <param name="qwen3TtsModels">Qwen3-TTS 模型字典。</param>
     public ModelRegistry(
         IReadOnlyDictionary<string, ModelMeta> whisperModels,
         IReadOnlyDictionary<string, ModelMeta> fasterWhisperModels,
         IReadOnlyDictionary<string, ModelMeta> qwen3AsrModels,
         IReadOnlyDictionary<string, ModelMeta> qwen3ForcedAlignerModels,
         IReadOnlyDictionary<string, ModelMeta> diarizationModels,
-        IReadOnlyDictionary<string, ModelMeta> bertOnnxModels)
+        IReadOnlyDictionary<string, ModelMeta> bertOnnxModels,
+        IReadOnlyDictionary<string, ModelMeta> qwen3TtsModels)
     {
         WhisperModels = whisperModels ?? throw new ArgumentNullException(nameof(whisperModels));
         FasterWhisperModels = fasterWhisperModels ?? throw new ArgumentNullException(nameof(fasterWhisperModels));
@@ -121,6 +126,7 @@ public sealed class ModelRegistry
         Qwen3ForcedAlignerModels = qwen3ForcedAlignerModels ?? throw new ArgumentNullException(nameof(qwen3ForcedAlignerModels));
         DiarizationModels = diarizationModels ?? throw new ArgumentNullException(nameof(diarizationModels));
         BertOnnxModels = bertOnnxModels ?? throw new ArgumentNullException(nameof(bertOnnxModels));
+        Qwen3TtsModels = qwen3TtsModels ?? throw new ArgumentNullException(nameof(qwen3TtsModels));
     }
 
     // ---------- 内置默认条目（原硬编码注册数据） ----------

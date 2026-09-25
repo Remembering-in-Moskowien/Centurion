@@ -2,6 +2,7 @@ using Centurion.Models.Console;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Abstractions.Pipeline;
 
@@ -72,20 +73,12 @@ public abstract class PipelineOperatorBase<TLogger> : IPipelineOperator, IProgre
 
     /// <summary>
     /// 记录一条警告级日志，自动附带算子名称前缀。
+    /// 算子内失败属内部细节：一律以 warn 记录并继续，由最外层统一输出一次 fail。
     /// </summary>
     /// <param name="message">日志消息正文。</param>
     protected void LogWarning(string message)
     {
         Logger.LogWarning("[{Operator}] {Message}", Name, message);
-    }
-
-    /// <summary>
-    /// 记录一条错误级日志，自动附带算子名称前缀。
-    /// </summary>
-    /// <param name="message">日志消息正文。</param>
-    protected void LogError(string message)
-    {
-        Logger.LogError("[{Operator}] {Message}", Name, message);
     }
 
     // ---------- 健康检查（可选重写） ----------

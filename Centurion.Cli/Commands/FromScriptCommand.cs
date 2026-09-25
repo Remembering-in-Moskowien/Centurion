@@ -10,6 +10,7 @@ using Centurion.Core.Pipeline.Operators;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Cli.Commands;
 
@@ -18,6 +19,7 @@ namespace Centurion.Cli.Commands;
 /// </summary>
 public sealed class FromScriptCommand(
     ITempDirectoryManager tempManager,
+    SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
@@ -27,6 +29,7 @@ public sealed class FromScriptCommand(
     TextPreprocessingOperator textCleaningOp,
     ScriptTimelineMapperOperator mapperOp,
     AlignmentOperator alignmentOp,
+    QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
     ILogger<FromScriptCommand> logger) : AsyncCommand<FromScriptSettings>
 {
@@ -49,12 +52,14 @@ public sealed class FromScriptCommand(
             var outputPath = settings.OutputFile?.FullName ?? Path.ChangeExtension(inputPath, ".ass");
             var config = new WorkflowConfig
             {
+                CommandName = "from-script",
                 InputFilePath = inputPath,
                 OutputFilePath = outputPath,
                 ScriptFilePath = settings.ScriptFile.FullName,
                 MapperStrategy = "rule",
                 SplitStrategy = "nlp",
                 Language = settings.Language,
+                ShowSpeakerLabels = settings.ShowSpeakerLabels,
                 TranscriberEngine = settings.Transcriber,
                 TranscriberModel = settings.TranscriberModel,
                 AudioPreprocess = new AudioPreprocessConfig
@@ -70,6 +75,8 @@ public sealed class FromScriptCommand(
                 Device = settings.Device,
                 EnableAlignment = settings.EnableAlignment,
                 AlignmentModel = settings.AlignmentModel,
+                AlignmentChunkGapSeconds = settings.AlignmentChunkGapSeconds,
+                AlignmentMaxChunkSeconds = settings.AlignmentMaxChunkSeconds,
                 MaxCps = settings.MaxCps,
                 MaxCharsPerLine = settings.MaxCharsPerLine,
                 CoverageThreshold = settings.CoverageThreshold,
@@ -83,6 +90,7 @@ public sealed class FromScriptCommand(
 
             var operators = new List<IPipelineOperator>
             {
+                subtitleTrackCheckerOp,
                 ffmpegOp,
                 audioPreprocessOp,
                 vocalSepOp,
@@ -91,7 +99,8 @@ public sealed class FromScriptCommand(
                 scriptLoaderOp,
                 textCleaningOp,
                 mapperOp,
-                alignmentOp
+                alignmentOp,
+                qualityReportOp
             };
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
@@ -100,14 +109,13 @@ public sealed class FromScriptCommand(
 
             // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
             var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "from-script", outputPath, ct);
-            ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed: {0}", outputPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
             return 0;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "From-script pipeline execution failed.");
-            ConsoleServices.Output.WriteError(ex.Message);
+            FailLogGate.Log(logger, ex, "From-script pipeline execution failed.");
             return 1;
         }
     }

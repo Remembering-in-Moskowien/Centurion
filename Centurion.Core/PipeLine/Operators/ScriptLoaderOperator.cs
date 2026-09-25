@@ -3,6 +3,7 @@ using Centurion.Abstractions.Pipeline;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Pipeline.Operators;
 
@@ -49,7 +50,7 @@ public sealed class ScriptLoaderOperator : PipelineOperatorBase<ScriptLoaderOper
         {
             const string message = "The script file does not contain any non-empty lines.";
             context.State.Errors.Add(message);
-            _logger.LogError(message);
+            _logger.LogWarning(message);
             throw new InvalidOperationException(message);
         }
 

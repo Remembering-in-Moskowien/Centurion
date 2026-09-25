@@ -1,4 +1,4 @@
-using Centurion.Core.Factories;
+﻿using Centurion.Core.Factories;
 using Centurion.Models.Workflow;
 
 using Centurion.Abstractions;
@@ -78,16 +78,17 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         var toolManager = GetToolManager(device);
         await toolManager.EnsureToolAsync(cancellationToken);
 
-        // 2. CLI 需要 -m 指定一个 ASR 模型；diarization 本身不依赖其质量，使用最小 whisper 模型
-        var modelPath = await _modelResolver.GetWhisperModelPathAsync("tiny", cancellationToken);
+        // 2. 分割使用与主转录一致的 qwen3 模型（whisper tiny 分段边界不稳定，
+        //    导致说话人片段每次运行漂移；同模型同后端输出更确定）
+        var modelPath = await _modelResolver.GetQwen3AsrModelPathAsync("qwen3-asr-1.7b", cancellationToken);
         if (!File.Exists(modelPath))
-            throw new FileNotFoundException($"Whisper tiny model not found: {modelPath}");
+            throw new FileNotFoundException($"Qwen3 ASR model not found: {modelPath}");
 
         // 3. 构建参数并执行（--diarize-speakers 将说话人标签写入 transcription 条目的 speaker 字段）
         var jsonBasePath = Path.Combine(
             Path.GetDirectoryName(audioPath) ?? string.Empty,
             Path.GetFileNameWithoutExtension(audioPath) + "_diar");
-        var args = BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel);
+        var args = BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel, DiarizeMethod, DiarizeEmbedder, DefaultSegmentModel, backend: "qwen3");
 
         _logger.LogDebug("Executing diarization: {Exe} {Args}", toolManager.ExecutablePath, args);
         await _processManager.ExecuteAsync(toolManager.ExecutablePath, args, cancellationToken);
@@ -115,11 +116,12 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         string? segmentModel,
         string method,
         string? embedder,
-        string? defaultSegmentModel)
+        string? defaultSegmentModel,
+        string backend = "qwen3")
     {
         _ = segmentModel;
         _ = defaultSegmentModel;
-        var args = $"--backend whisper -m \"{modelPath}\" -f \"{audioPath}\" " +
+        var args = $"--backend {backend} -m \"{modelPath}\" -f \"{audioPath}\" " +
                    $"--diarize-speakers --diarize-method {method} -ojf -of \"{jsonBasePath}\"";
         if (!string.IsNullOrEmpty(embedder))
             args += $" --diarize-embedder {embedder}";
@@ -141,3 +143,4 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel,
             DiarizeMethod, DiarizeEmbedder, DefaultSegmentModel);
 }
+

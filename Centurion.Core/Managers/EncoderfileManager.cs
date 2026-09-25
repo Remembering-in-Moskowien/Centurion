@@ -90,11 +90,12 @@ public sealed class EncoderfileManager(
             ? "encoderfile-linux-x86_64"
             : RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "encoderfile-macos-arm64" : "encoderfile-macos-x86_64";
         var url = $"https://github.com/mozilla-ai/encoderfile/releases/latest/download/{asset}";
-        _logger.LogInformation("Downloading Encoderfile CLI from {Url}.", url);
+        var downloadUrl = Centurion.Core.Utils.GitHubDownloadProxy.CandidateUrls(url).First();
+        _logger.LogInformation("Downloading Encoderfile CLI from {Url}.", downloadUrl);
         using var downloader = _serviceProvider.GetRequiredService<Operators.Downloader>();
         await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
         {
-            Payload = new AriaDownloadRequest { Url = url, FullSavePath = EncoderfileCliPath, SplitThread = 4, ServerConnection = 4, MaxRetry = 5 }
+            Payload = new AriaDownloadRequest { Url = downloadUrl, FullSavePath = EncoderfileCliPath, SplitThread = 4, ServerConnection = 4, MaxRetry = 5 }
         }, ct);
         File.SetUnixFileMode(EncoderfileCliPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }

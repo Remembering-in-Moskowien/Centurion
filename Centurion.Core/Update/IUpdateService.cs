@@ -49,8 +49,8 @@ public sealed record UpdateStageResult(
 /// </summary>
 public interface IUpdateService
 {
-    /// <summary>本地版本号（如 0.1.0）。</summary>
-    string LocalVersion { get; }
+    /// <summary>本地程序的构建日期（UTC）；无法读取时为 null。</summary>
+    DateTimeOffset? BuildDate { get; }
 
     /// <summary>
     /// 检查 GitHub 上是否存在比本地更新的版本。

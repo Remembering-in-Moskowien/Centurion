@@ -5,6 +5,7 @@ using Centurion.Core.Infrastructure;
 using Centurion.Core.Update;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Cli.Commands;
 
@@ -25,20 +26,21 @@ public sealed class UpdateCommand(
     {
         try
         {
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Current version: {updateService.LocalVersion}[/]");
+            var buildDate = updateService.BuildDate;
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Current build: {0}", buildDate?.ToString("yyyy-MM-dd") ?? "unknown"));
             var check = await updateService.CheckAsync(cancellationToken);
 
             if (!check.HasUpdate)
             {
                 if (check.Reason is not null)
-                    ConsoleServices.Output.WriteWarning(check.Reason);
+                    ConsoleServices.Output.WriteWarning(ConsoleServices.T(check.Reason));
                 else
-                    ConsoleServices.Output.WriteSuccess("You're on the latest version — all good. 🎉");
+                    ConsoleServices.Output.WriteSuccess(ConsoleServices.T("You're on the latest version 🎉"));
                 return 0;
             }
 
             var release = check.Latest!;
-            ConsoleServices.Output.WriteMarkupLine($"[bold cyan]New version available: {release.TagName}[/] [grey]({release.PublishedAt:yyyy-MM-dd})[/]");
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("New version available: {0} ({1})", release.TagName, $"{release.PublishedAt:yyyy-MM-dd}"));
             if (!string.IsNullOrWhiteSpace(release.Body))
             {
                 var excerpt = release.Body.Split('\n')
@@ -46,12 +48,12 @@ public sealed class UpdateCommand(
                     .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal))
                     .Take(3);
                 foreach (var line in excerpt)
-                    ConsoleServices.Output.WriteMarkupLine($"[grey]  {EscapeMarkup(line)}[/]");
+                    ConsoleServices.Output.WriteInfo(ConsoleServices.T("  {0}", line));
             }
 
             if (settings.CheckOnly)
             {
-                ConsoleServices.Output.WriteInfo("Check only — nothing downloaded. Run again without --check to update.");
+                ConsoleServices.Output.WriteInfo(ConsoleServices.T("Check only — nothing downloaded. Run again without --check to update."));
                 return 0;
             }
 
@@ -63,33 +65,32 @@ public sealed class UpdateCommand(
 
             if (asset is null)
             {
-                ConsoleServices.Output.WriteError($"No matching release asset for '{rid}'. Available: {string.Join(", ", release.Assets.Select(a => a.Name))}");
+                ConsoleServices.Output.WriteError(ConsoleServices.T("No matching release asset for '{0}'. Available: {1}", rid, string.Join(", ", release.Assets.Select(a => a.Name))));
                 return 1;
             }
 
-            ConsoleServices.Output.WriteInfo($"Downloading {asset.Name} ({FormatSize(asset.SizeBytes)})...");
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Downloading {0} ({1})...", asset.Name, FormatSize(asset.SizeBytes)));
             var stage = await updateService.StageAsync(check, settings.AssetName, cancellationToken);
-            ConsoleServices.Output.WriteSuccess($"Update staged: {stage.PayloadDirectory}");
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Update staged: {0}", stage.PayloadDirectory));
 
             if (settings.Apply)
             {
-                ConsoleServices.Output.WriteInfo("Launching the apply script — the program will close and restart automatically. 🔄");
+                ConsoleServices.Output.WriteInfo(ConsoleServices.T("Launching the apply script — the program will close and restart automatically. 🔄"));
                 Process.Start(new ProcessStartInfo(stage.ScriptPath) { UseShellExecute = true, WorkingDirectory = AppContext.BaseDirectory });
                 return 0;
             }
 
-            ConsoleServices.Output.WriteMarkupLine($"Run [green]{stage.ScriptPath}[/] to finish the update (it will close & restart this program).");
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Run {0} to finish the update (it will close & restart this program).", stage.ScriptPath));
             return 0;
         }
         catch (OperationCanceledException)
         {
-            ConsoleServices.Output.WriteWarning("Update cancelled.");
+            ConsoleServices.Output.WriteWarning(ConsoleServices.T("Update cancelled."));
             return 1;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Update failed.");
-            ConsoleServices.Output.WriteError($"Update failed: {ex.Message}");
+            FailLogGate.Log(logger, ex, "Update failed.");
             return 1;
         }
     }

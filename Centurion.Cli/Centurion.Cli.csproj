@@ -20,6 +20,12 @@
       <ProjectReference Include="..\Centurion.Core\Centurion.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="Localization\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
     <Target Name="MoveSatelliteAssemblies" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <ItemGroup>
             <SatelliteAssemblies Include="$(OutputPath)**\*.resources.dll"
@@ -32,6 +38,12 @@
 
     <PropertyGroup>
         <ApplicationIcon>app.ico</ApplicationIcon>
+        <!--
+          ReadyToRun（R2R）预编译：仅在发布时显式指定了 RuntimeIdentifier 才默认启用，
+          因为 R2R 必须配合运行时包（runtime pack）才能编译；无 RID 时保持关闭，
+          避免 NETSDK1094（找不到有效的运行时包）。可用 -p:PublishReadyToRun=false 覆盖。
+        -->
+        <PublishReadyToRun Condition="'$(PublishReadyToRun)' == '' and '$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
     </PropertyGroup>
 
 </Project>

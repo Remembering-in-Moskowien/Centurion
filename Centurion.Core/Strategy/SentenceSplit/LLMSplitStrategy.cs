@@ -6,6 +6,7 @@ using Centurion.Models.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Strategy.SentenceSplit;
 
@@ -75,7 +76,7 @@ public class LLMSplitStrategy : BaseSplitStrategy
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "LLM request failed. Falling back to rule-based splitting.");
+            _logger?.LogWarning(ex, "LLM request failed. Falling back to rule-based splitting.");
             return FallbackSplit(words, options);
         }
     }

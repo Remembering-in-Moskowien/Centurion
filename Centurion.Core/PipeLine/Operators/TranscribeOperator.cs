@@ -6,6 +6,7 @@ using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Exceptions;
 using Centurion.Models;
 using Centurion.Models.Workflow;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
@@ -98,15 +99,18 @@ public class TranscribeOperator(
             if (cleanedWords.Count == 0)
                 throw new Exception("After cleaning, no words remain.");
 
+            // ---- 词级时间戳健康化：排序/钳制/补零时长，稳定下游分句与说话人标注 ----
+            var sanitizedWords = WordTimingSanitizer.Sanitize(cleanedWords);
+
             // 聚合成一个句子（后续分句会拆分）；中文等无空格语系不插入空格
             var aggregatedText = Centurion.Models.Text.LanguageSupport.JoinWords(
-                cleanedWords.Select(w => w.Text), config.Language);
+                sanitizedWords.Select(w => w.Text), config.Language);
             var sentence = new Sentence
             {
                 Text = aggregatedText,
-                Start = cleanedWords.First().Start,
-                End = cleanedWords.Last().End,
-                Words = cleanedWords
+                Start = sanitizedWords.First().Start,
+                End = sanitizedWords.Last().End,
+                Words = sanitizedWords
             };
 
             context.State.TranscribeSentences = [sentence];
@@ -117,7 +121,7 @@ public class TranscribeOperator(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogError($"Transcription failed: {ex.Message}");
+            LogWarning($"Transcription failed: {ex.Message}");
             throw new WhisperProcessException("Transcription failed.", -1, ex.Message);
         }
     }

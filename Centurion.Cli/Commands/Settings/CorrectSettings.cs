@@ -11,11 +11,11 @@ namespace Centurion.Cli.Commands.Settings;
 public sealed class CorrectSettings : CommandSettings
 {
     /// <summary>
-    /// 待校正的输入字幕文件。
+    /// 待校正的输入：字幕文件，或含字幕轨的媒体文件（mkv/mp4/ts…，将自动提取字幕轨）。
     /// </summary>
-    [CommandArgument(0, "<SUBTITLE_FILE>")]
-    [Description("Input subtitle file")]
-    public required FileInfo SubtitleFile { get; init; }
+    [CommandArgument(0, "<INPUT_FILE>")]
+    [Description("Input subtitle file, or a media file whose subtitle track will be extracted")]
+    public FileInfo? SubtitleFile { get; init; }
 
     /// <summary>
     /// 输出 ASS 字幕文件路径；省略时以输入文件名加 .ass 扩展名输出。
@@ -25,10 +25,10 @@ public sealed class CorrectSettings : CommandSettings
     public FileInfo? OutputFile { get; init; }
 
     /// <summary>
-    /// 用于时间轴校正的音频文件（时间轴类策略时必填）。
+    /// 用于时间轴校正的音频/媒体文件（时间轴类策略时必填；输入为媒体文件时可省略）。
     /// </summary>
     [CommandOption("--audio <AUDIO_FILE>")]
-    [Description("Audio file used for timeline correction")]
+    [Description("Audio file used for timeline correction (optional when INPUT_FILE is a media file)")]
     public FileInfo? AudioFile { get; init; }
 
     /// <summary>
@@ -116,4 +116,27 @@ public sealed class CorrectSettings : CommandSettings
     [CommandOption("-k|--karaoke")]
     [Description("Generate ASS karaoke effects")]
     public bool Karaoke { get; init; }
+
+    /// <summary>
+    /// 是否在字幕文本前显示说话人标签；默认开启，传 --no-speaker-labels 关闭。
+    /// 说话人信息始终写入 ASS 的 Name 字段，不受本开关影响。
+    /// </summary>
+    [CommandOption("--no-speaker-labels")]
+    [Description("Do not prefix subtitle text with speaker labels (Name field is always written)")]
+    public bool ShowSpeakerLabels { get; init; } = true;
+
+    /// <summary>
+    /// 是否启用 Hunspell 拼写检查（检测字幕中的可疑词并输出报告）。
+    /// </summary>
+    [CommandOption("--spellcheck")]
+    [Description("Check subtitle text with Hunspell and report suspicious words")]
+    public bool SpellCheck { get; init; }
+
+    /// <summary>
+    /// Hunspell 词典前缀，默认 en_US；缺失时自动下载（仅支持默认前缀）。
+    /// </summary>
+    [CommandOption("--hunspell-dict <PREFIX>")]
+    [Description("Hunspell dictionary prefix, default en_US (auto-downloaded if missing)")]
+    public string HunspellDictionary { get; init; } = "en_US";
+
 }
