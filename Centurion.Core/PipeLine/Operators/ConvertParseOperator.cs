@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Utils;
 using Centurion.Models;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using SubtitlesParserV2;
 
@@ -10,6 +11,7 @@ namespace Centurion.Core.Pipeline.Operators;
 /// <summary>
 /// 转换管道 - 使用 SubtitlesParserV2 解析输入字幕文件，
 /// 并将每个字幕条目转换为 Sentence 对象存入 TranscribeSentences。
+/// ASS 输入使用项目自有 <see cref="AssSubBuilder"/> 解析，保留样式表与逐行样式。
 /// </summary>
 public partial class ConvertParseOperator : IPipelineOperator
 {
@@ -27,28 +29,54 @@ public partial class ConvertParseOperator : IPipelineOperator
         if (string.IsNullOrEmpty(inputPath) || !File.Exists(inputPath))
             throw new FileNotFoundException("Subtitle file not found.", inputPath);
 
-        await using var stream = File.OpenRead(inputPath);
-        var subtitle = SubtitleParser.ParseStream(stream)?.Subtitles;
+        var isAss = Path.GetExtension(inputPath).Equals(".ass", StringComparison.OrdinalIgnoreCase)
+            || Path.GetExtension(inputPath).Equals(".ssa", StringComparison.OrdinalIgnoreCase);
 
-        if (subtitle == null || subtitle.Count == 0)
-            throw new InvalidOperationException("No subtitle items parsed.");
-
-        // 转换为 Sentence 列表
-        var sentences = subtitle
-            .Where(item => item.Lines.Count > 0)
-            .Select(item =>
-            {
-                var text = string.Join(" ", item.Lines);
-                var words = ParseKaraokeWords(text, item.StartTime, item.EndTime, context.Config.Language);
-                return new Sentence
+        List<Sentence> sentences;
+        if (isAss)
+        {
+            // ASS：用项目自有解析器，保留样式表与逐行样式引用
+            var builder = AssSubBuilder.FromFile(inputPath);
+            context.State.Styles = [.. builder.Styles];
+            sentences = builder.Lines
+                .Where(line => !string.IsNullOrWhiteSpace(line.Text))
+                .Select(line => new Sentence
                 {
-                    Text = KaraokeTagRegex().Replace(text, string.Empty).Trim(),
-                    Start = item.StartTime,
-                    End = item.EndTime,
-                    Words = words
-                };
-            })
-            .ToList();
+                    Text = line.Text.Trim(),
+                    Start = line.GetStart(),
+                    End = line.GetEnd(),
+                    Style = string.IsNullOrWhiteSpace(line.Style) ? null : line.Style.Trim()
+                })
+                .ToList();
+        }
+        else
+        {
+            await using var stream = File.OpenRead(inputPath);
+            var subtitle = SubtitleParser.ParseStream(stream)?.Subtitles;
+
+            if (subtitle == null || subtitle.Count == 0)
+                throw new InvalidOperationException("No subtitle items parsed.");
+
+            // 转换为 Sentence 列表
+            sentences = subtitle
+                .Where(item => item.Lines.Count > 0)
+                .Select(item =>
+                {
+                    var text = string.Join(" ", item.Lines);
+                    var words = ParseKaraokeWords(text, item.StartTime, item.EndTime, context.Config.Language);
+                    return new Sentence
+                    {
+                        Text = KaraokeTagRegex().Replace(text, string.Empty).Trim(),
+                        Start = item.StartTime,
+                        End = item.EndTime,
+                        Words = words
+                    };
+                })
+                .ToList();
+        }
+
+        if (sentences.Count == 0)
+            throw new InvalidOperationException("No subtitle items parsed.");
 
         // 保留独立基线；转换管道仍使用 TranscribeSentences 作为现有输出槽。
         context.State.SubtitleSentences = sentences.Select(CloneSentence).ToList();
@@ -65,6 +93,7 @@ public partial class ConvertParseOperator : IPipelineOperator
             Start = source.Start,
             End = source.End,
             SkipRender = source.SkipRender,
+            Style = source.Style,
             Words = source.Words.Select(word => new Word
             {
                 Text = word.Text,

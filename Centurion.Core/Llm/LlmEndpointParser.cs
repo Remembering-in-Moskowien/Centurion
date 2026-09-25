@@ -1,3 +1,6 @@
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using Centurion.Models.Llm;
 using Microsoft.Extensions.Logging;
 
@@ -130,6 +133,17 @@ public static class LlmEndpointParser
         var model = !string.IsNullOrWhiteSpace(options.Model)
             ? options.Model
             : LlmProviderRegistry.GetDefaultModel(provider);
+        // Ollama 默认模型（llama3.1）可能与本机实际拉取的模型不一致，导致 404 整批失败；
+        // 未显式指定模型时自动探测本机 Ollama 已安装的对话模型。
+        if (string.IsNullOrWhiteSpace(options.Model) && provider == LlmProvider.Ollama)
+        {
+            var probed = TryProbeLocalOllamaModel(baseUrl);
+            if (!string.IsNullOrWhiteSpace(probed))
+            {
+                model = probed;
+                logger.LogInformation("Using locally available Ollama model: {Model}", probed);
+            }
+        }
 
         if (string.IsNullOrEmpty(model))
             logger.LogWarning(
@@ -137,5 +151,37 @@ public static class LlmEndpointParser
                 LlmProviderRegistry.GetDisplayName(provider));
 
         return (provider, baseUrl, model);
+    }
+
+    /// <summary>
+    /// 探测本地 Ollama（/api/tags）已安装的第一个对话模型；失败或不可达返回 null。
+    /// </summary>
+    private static string? TryProbeLocalOllamaModel(string baseUrl)
+    {
+        try
+        {
+            var endpoint = baseUrl.TrimEnd('/') + "/api/tags";
+            using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1500) };
+            var json = client.GetStringAsync(endpoint).GetAwaiter().GetResult();
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("models", out var models)) return null;
+            foreach (var m in models.EnumerateArray())
+            {
+                var name = m.TryGetProperty("name", out var n) ? n.GetString() : null;
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                if (m.TryGetProperty("capabilities", out var caps) &&
+                    caps.ValueKind == JsonValueKind.Array &&
+                    caps.EnumerateArray().Any(x => x.GetString() == "embedding"))
+                {
+                    continue; // 仅 embedding 模型不能做对话翻译
+                }
+                return name;
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
