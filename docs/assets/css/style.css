@@ -1,0 +1,247 @@
+/* ============================================================
+   Centurion Docs — Black & White, Heavy.
+   Pure monochrome. Heavy borders. Zero pastel. Zero mercy.
+   ============================================================ */
+
+:root {
+    --black: #000000;
+    --near-black: #0a0a0a;
+    --white: #ffffff;
+    --off-white: #e8e8e8;
+    --gray: #8a8a8a;
+    --line: 3px;
+    --pad: 1.6rem;
+    --mono: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    margin: 0;
+    background: var(--black);
+    color: var(--white);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+a { color: var(--white); }
+
+p { margin: 0 0 1rem; }
+
+/* ---------- Masthead: the heavy top block ---------- */
+
+.masthead {
+    background: var(--black);
+    border-bottom: 4px solid var(--white);
+}
+
+.masthead-inner {
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 2.2rem 1.6rem;
+}
+
+.masthead-icon {
+    width: 96px;
+    height: 96px;
+    border: 4px solid var(--white);
+    border-radius: 50%;
+    background: var(--white);
+    flex: none;
+}
+
+.masthead-title {
+    margin: 0;
+    font-size: 4.2rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.masthead-tagline {
+    margin: 0.5rem 0 0;
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    letter-spacing: 0.28em;
+    color: var(--gray);
+    text-transform: uppercase;
+}
+
+/* ---------- Navbar: heavy mono strip ---------- */
+
+.navbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: 4px solid var(--white);
+    background: var(--near-black);
+    padding: 0;
+}
+
+.navbar a {
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+    text-transform: uppercase;
+    color: var(--white);
+    padding: 0.85rem 1.5rem;
+    border-right: 2px solid var(--white);
+    transition: background 0.12s, color 0.12s;
+}
+
+.navbar a:hover {
+    background: var(--white);
+    color: var(--black);
+}
+
+/* ---------- Content ---------- */
+
+.content {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 2.4rem 1.6rem 4rem;
+}
+
+.content h1 {
+    font-size: 2.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 4px solid var(--white);
+    padding-bottom: 0.5rem;
+    margin: 2.4rem 0 1.4rem;
+}
+
+.content h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-left: 6px solid var(--white);
+    padding-left: 0.9rem;
+    margin: 2.6rem 0 1rem;
+}
+
+.content h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 1.8rem 0 0.8rem;
+}
+
+.content blockquote {
+    margin: 1.4rem 0;
+    padding: 0.9rem 1.2rem;
+    border: var(--line) solid var(--white);
+    background: var(--near-black);
+    font-size: 1.02rem;
+}
+
+.content blockquote p { margin: 0; }
+
+/* ---------- Heavy tables ---------- */
+
+.content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.4rem 0 2rem;
+    font-size: 0.95rem;
+}
+
+.content th {
+    background: var(--white);
+    color: var(--black);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+    border: 2px solid var(--white);
+}
+
+.content td {
+    padding: 0.6rem 0.9rem;
+    border: 2px solid var(--white);
+    vertical-align: top;
+}
+
+.content tr:nth-child(even) td { background: var(--near-black); }
+
+/* ---------- Code: monochrome heavy ---------- */
+
+.content code {
+    font-family: var(--mono);
+    font-size: 0.9em;
+    background: var(--near-black);
+    border: 1px solid var(--gray);
+    padding: 0.1em 0.35em;
+    color: var(--white);
+}
+
+.content pre {
+    background: var(--near-black);
+    border: var(--line) solid var(--white);
+    padding: 1.1rem 1.3rem;
+    overflow-x: auto;
+    margin: 1.4rem 0 2rem;
+}
+
+.content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+/* ---------- Lists & hr ---------- */
+
+.content ul, .content ol { padding-left: 1.5rem; }
+
+.content li { margin: 0.35rem 0; }
+
+.content hr {
+    border: none;
+    border-top: 4px solid var(--white);
+    margin: 2.6rem 0;
+}
+
+.content img { max-width: 100%; border: 2px solid var(--white); }
+
+/* ---------- Footer ---------- */
+
+.footer {
+    border-top: 4px solid var(--white);
+    background: var(--near-black);
+    padding: 1.4rem 1.6rem;
+    text-align: center;
+}
+
+.footer p {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    color: var(--gray);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 720px) {
+    .masthead-title { font-size: 2.6rem; }
+    .masthead-icon { width: 64px; height: 64px; }
+    .content h1 { font-size: 1.9rem; }
+    .navbar a { padding: 0.7rem 1rem; }
+}
