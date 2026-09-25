@@ -38,7 +38,7 @@ public partial class ConvertParseOperator : IPipelineOperator
             .Select(item =>
             {
                 var text = string.Join(" ", item.Lines);
-                var words = ParseKaraokeWords(text, item.StartTime, item.EndTime);
+                var words = ParseKaraokeWords(text, item.StartTime, item.EndTime, context.Config.Language);
                 return new Sentence
                 {
                     Text = KaraokeTagRegex().Replace(text, string.Empty).Trim(),
@@ -76,11 +76,11 @@ public partial class ConvertParseOperator : IPipelineOperator
         };
     }
 
-    private static List<Word> ParseKaraokeWords(string text, double sentenceStart, double sentenceEnd)
+    private static List<Word> ParseKaraokeWords(string text, double sentenceStart, double sentenceEnd, string? language)
     {
         var matches = KaraokeWordRegex().Matches(text);
         if (matches.Count == 0)
-            return [];
+            return BuildPlainWords(text, sentenceStart, sentenceEnd, language);
 
         var words = new List<Word>(matches.Count);
         var cursor = sentenceStart;
@@ -104,6 +104,47 @@ public partial class ConvertParseOperator : IPipelineOperator
                 Status = MappingStatus.Matched
             });
             cursor = end;
+        }
+
+        return words;
+    }
+
+    /// <summary>
+    /// 无卡拉OK标签时按语言切分纯文本为词级单元：空格语系按空白分词，
+    /// 中日韩等无空格语系按字符切分（每字符一词，保证后续分句/清洗/对齐可用）。
+    /// 时间按词数等分句内时长。
+    /// </summary>
+    /// <param name="text">纯文本句子。</param>
+    /// <param name="start">句内起始时间（毫秒）。</param>
+    /// <param name="end">句内结束时间（毫秒）。</param>
+    /// <param name="language">语言代码，决定分词方式（CJK 逐字）。</param>
+    /// <returns>词级单元列表。</returns>
+    private static List<Word> BuildPlainWords(string text, double start, double end, string? language)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0)
+            return [];
+
+        var tokens = Centurion.Models.Text.LanguageSupport.IsSpaceless(language)
+            ? trimmed.Select(ch => ch.ToString()).ToList()
+            : trimmed.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (tokens.Count == 0)
+            return [];
+
+        var duration = Math.Max(0, end - start);
+        var step = duration / tokens.Count;
+        var words = new List<Word>(tokens.Count);
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var wordStart = start + i * step;
+            words.Add(new Word
+            {
+                Text = tokens[i],
+                Start = wordStart,
+                End = Math.Min(end, wordStart + step),
+                Speaker = "UNKNOWN",
+                Status = MappingStatus.Matched
+            });
         }
 
         return words;
