@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/x-icon" href="{{ site.baseurl }}/favicon.ico">
+    <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
+    <title>{% if page.title %}{{ page.title }} · Centurion{% else %}Centurion — Speech In, Subtitles Out{% endif %}</title>
+</head>
+<body>
+
+<header class="masthead">
+    <div class="masthead-inner">
+        <img class="masthead-icon" src="{{ site.baseurl }}/favicon.ico" alt="Centurion">
+        <div class="masthead-text">
+            <h1 class="masthead-title">CENTURION</h1>
+            <p class="masthead-tagline">SPEECH IN · SUBTITLES OUT · .NET 10</p>
+        </div>
+    </div>
+</header>
+
+<nav class="navbar" aria-label="Main navigation">
+    <a href="{{ site.baseurl }}/">HOME</a>
+    <a href="{{ site.baseurl }}/quickstart">QUICK START</a>
+    <a href="{{ site.baseurl }}/commands">COMMANDS</a>
+    <a href="{{ site.baseurl }}/translate">TRANSLATE</a>
+    <a href="{{ site.baseurl }}/dub">DUB</a>
+    <a href="{{ site.baseurl }}/server">SERVER</a>
+    <a href="{{ site.baseurl }}/advanced">ADVANCED</a>
+    <a href="{{ site.baseurl }}/features">FEATURES</a>
+</nav>
+
+<main class="content">
+    {{ content }}
+</main>
+
+<footer class="footer">
+    <p>© 2026 CENTURION · MIT LICENSE · BUILT WITH .NET 10 — STILL LEARNING, STILL IMPROVING.</p>
+</footer>
+
+</body>
+</html>
