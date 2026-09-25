@@ -10,6 +10,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// </summary>
 public sealed class SpawnSettings : CommandSettings
 {
+
     // ----- 基础参数（不变）-----
     /// <summary>
     /// 输入音视频媒体文件。
@@ -150,6 +151,72 @@ public sealed class SpawnSettings : CommandSettings
     [CommandOption("--device <DEVICE>")]
     [Description("Inference device: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded)")]
     public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
+
+    // ----- 模式 (Mode) -----
+    /// <summary>
+    /// 生成模式：asr（语音识别，默认，现有管线）或 ocr（GLM-OCR 从视频帧/图片提取字幕）。
+    /// </summary>
+    [CommandOption("-m|--mode <MODE>")]
+    [Description("Spawn mode: asr (default, speech recognition) or ocr (GLM-OCR from video frames/images)")]
+    public string Mode { get; init; } = "asr";
+
+    // ----- 云端 ASR (Cloud ASR API) -----
+    /// <summary>
+    /// 云端 ASR 提供商：openai / groq / dashscope / deepgram（--transcriber 传对应引擎名）。
+    /// </summary>
+    [CommandOption("--asr-provider <PROVIDER>")]
+    [Description("Cloud ASR provider: openai / groq / dashscope / deepgram (use with -t openai etc.)")]
+    public string AsrProvider { get; init; } = "crispasr";
+
+    /// <summary>
+    /// 云端 ASR API 密钥。
+    /// </summary>
+    [CommandOption("--asr-api-key <KEY>")]
+    [Description("Cloud ASR API key")]
+    public string? AsrApiKey { get; init; }
+
+    /// <summary>
+    /// 云端 ASR 端点；省略时按提供商默认。
+    /// </summary>
+    [CommandOption("--asr-base-url <URL>")]
+    [Description("Cloud ASR endpoint (defaults per provider)")]
+    public string? AsrBaseUrl { get; init; }
+
+    // ----- OCR 模式 (GLM-OCR) -----
+    /// <summary>
+    /// OCR 抽帧间隔（秒），默认 2 秒。
+    /// </summary>
+    [CommandOption("--ocr-interval <SECONDS>")]
+    [Description("OCR frame interval in seconds, default 2")]
+    public double OcrIntervalSeconds { get; init; } = 2.0;
+
+    /// <summary>
+    /// OCR 推理后端：zhipu（云端 GLM-OCR，默认）| ollama（本地 Ollama 视觉模型）| llamacpp（本地 llama-server）。
+    /// </summary>
+    [CommandOption("--ocr-backend <BACKEND>")]
+    [Description("OCR backend: zhipu (default, cloud GLM-OCR) / ollama (local) / llamacpp (local llama-server)")]
+    public string OcrBackend { get; init; } = "zhipu";
+
+    /// <summary>
+    /// OCR 模型名，默认 glm-ocr（智谱；未开通可换 glm-4v-plus 等视觉模型）。
+    /// </summary>
+    [CommandOption("--ocr-model <MODEL>")]
+    [Description("OCR model, default glm-ocr (fallback: glm-4v-plus)")]
+    public string? OcrModel { get; init; }
+
+    /// <summary>
+    /// GLM-OCR API 密钥（智谱开放平台）。
+    /// </summary>
+    [CommandOption("--ocr-api-key <KEY>")]
+    [Description("GLM-OCR API key (Zhipu AI open platform)")]
+    public string? OcrApiKey { get; init; }
+
+    /// <summary>
+    /// GLM-OCR 端点地址；省略时使用智谱 v4 chat/completions。
+    /// </summary>
+    [CommandOption("--ocr-base-url <URL>")]
+    [Description("GLM-OCR endpoint (default: Zhipu v4 chat/completions)")]
+    public string? OcrBaseUrl { get; init; }
 
     // ----- 分句模块 (Splitter) -----
     /// <summary>

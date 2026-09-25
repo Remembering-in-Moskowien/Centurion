@@ -50,6 +50,12 @@ public class WorkflowConfig
     public string TranscriberEngine { get; init; } = "crispasr";   // whisper, qwen, api
     /// <summary>所选引擎使用的模型规格名（如 qwen3-asr-1.7b、large-v3）。</summary>
     public string? TranscriberModel { get; init; } = "qwen3-asr-1.7b";     // e.g., base, large
+    /// <summary>云端 ASR 提供商名（openai/groq/dashscope/deepgram）；本地引擎忽略。</summary>
+    public string AsrProvider { get; set; } = "crispasr";
+    /// <summary>云端 ASR API 密钥。</summary>
+    public string? AsrApiKey { get; init; }
+    /// <summary>云端 ASR 端点；为空时按提供商默认。</summary>
+    public string? AsrBaseUrl { get; init; }
     /// <summary>识别语言代码（如 "en"、"zh"）。</summary>
     public string Language { get; init; } = "en";
     /// <summary>喂给模型的初始提示词，用于引导风格/术语，可为空。</summary>
@@ -89,6 +95,18 @@ public class WorkflowConfig
     /// Demucs 分离模型名（如 htdemucs），由 demucs-rs 首次运行时自动从 HuggingFace 下载缓存。
     /// </summary>
     public string VocalSeparationModel { get; set; } = "htdemucs";
+
+    // ---------- OCR 模式（spawn --mode ocr）----------
+    /// <summary>spawn OCR 模式：抽帧间隔（秒），默认 2 秒。</summary>
+    public double OcrIntervalSeconds { get; init; } = 2.0;
+    /// <summary>spawn OCR 模式：OCR 后端："zhipu"（云端 GLM-OCR，默认）| "ollama"（本地 Ollama 视觉模型）| "llamacpp"（本地 llama-server）。</summary>
+    public string OcrBackend { get; init; } = "zhipu";
+    /// <summary>spawn OCR 模式：OCR 模型名（默认随后端：zhipu→glm-ocr，ollama→qwen2.5vl:7b，llamacpp→local-model）。</summary>
+    public string? OcrModel { get; init; }
+    /// <summary>spawn OCR 模式：GLM-OCR API 密钥。</summary>
+    public string? OcrApiKey { get; init; }
+    /// <summary>spawn OCR 模式：GLM-OCR 端点地址（默认智谱 v4 chat/completions）。</summary>
+    public string? OcrBaseUrl { get; init; }
 
     // ---------- 说话人分割 ----------
     /// <summary>

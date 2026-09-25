@@ -9,6 +9,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// </summary>
 public sealed class TranslateSettings : CommandSettings
 {
+
     /// <summary>
     /// 待翻译的 Centurion 中间文件（.centurion.json）。
     /// </summary>
