@@ -74,6 +74,10 @@ public class WorkflowConfig
     public string? SplitterModel { get; init; }                 // 用于LLM
     /// <summary>LLM 分句所需的 API 密钥，可为空。</summary>
     public string? SplitterApiKey { get; init; }                // 用于LLM
+    /// <summary>LLM 分句服务提供商名（如 deepseek、moonshot、openrouter；为空自动推断）。</summary>
+    public string? SplitterProvider { get; init; }
+    /// <summary>LLM 分句自定义端点；为空时使用所选提供商默认端点。</summary>
+    public string? SplitterBaseUrl { get; init; }
 
     // ---------- 人声分离（可选增强，默认关闭） ----------
     /// <summary>
@@ -156,6 +160,10 @@ public class WorkflowConfig
     public string? TranslationModel { get; init; }
     /// <summary>LLM 翻译所需的 API 密钥；为空时回退本地 Ollama。</summary>
     public string? TranslationApiKey { get; init; }
+    /// <summary>LLM 翻译服务提供商名（如 deepseek、moonshot、openrouter；为空自动推断）。</summary>
+    public string? TranslationProvider { get; init; }
+    /// <summary>LLM 翻译自定义端点；为空时使用所选提供商默认端点。</summary>
+    public string? TranslationBaseUrl { get; init; }
     /// <summary>术语表文件路径（JSON：源语言术语与目标语言术语的映射），可为空。</summary>
     public string? GlossaryPath { get; init; }
     /// <summary>目标语言台本文件路径（每行一句目标语言译文），可为空。</summary>

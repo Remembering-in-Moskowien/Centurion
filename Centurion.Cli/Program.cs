@@ -128,6 +128,7 @@ app.Configure(config =>
     config.AddCommand<TranslateCommand>("translate");
     config.AddCommand<DubCommand>("dub");
     config.AddCommand<ConvertCommand>("convert");
+    config.AddCommand<BuildCommand>("build");
     config.AddCommand<UpdateCommand>("update");
 });
 

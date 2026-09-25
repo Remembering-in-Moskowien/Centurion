@@ -34,7 +34,7 @@ public sealed class AudioMixOperator(
     /// <param name="cancellationToken">取消令牌。</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
-        if (!context.State.Extensions.TryGetValue("DubSegments", out var raw) || raw is not List<DubSegment> segments)
+        if (context.State.DubSegments is not { Count: > 0 } segments)
             return;
 
         var ffmpeg = LocateFfmpeg();
@@ -54,7 +54,12 @@ public sealed class AudioMixOperator(
         }
 
         var totalMs = Math.Max(1000, (int)Math.Ceiling(segments.Max(s => s.TargetEndMs)));
-        var outputPath = context.Config.OutputFilePath ?? Path.ChangeExtension(context.Config.InputFilePath, ".dub.wav");
+        var wavPath = context.State.Extensions.TryGetValue("DubOutputWavPath", out var rawWav)
+            ? rawWav as string
+            : Path.ChangeExtension(context.Config.SubtitleFilePath ?? context.Config.InputFilePath ?? context.Config.OutputFilePath, ".dub.wav");
+        var outputPath = !string.IsNullOrWhiteSpace(wavPath)
+            ? wavPath!
+            : Path.ChangeExtension(context.Config.InputFilePath, ".dub.wav")!;
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? AppContext.BaseDirectory);
 
         var background = context.Config.DubBackgroundPath;

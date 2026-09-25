@@ -127,7 +127,7 @@ public class DubPhase23Tests
             new() { Text = "World.", Start = 1000, End = 2000 } // 无译文
         };
         state.CurrentSentences.AddRange(sentences);
-        state.Extensions["DubSegments"] = new List<DubSegment>
+        state.DubSegments = new List<DubSegment>
         {
             new() { Text = "你好。", TargetStartMs = 0, TargetEndMs = 1000, AlignmentTempo = 1.1, AlignedDurationSec = 1.0, SynthesizedDurationSec = 1.2 },
             new() { Text = "World.", TargetStartMs = 1000, TargetEndMs = 2000, AlignmentTempo = 0.9, AlignedDurationSec = 1.0, SynthesizedDurationSec = 1.3 }

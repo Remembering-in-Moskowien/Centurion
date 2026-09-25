@@ -77,9 +77,7 @@ public static class QualityReportBuilder
         if (!string.Equals(context.Config.CommandName, "dub", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var segments = context.State.Extensions.TryGetValue("DubSegments", out var raw)
-            ? raw as List<DubSegment> ?? []
-            : [];
+        var segments = context.State.DubSegments;
 
         var succeeded = segments.Where(s => !s.Skipped).ToList();
         // 配音文本覆盖率：目标语言文本（译文轨或单轨原文）非空的句子占比

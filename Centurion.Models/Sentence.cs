@@ -9,9 +9,9 @@ public class Sentence
     public string? TranslatedText { get; set; }
     /// <summary>经过文本清洗（去标点、数字展开等）后的文本，未清洗时为 null。</summary>
     public string? CleanedText { get; set; }
-    /// <summary>句子起始时间（秒）。</summary>
+    /// <summary>句子起始时间（毫秒）。</summary>
     public double Start { get; set; }
-    /// <summary>句子结束时间（秒）。</summary>
+    /// <summary>句子结束时间（毫秒）。</summary>
     public double End { get; set; }
     /// <summary>是否在渲染字幕时跳过该句子。</summary>
     public bool SkipRender { get; set; }

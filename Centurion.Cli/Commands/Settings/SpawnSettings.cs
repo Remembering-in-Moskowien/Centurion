@@ -201,6 +201,20 @@ public sealed class SpawnSettings : CommandSettings
     [Description("API key for LLM splitter")]
     public string? SplitterApiKey { get; init; }
 
+    /// <summary>
+    /// LLM 分句服务提供商名（openai/deepseek/moonshot/zhipu/openrouter/groq/siliconflow/dashscope/ark/azure/ollama）。
+    /// </summary>
+    [CommandOption("--llm-provider <PROVIDER>")]
+    [Description("LLM provider for splitting: openai, deepseek, moonshot, zhipu, openrouter, groq, ollama, ...")]
+    public string? LlmProvider { get; init; }
+
+    /// <summary>
+    /// LLM 分句自定义端点；为空时使用所选提供商默认端点。
+    /// </summary>
+    [CommandOption("--llm-base-url <URL>")]
+    [Description("LLM base URL for splitting (defaults to provider endpoint)")]
+    public string? LlmBaseUrl { get; init; }
+
     // ----- 对齐模块 (Alignment) -----
     /// <summary>
     /// 是否启用强制对齐。

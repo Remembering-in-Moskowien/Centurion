@@ -72,6 +72,10 @@ public class WorkflowState
     /// <summary>翻译阶段是否已完成。</summary>
     public bool IsTranslated { get; set; }
 
+    // ---------- 译制（dub）数据 ----------
+    /// <summary>译制分段（说话人画像 + TTS 合成 + 时间对齐 + 混音的段级数据）。</summary>
+    public List<DubSegment> DubSegments { get; set; } = [];
+
     /// <summary>整个流水线是否已收尾完成。</summary>
     public bool IsFinalized { get; set; }
 

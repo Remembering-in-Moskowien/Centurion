@@ -65,12 +65,17 @@ public class SentenceSplitOperator(
             ChunkGranularity = Math.Clamp(config.ChunkGranularity, 0f, 1f)
         };
 
-        // 通过工厂创建分句策略，传递模型和 API Key（仅 LLM 策略需要）
+        // 通过工厂创建分句策略，传递 LLM 连接配置（仅 LLM 策略需要）
         var strategy = _factory.Create(
             config.SplitStrategy,
             options,
-            config.SplitterModel,
-            config.SplitterApiKey
+            new Centurion.Models.Llm.LlmOptions
+            {
+                Model = config.SplitterModel,
+                ApiKey = config.SplitterApiKey,
+                ProviderName = config.SplitterProvider,
+                BaseUrl = config.SplitterBaseUrl
+            }
         );
 
         LogInfo($"Using split strategy: {strategy.GetType().Name}");
