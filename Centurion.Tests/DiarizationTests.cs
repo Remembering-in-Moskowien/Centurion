@@ -76,13 +76,13 @@ public sealed class DiarizationTests
     }
 
     [Fact]
-    public void ResolveSpeaker_UnmatchedOrEmpty_FallsBackToDefault()
+    public void ResolveSpeaker_UnmatchedOrEmpty_FallsBackToNearestOrDefault()
     {
         var turns = new List<SpeakerSegment> { new(0.0, 5.0, "speaker 0") };
 
-        // 落在区间外 → 默认标签
+        // 落在区间外 → 回退到时间最近的说话人片段（避免说话人信息丢失）
         var wordMiss = new Word { Text = "miss", Start = 8000, End = 9000, Speaker = "SPEAKER_00" };
-        Assert.Equal("SPEAKER_00", DiarizationOperator.ResolveSpeaker(wordMiss, turns));
+        Assert.Equal("speaker 0", DiarizationOperator.ResolveSpeaker(wordMiss, turns));
 
         // 空 turns → 默认标签
         var wordEmpty = new Word { Text = "x", Start = 0, End = 100, Speaker = "SPEAKER_00" };
@@ -129,5 +129,113 @@ public sealed class DiarizationTests
 
         Assert.DoesNotContain("--sherpa-segment-model", args);
         Assert.DoesNotContain("pyannote-seg-3.0", args);
+    }
+
+    // ---------- ResolveSpeaker：时间窗重叠最大化 ----------
+
+    [Fact]
+    public void ResolveSpeaker_BoundaryWord_AssignsToLargerOverlap()
+    {
+        // 词 (4500–6500ms) 横跨 A(0–5000ms) 与 B(5500–10000ms)：
+        // 与 A 重叠 500ms，与 B 重叠 1000ms → 归 B（重叠更大的一侧）
+        var turns = new List<SpeakerSegment>
+        {
+            new(0.0, 5.0, "speaker 0"),
+            new(5.5, 10.0, "speaker 1")
+        };
+
+        var boundary = new Word { Text = "both", Start = 4500, End = 6500, Speaker = "SPEAKER_00" };
+        Assert.Equal("speaker 1", DiarizationOperator.ResolveSpeaker(boundary, turns));
+    }
+
+    [Fact]
+    public void ResolveSpeaker_FullyInside_AssignsContainingTurn()
+    {
+        var turns = new List<SpeakerSegment> { new(2.0, 8.0, "speaker 0") };
+
+        var inside = new Word { Text = "in", Start = 3000, End = 4000, Speaker = "SPEAKER_00" };
+        Assert.Equal("speaker 0", DiarizationOperator.ResolveSpeaker(inside, turns));
+    }
+
+    // ---------- SpeakerSegmentSmoother ----------
+
+    [Fact]
+    public void Smooth_MergesAdjacentSameSpeaker()
+    {
+        var turns = new List<SpeakerSegment>
+        {
+            new(0.0, 2.0, "speaker 0"),
+            new(2.0, 4.0, "speaker 0"),
+            new(4.0, 6.0, "speaker 1")
+        };
+
+        var smoothed = SpeakerSegmentSmoother.Smooth(turns);
+
+        Assert.Equal(2, smoothed.Count);
+        Assert.Equal(new SpeakerSegment(0.0, 4.0, "speaker 0"), smoothed[0]);
+        Assert.Equal(new SpeakerSegment(4.0, 6.0, "speaker 1"), smoothed[1]);
+    }
+
+    [Fact]
+    public void Smooth_RemovesAlternatingBlip_BetweenSameSpeakers()
+    {
+        // A(0–3) B(3–3.4) A(3.4–6)：B 为 0.4s 碎片且前后同为 A → 吞并为一个 A 段
+        var turns = new List<SpeakerSegment>
+        {
+            new(0.0, 3.0, "speaker 0"),
+            new(3.0, 3.4, "speaker 1"),
+            new(3.4, 6.0, "speaker 0")
+        };
+
+        var smoothed = SpeakerSegmentSmoother.Smooth(turns, minDurationSeconds: 0.5);
+
+        Assert.Single(smoothed);
+        Assert.Equal(new SpeakerSegment(0.0, 6.0, "speaker 0"), smoothed[0]);
+    }
+
+    [Fact]
+    public void Smooth_ShortFragment_MergesIntoLongerNeighbor()
+    {
+        // B(3–3.4) 短于阈值，前后为不同说话人 → 并入相邻较长的 A(0–3, 3s > C 2.6s)
+        var turns = new List<SpeakerSegment>
+        {
+            new(0.0, 3.0, "speaker 0"),
+            new(3.0, 3.4, "speaker 1"),
+            new(3.4, 6.0, "speaker 2")
+        };
+
+        var smoothed = SpeakerSegmentSmoother.Smooth(turns, minDurationSeconds: 0.5);
+
+        Assert.Equal(2, smoothed.Count);
+        Assert.Equal(new SpeakerSegment(0.0, 3.4, "speaker 0"), smoothed[0]);
+        Assert.Equal(new SpeakerSegment(3.4, 6.0, "speaker 2"), smoothed[1]);
+    }
+
+    [Fact]
+    public void Smooth_SortsAndRemovesOverlap()
+    {
+        // 乱序 + 交叠输入：按开始时间排序并裁剪重叠
+        var turns = new List<SpeakerSegment>
+        {
+            new(5.0, 8.0, "speaker 1"),
+            new(0.0, 5.0, "speaker 0"),
+            new(4.0, 6.0, "speaker 2")
+        };
+
+        var smoothed = SpeakerSegmentSmoother.Smooth(turns);
+
+        Assert.Equal(3, smoothed.Count);
+        Assert.Equal("speaker 0", smoothed[0].Speaker);
+        Assert.Equal("speaker 2", smoothed[1].Speaker);
+        Assert.Equal(5.0, smoothed[1].StartSeconds);
+        Assert.Equal("speaker 1", smoothed[2].Speaker);
+        for (var i = 1; i < smoothed.Count; i++)
+            Assert.True(smoothed[i].StartSeconds >= smoothed[i - 1].EndSeconds);
+    }
+
+    [Fact]
+    public void Smooth_EmptyInput_ReturnsEmpty()
+    {
+        Assert.Empty(SpeakerSegmentSmoother.Smooth([]));
     }
 }

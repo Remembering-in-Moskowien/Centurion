@@ -6,6 +6,7 @@ using Centurion.Models;
 using Centurion.Models.Workflow;
 using Centurion.Core.Text;
 using Microsoft.Extensions.Logging;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Pipeline.Operators;
 
@@ -59,7 +60,7 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
         {
             const string message = "No current sentences are available for alignment.";
             context.State.Errors.Add(message);
-            _logger.LogError(message);
+            _logger.LogWarning(message);
             throw new AlignmentException(message);
         }
 
@@ -89,6 +90,11 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
         if (modelName != null)
         {
             var strategy = _strategyFactory.Create(modelName);
+            if (strategy is Centurion.Core.Strategy.Alignment.CrispAsrAlignmentStrategy crisp)
+            {
+                crisp.ChunkGapSeconds = context.Config.AlignmentChunkGapSeconds;
+                crisp.MaxChunkSeconds = context.Config.AlignmentMaxChunkSeconds;
+            }
 
             var metadata = CorrectionMetadata.Get(context.State);
             var originalTimings = sentences.ToDictionary(
@@ -126,7 +132,7 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
             {
                 var actualCount = alignedSentences?.Count ?? 0;
                 var message = $"Alignment changed the sentence count from {sentences.Count} to {actualCount}.";
-                _logger.LogError(message);
+                _logger.LogWarning(message);
                 context.State.Errors.Add(message);
                 throw new AlignmentException(message);
             }

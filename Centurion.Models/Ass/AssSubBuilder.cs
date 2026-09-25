@@ -218,8 +218,16 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         var lines = new List<AssSubLine>();
         foreach (var sentence in sentences)
         {
-            if (sentence.SkipRender || sentence.End <= sentence.Start)
+            if (sentence.SkipRender || sentence.End < sentence.Start)
                 continue;
+            // 零时长句（End == Start，如对齐输出瞬间词）不再整句丢弃；
+            // 补最小 80ms 时长渲染，避免句末词丢失
+            if (sentence.End <= sentence.Start)
+                sentence.End = sentence.Start + 80;
+
+            // 说话人：仅当分割已成功完成时才视为有效（未分割时词级为占位标签，不写入）
+            var speaker = context.State.IsDiarized ? sentence.Speaker : null;
+            var showLabels = context.Config.ShowSpeakerLabels;
 
             var words = sentence.Words ?? [];
             var useRawSentence = words.Count == 0 || words.All(word => word.Status == MappingStatus.ScriptMissing);
@@ -238,6 +246,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             // 单语：一行（主字幕 Default 样式）；双语：两行——主行原文（Default，上方 MarginV 100）、
             // 次行译文（Sub 样式，贴底 MarginV 28），参照 Theme.ass 的 eng/chi 主次布局。
             // KaraokeMode 下翻译句不再跳过：译文用时间插值 + 长音节词多分配构建词级 \K 时间戳。
+            // 说话人标签加在主行（原文/唯一行）文本前；ASS Name 字段在所有行写入。
             if (!string.IsNullOrWhiteSpace(sentence.TranslatedText))
             {
                 var targetLanguage = string.IsNullOrWhiteSpace(context.Config.TargetLanguage)
@@ -250,13 +259,13 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                         ? string.Join(" ", tokens.Select(FormatKaraokeToken))
                         : Centurion.Models.Text.LanguageSupport.JoinWords(
                             tokens.Select(token => token.Text), context.Config.Language);
-                    lines.Add(BuildLine(sentence, mainText, "Default"));
+                    lines.Add(BuildLine(sentence, mainText, "Default", speaker, showLabels));
 
                     var subText = context.Config.KaraokeMode
                         ? TranslationKaraokeBuilder.Build(
                             sentence.TranslatedText, sentence.Start, sentence.End, targetLanguage)
                         : sentence.TranslatedText;
-                    lines.Add(BuildLine(sentence, subText, "Sub"));
+                    lines.Add(BuildLine(sentence, subText, "Sub", speaker, false));
                 }
                 else
                 {
@@ -264,7 +273,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                         ? TranslationKaraokeBuilder.Build(
                             sentence.TranslatedText, sentence.Start, sentence.End, targetLanguage)
                         : sentence.TranslatedText;
-                    lines.Add(BuildLine(sentence, translated, "Default"));
+                    lines.Add(BuildLine(sentence, translated, "Default", speaker, showLabels));
                 }
 
                 continue;
@@ -274,25 +283,29 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                 ? string.Join(" ", tokens.Select(FormatKaraokeToken))
                 : Centurion.Models.Text.LanguageSupport.JoinWords(
                     tokens.Select(token => token.Text), context.Config.Language);
-            lines.Add(BuildLine(sentence, dialogue, "Default"));
+            lines.Add(BuildLine(sentence, dialogue, "Default", speaker, showLabels));
         }
 
         return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
     }
 
-    private static AssSubLine BuildLine(Sentence sentence, string text, string style)
+    private static AssSubLine BuildLine(Sentence sentence, string text, string style, string? speaker, bool showSpeakerPrefix)
     {
+        var finalText = showSpeakerPrefix && !string.IsNullOrWhiteSpace(speaker)
+            ? $"[{speaker}] {text}"
+            : text;
+
         return new AssSubLineBuilder().WithComment(false)
             .WithLayer(0)
             .WithStart((long)sentence.Start)
             .WithEnd((long)sentence.End)
             .WithStyle(style)
-            .WithName(string.Empty)
+            .WithName(speaker ?? string.Empty)
             .WithMarginL(0)
             .WithMarginR(0)
             .WithMarginV(0)
             .WithEffect(string.Empty)
-            .WithText(text)
+            .WithText(finalText)
             .Build();
     }
 
@@ -308,8 +321,10 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             var word = words[index];
             if (word.Status == MappingStatus.ScriptMissing)
             {
-                if (fillGapWithEllipsis)
-                    result.Add(new DisplayToken("[...]", [word]));
+                // ScriptMissing 词是真实存在的词（转录/台本未匹配），必须保留文本显示，
+                // 否则句末未匹配词会被静默丢弃造成"末尾丢词"。
+                // fillGapWithEllipsis 仅用于无词内容的间隙占位，这里不再跳过词本身。
+                result.Add(new DisplayToken(word.Text, [word]));
                 continue;
             }
 

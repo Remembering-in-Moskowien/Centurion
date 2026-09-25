@@ -2,6 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OpenAI;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Core.Factories;
 
@@ -50,7 +51,7 @@ public static class LlmClientFactory
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create Ollama client for model {Model}", model);
+            logger.LogWarning(ex, "Failed to create Ollama client for model {Model}", model);
             throw new InvalidOperationException($"Failed to initialize Ollama client: {ex.Message}", ex);
         }
     }

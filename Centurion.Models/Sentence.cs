@@ -17,4 +17,25 @@ public class Sentence
     public bool SkipRender { get; set; }
     /// <summary>该句包含的词级明细列表，无词级时间轴时为空。</summary>
     public List<Word> Words { get; set; } = [];
+
+    /// <summary>
+    /// 句子说话人：从词级 <see cref="Word.Speaker"/> 按多数投票推导。
+    /// 句子无词级数据或全部为占位标签（如未运行说话人分割）时返回 null；
+    /// 是否把结果渲染进字幕由工作流状态（IsDiarized）与显示开关决定。
+    /// </summary>
+    public string? Speaker
+    {
+        get
+        {
+            if (Words.Count == 0)
+                return null;
+
+            return Words
+                .Select(word => word.Speaker)
+                .Where(speaker => !string.IsNullOrWhiteSpace(speaker))
+                .GroupBy(speaker => speaker, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Count())
+                .FirstOrDefault()?.Key;
+        }
+    }
 }

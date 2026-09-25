@@ -45,7 +45,8 @@ public class PipelineExecutor
         var stepTimings = new Dictionary<string, TimeSpan>();
         context.State.Extensions["StepTimings"] = stepTimings;
 
-        ConsoleServices.Output.WriteMarkupLine("[cyan]Starting pipeline execution...[/]");
+        // 每步执行反馈输出到控制台（精简：一步一行，避免刷屏）；细节走 ILogger（--verbose 可见）
+        ConsoleServices.Output.WriteLine(ConsoleServices.T("Pipeline execution started"));
         _logger.LogInformation("Pipeline started for {InputPath}", context.Config.InputFilePath);
 
         var totalStopwatch = Stopwatch.StartNew();
@@ -61,7 +62,7 @@ public class PipelineExecutor
             var stepName = op.Name;
             var stepStopwatch = Stopwatch.StartNew();
 
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Executing step: [yellow]{stepName}[/][/]");
+            ConsoleServices.Output.WriteLine(ConsoleServices.T("Executing step: {0}", stepName));
             _logger.LogInformation("Starting step: {StepName}", stepName);
 
             await op.ExecuteAsync(context, cancellationToken);
@@ -71,12 +72,11 @@ public class PipelineExecutor
             stepTimings[stepName] = elapsed;
 
             _logger.LogInformation(@"Step '{StepName}' completed in {Elapsed:mm\:ss\.fff}", stepName, elapsed);
-            ConsoleServices.Output.WriteMarkupLine($@"  [grey]Step '{stepName}' took: [yellow]{elapsed:mm\:ss\.fff}[/][/]");
         }
 
         totalStopwatch.Stop();
         var totalElapsed = totalStopwatch.Elapsed;
+        ConsoleServices.Output.WriteLine(ConsoleServices.T("Total pipeline time: {0}", $@"{totalElapsed:mm\:ss\.fff}"));
         _logger.LogInformation(@"Total pipeline execution time: {Total:mm\:ss\.fff}", totalElapsed);
-        ConsoleServices.Output.WriteMarkupLine($@"[green]Total pipeline time: [bold]{totalElapsed:mm\:ss\.fff}[/][/]");
     }
 }

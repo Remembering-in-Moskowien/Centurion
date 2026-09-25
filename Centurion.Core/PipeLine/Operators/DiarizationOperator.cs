@@ -4,6 +4,7 @@ using Centurion.Abstractions.Strategy;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Centurion.Core.Strategy.Diarization;
+using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Pipeline.Operators;
@@ -92,14 +93,20 @@ public sealed class DiarizationOperator(
                 return;
             }
 
-            // 6. 按时间中点把说话人映射到每个 Word（Word 为引用类型，原地标注）
+            // 6. 后处理平滑：合并相邻同说话人、消除逐段交替抖动与过短碎片，
+            //    显著降低边界词的错标率
+            var smoothed = SpeakerSegmentSmoother.Smooth(turns, config.DiarizationMinSegmentSeconds);
+            if (smoothed.Count < turns.Count)
+                LogInfo($"Speaker segments smoothed from {turns.Count} to {smoothed.Count} (min duration {config.DiarizationMinSegmentSeconds}s).");
+
+            // 7. 按时间窗重叠最大化把说话人映射到每个 Word（Word 为引用类型，原地标注）
             var annotated = sentences.ToList();
             var annotatedWordCount = 0;
             foreach (var sentence in annotated)
             {
                 foreach (var word in sentence.Words)
                 {
-                    word.Speaker = ResolveSpeaker(word, turns);
+                    word.Speaker = ResolveSpeaker(word, smoothed);
                     annotatedWordCount++;
                 }
             }
@@ -107,7 +114,7 @@ public sealed class DiarizationOperator(
             context.State.DiarizedSentences = annotated;
             context.State.IsDiarized = true;
             OnProgress(100, "Diarization completed");
-            LogInfo($"Assigned speakers to {annotatedWordCount} words across {turns.Count} segments.");
+            LogInfo($"Assigned speakers to {annotatedWordCount} words across {smoothed.Count} segments.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -117,22 +124,49 @@ public sealed class DiarizationOperator(
     }
 
     /// <summary>
-    /// 按 Word 时间中点匹配说话人片段（internal，便于单元测试）。
-    /// 未命中时回退到默认说话人标签。
+    /// 按 Word 时间窗与说话人片段的重叠量归属说话人（internal，便于单元测试）。
+    /// 取与词时间窗交集最长的片段；词横跨说话人切换点时归给重叠更大的一侧，
+    /// 避免时间中点法在边界处整词错标。完全无重叠（词级时间戳病态）时回退到
+    /// 时间距离最近的片段；完全无片段时回退默认标签。
     /// </summary>
     internal static string ResolveSpeaker(Word word, IReadOnlyList<SpeakerSegment> turns)
     {
         if (word == null || turns == null || turns.Count == 0)
             return "SPEAKER_00";
 
-        var midMs = (word.Start + word.End) / 2.0;
+        var bestOverlap = 0.0;
+        SpeakerSegment? best = null;
         foreach (var turn in turns)
         {
             var startMs = turn.StartSeconds * 1000.0;
             var endMs = turn.EndSeconds * 1000.0;
-            if (midMs >= startMs && midMs <= endMs)
-                return turn.Speaker;
+            var overlap = Math.Min(word.End, endMs) - Math.Max(word.Start, startMs);
+            if (overlap > bestOverlap)
+            {
+                bestOverlap = overlap;
+                best = turn;
+            }
         }
-        return "SPEAKER_00";
+
+        if (best is not null)
+            return best.Speaker;
+
+        // 时间窗与所有片段均无重叠（词级时间戳病态或片段间隙）：
+        // 取时间距离最近的说话人片段，避免大量回退到占位标签造成说话人信息丢失
+        SpeakerSegment? nearest = null;
+        var nearestDistance = double.MaxValue;
+        foreach (var turn in turns)
+        {
+            var startMs = turn.StartSeconds * 1000.0;
+            var endMs = turn.EndSeconds * 1000.0;
+            var distance = word.End < startMs ? startMs - word.End : word.Start - endMs;
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearest = turn;
+            }
+        }
+
+        return nearest?.Speaker ?? "SPEAKER_00";
     }
 }

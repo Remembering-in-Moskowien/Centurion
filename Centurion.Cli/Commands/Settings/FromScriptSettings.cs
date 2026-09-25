@@ -126,6 +126,22 @@ public sealed class FromScriptSettings : CommandSettings
     public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 
     /// <summary>
+    /// 强制对齐分段：相邻句子的时间间隙超过该秒数时切分为独立块（默认 2.0 秒）。
+    /// 每块仅启动一次对齐进程，长音频下显著提速。
+    /// </summary>
+    [CommandOption("--align-chunk-gap <SEC>")]
+    [Description("Split alignment into chunks when the gap between sentences exceeds this many seconds, default 2.0")]
+    public double AlignmentChunkGapSeconds { get; init; } = 2.0;
+
+    /// <summary>
+    /// 强制对齐分段：单个块的最大音频时长（秒），默认 120 秒。
+    /// </summary>
+    [CommandOption("--align-max-chunk <SEC>")]
+    [Description("Maximum audio duration per alignment chunk in seconds, default 120")]
+    public double AlignmentMaxChunkSeconds { get; init; } = 120.0;
+
+
+    /// <summary>
     /// 字幕显示时允许的最大每秒字符数。
     /// </summary>
     [CommandOption("--max-cps <CPS>")]
@@ -152,4 +168,13 @@ public sealed class FromScriptSettings : CommandSettings
     [CommandOption("--fill-gap")]
     [Description("Render missing script words as an ellipsis")]
     public bool FillGapWithEllipsis { get; init; } = true;
+
+    /// <summary>
+    /// 是否在字幕文本前显示说话人标签；默认开启，传 --no-speaker-labels 关闭。
+    /// 说话人信息始终写入 ASS 的 Name 字段，不受本开关影响。
+    /// </summary>
+    [CommandOption("--no-speaker-labels")]
+    [Description("Do not prefix subtitle text with speaker labels (Name field is always written)")]
+    public bool ShowSpeakerLabels { get; init; } = true;
+
 }

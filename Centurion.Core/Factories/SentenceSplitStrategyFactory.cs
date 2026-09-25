@@ -17,7 +17,7 @@ public class SentenceSplitStrategyFactory(
     /// <summary>
     /// 按策略类型创建分句策略，支持规则式与基于大语言模型（OpenAI/Ollama）两种模式。
     /// </summary>
-    /// <param name="strategy">分句策略名称，支持 "rule"、"catalyst"/"nlp"（规则式）与 "llm"。</param>
+    /// <param name="strategy">分句策略名称：规则式 "rule"/"rule-aggressive"（积极，默认）、"rule-passive"（消极）、"catalyst"/"nlp" 别名，以及 "llm"。</param>
     /// <param name="options">分句所需的规则选项，供规则式或 LLM 策略使用。</param>
     /// <param name="model">可选的模型名称；未提供时按各后端默认模型处理。</param>
     /// <param name="apiKey">可选的 API 密钥；提供时使用 OpenAI 后端，否则回退到本地 Ollama。</param>
@@ -27,8 +27,9 @@ public class SentenceSplitStrategyFactory(
     {
         return strategy.ToLowerInvariant() switch
         {
-            "rule" => serviceProvider.GetRequiredService<RuleBasedSplitStrategy>(),
-            "catalyst" or "nlp" => serviceProvider.GetRequiredService<RuleBasedSplitStrategy>(),
+            "rule" or "rule-aggressive" => serviceProvider.GetRequiredService<AggressiveRuleSplitStrategy>(),
+            "rule-passive" => serviceProvider.GetRequiredService<PassiveRuleSplitStrategy>(),
+            "catalyst" or "nlp" => serviceProvider.GetRequiredService<AggressiveRuleSplitStrategy>(),
             "llm" => CreateLLMStrategy(options, model, apiKey),
             _ => throw new NotSupportedException($"Split strategy '{strategy}' is not supported.")
         };

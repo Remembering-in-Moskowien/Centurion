@@ -10,6 +10,7 @@ using Centurion.Core.Pipeline.Operators;
 using Centurion.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Cli.Commands;
 
@@ -18,6 +19,7 @@ namespace Centurion.Cli.Commands;
 /// </summary>
 public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
+    SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
@@ -26,6 +28,7 @@ public sealed class SpawnCommand(
     SentenceSplitOperator splitOp,
     TextPreprocessingOperator textCleaningOp,
     AlignmentOperator alignmentOp,
+    QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
     ILogger<SpawnCommand> logger)
     : AsyncCommand<SpawnSettings>
@@ -50,11 +53,16 @@ public sealed class SpawnCommand(
             // Build workflow configuration
             var config = new WorkflowConfig
             {
+                CommandName = "spawn",
                 InputFilePath = inputPath,
                 OutputFilePath = outputPath,
                 Language = settings.Language,
                 NumSpeakers = settings.NumSpeakers,
+                DiarizationBackend = settings.DiarizationBackend is not null
+                    ? settings.DiarizationBackend
+                    : settings.Diarize ? "crispasr" : "none",
                 KaraokeMode = settings.Karaoke,
+                ShowSpeakerLabels = settings.ShowSpeakerLabels,
                 CacheDirectory = "./cache",
 
                 TranscriberEngine = settings.Transcriber,
@@ -83,7 +91,9 @@ public sealed class SpawnCommand(
                 SplitterApiKey = settings.SplitterApiKey,
 
                 EnableAlignment = settings.EnableAlignment,
-                AlignmentModel = settings.AlignmentModel
+                AlignmentModel = settings.AlignmentModel,
+                AlignmentChunkGapSeconds = settings.AlignmentChunkGapSeconds,
+                AlignmentMaxChunkSeconds = settings.AlignmentMaxChunkSeconds
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
@@ -95,6 +105,7 @@ public sealed class SpawnCommand(
             // ─── Dynamically build the operator pipeline ───
             var operators = new List<IPipelineOperator>
             {
+                subtitleTrackCheckerOp,
                 ffmpegOp,
                 audioPreprocessOp,
                 vocalSepOp,
@@ -102,14 +113,15 @@ public sealed class SpawnCommand(
                 diarizationOp,
                 splitOp,
                 textCleaningOp,
-                alignmentOp
+                alignmentOp,
+                qualityReportOp
             };
 
             // Execute the dynamic pipeline
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
             // Generate ASS subtitle file
-            ConsoleServices.Output.WriteMarkupLine("[grey]Generating ASS subtitle file...[/]");
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Generating ASS subtitle file..."));
             var assBuilder = AssSubBuilder.FromWorkflow(workflowContext);
             var assDoc = assBuilder.Build();
 
@@ -118,14 +130,13 @@ public sealed class SpawnCommand(
             // 输出富上下文 JSON（配置 + 各阶段句子 + 诊断）
             var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "spawn", outputPath, ct);
 
-            ConsoleServices.Output.WriteMarkupLine($"[green]Subtitle generation completed: {outputPath}[/]");
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed: {0}", outputPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
             return 0;
         }
         catch (Exception ex)
         {
-            ConsoleServices.Output.WriteError(ex.Message);
-            logger.LogError(ex, "Pipeline execution failed.");
+            FailLogGate.Log(logger, ex, "Pipeline execution failed.");
             return 1;
         }
     }

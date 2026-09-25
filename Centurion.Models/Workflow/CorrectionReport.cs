@@ -24,6 +24,9 @@ public sealed class CorrectionReport
     public int Unmatched { get; set; }
     /// <summary>对齐残差的平均漂移量（毫秒）。</summary>
     public double AverageDriftMs { get; set; }
+
+    /// <summary>校准中出现的最大单句漂移（毫秒）。</summary>
+    public double MaxDriftMs { get; set; }
     /// <summary>脚本文本被覆盖的比例（0-1）。</summary>
     public double TextCoverage { get; set; }
     /// <summary>本次校正耗时。</summary>

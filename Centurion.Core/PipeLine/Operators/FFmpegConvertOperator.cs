@@ -74,7 +74,7 @@ public class FFmpegConvertOperator(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogError($"Audio conversion failed: {ex.Message}");
+            LogWarning($"Audio conversion failed: {ex.Message}");
             throw new AudioConversionException($"FFmpeg conversion failed for '{inputPath}'", ex);
         }
     }

@@ -53,7 +53,7 @@ public sealed class CorrectionReportOperator : PipelineOperatorBase<CorrectionRe
             ? timings.Values.Aggregate(TimeSpan.Zero, (total, elapsed) => total + elapsed)
             : stopwatch.Elapsed;
 
-        ConsoleServices.Output.WriteMarkupLine($"[green]Correction complete:[/] {report.TotalSentences} sentences, text coverage {report.TextCoverage:P1}, average drift {report.AverageDriftMs:F0}ms");
+        ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction complete: {0} sentences, text coverage {1:P1}, average drift {2:F0}ms", report.TotalSentences, report.TextCoverage, report.AverageDriftMs));
         Logger.LogInformation("Correction report: Total={Total}, TextCorrected={TextCorrected}, TimelineShifted={TimelineShifted}, Unmatched={Unmatched}, AverageDriftMs={Drift:F0}, TextCoverage={Coverage:P1}, Elapsed={Elapsed}", report.TotalSentences, report.TextCorrected, report.TimelineShifted, report.Unmatched, report.AverageDriftMs, report.TextCoverage, report.Elapsed);
         OnProgress(100, "Correction complete");
         return Task.CompletedTask;

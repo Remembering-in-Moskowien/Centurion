@@ -111,7 +111,6 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
                 .ProcessAsynchronously();
 
             results.Add(outputFile);
-            ConsoleServices.Output?.WriteLine($"Segment saved (with 100ms silence padding): {outputFile}");
         }
 
         return new FFmpegSplitResponse { OutputFiles = results };

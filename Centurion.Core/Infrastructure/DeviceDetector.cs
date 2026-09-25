@@ -94,9 +94,10 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
                 gpuMemoryBytes = (long)(miB * 1024 * 1024);
             return true;
         }
-        catch (Exception ex)
+        catch
         {
-            logger.LogDebug("nvidia-smi probe failed: {Message}", ex.Message);
+            // 不记录系统异常消息（非 UTF-8 系统文本会乱码污染日志），仅标记探测失败
+            logger.LogDebug("nvidia-smi probe failed; NVIDIA GPU detection skipped.");
         }
 
         // 兜底：CUDA 工具链已安装但 nvidia-smi 不在 PATH

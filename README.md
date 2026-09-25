@@ -3,7 +3,7 @@
 > **Speech → Subtitles, done properly.** 🎬
 > Centurion is a **.NET 10** command-line powerhouse that turns audio/video into **polished ASS subtitles**: transcribe → diarize → split → clean → force-align, all in one automatic pipeline. Sit back, relax, let it cook. ✨
 
-![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-96%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
+![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-150%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
 
 ---
 
@@ -30,13 +30,18 @@
 | 📏 Forced alignment | Word-level timestamps + text cleaning, subtitles hit the beat | ✅ On by default |
 | 🎵 Karaoke mode | `\K` tags for word-by-word highlighting | ✅ |
 | 📜 Script timing | Have a script + media? `from-script` aligns them instantly | ✅ |
-| 🛠️ Subtitle calibration | Existing subs slightly off? `correct` straightens them out | ✅ |
+| 🛠️ Subtitle calibration | Existing subs slightly off? `correct` straightens them out — no subtitle file? It extracts the subtitle track from the media (mkvtoolnix) | ✅ |
+| ✍️ Spell check | `correct --spellcheck` hunts typos with **Hunspell** (en_US auto-downloaded) and writes a `.spellcheck.json` report | ✅ Opt-in |
 | 🔄 Format conversion | SRT/VTT/… → ASS, no fuss | ✅ |
 | 🌐 Machine translation | Translate existing subtitles with **LLM (OpenAI / Ollama)**, glossary & target-script alignment | ✅ |
 | 📝 Translated karaoke | Word-level `\K` timestamps for translations — time interpolation, long syllables get more time | ✅ |
 | 🈶 Non-Latin script support | Chinese, Japanese, Korean, Cyrillic, Arabic & more — no more space-joined gibberish | ✅ |
 | 🧾 Rich context JSON | Every run dumps a `.context.json` with config, results & diagnostics | ✅ |
+| 🎞️ Subtitle track pre-check | Before spawn/correct/from-script, mkvtoolnix scans the media for existing subtitle tracks and warns you (report: `.tracks.json`) | ✅ Auto-installed |
 | 🔄 Self-update | One command pulls the latest release from GitHub | ✅ |
+| ⚡ GitHub 520 auto-mirror | All GitHub downloads (updates, Hunspell dictionaries, tool binaries) automatically try multiple 520-style mirrors, then fall back to direct | ✅ Auto |
+| 🎙️ Media dubbing (Qwen3-TTS) | `dub` re-voices translated subtitles into WAV audio — voice cloning from speaker profiles, time-aligned, mixed in | ✅ Phase 1 MVP |
+| 📊 Quality reports | Every path writes a `<output>.quality.json` — coverage, alignment drift, CPS, speaker stats & warnings | ✅ Every command |
 
 ---
 
@@ -62,6 +67,27 @@
 - Each step is a `PipelineOperator` running on a shared `SubtitleWorkflowContext` (immutable `WorkflowConfig` + mutable `WorkflowState`)
 - Pipelines are **assembled dynamically per command** and executed by `PipelineExecutor`
 - Fully async & cancellation-aware; **non-fatal errors just log a warning and keep going** — no half-baked bailouts 💪
+
+---
+
+## 🌍 Localization (JSON, on by default in English)
+
+- All user-facing console/log messages go through `ConsoleServices.T()`; the **key is the English default text**
+- Translations live in `Localization/{culture}.json` next to the executable — drop a file in, no recompile needed
+- Built-in `zh-CN.json` ships with every release (Simplified Chinese 🇨🇳)
+
+```bash
+# run in Chinese
+Centurion.Cli.exe --lang zh-CN spawn video.mp4 -o out.ass
+# omit --lang → English (default)
+
+# GitHub downloads (update / dictionaries / tools) auto-try 520 mirrors then direct
+Centurion.Cli.exe --github-proxy https://my-mirror.example/ update      # use a custom mirror
+Centurion.Cli.exe --no-github-proxy update                              # disable mirrors entirely
+```
+
+- Missing key / missing language file → falls back to English gracefully ✅
+- Powered by the official `Microsoft.Extensions.Localization` NuGet package + a custom JSON resource provider
 
 ---
 
@@ -108,6 +134,7 @@ Run it directly:
 | `from-script` | 📜 Script timing: media + script → ASS | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
 | `convert` | 🔄 Subtitle format conversion | `convert <INPUT_FILE>` |
 | `translate` | 🌐 Translate existing subtitles (LLM, glossary, target-script) | `translate <SUBTITLE_FILE> -t <LANG>` |
+| `dub` | 🎙️ Media dubbing: bilingual subtitles → translated WAV audio (Qwen3-TTS) | `dub <SUBTITLE_FILE> -t <LANG>` |
 | `update` | 🔄 Self-update from GitHub releases | `update [options]` |
 
 ---
@@ -136,7 +163,7 @@ Centurion spawn <INPUT_FILE> [options]
 - `--audio-noise-reduction` — conditional noise reduction
 - `--audio-snr-threshold <DB>` — SNR threshold for noise reduction, default `15`
 - `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
-- `-s, --splitter <STRATEGY>` — `rule` (default) / `llm`
+- `-s, --splitter <STRATEGY>` — `rule` / `rule-aggressive` (default, fast-paced dialogue) / `rule-passive` (monologue, uniform speech) / `llm`
 - `--splitter-*` — sentence-splitting knobs (length, granularity, spread…)
 - `-a, --align` — forced alignment, **on by default** 📏
 - `--am, --alignment-model <MODEL>` — aligner model, default `qwen3-forced-aligner-0.6b-f16`
@@ -245,7 +272,97 @@ Centurion convert subtitles.vtt --output subtitles.ass
 
 ---
 
-## 5️⃣ `update` — Self-Update 🔄
+## 5️⃣ `dub` — Media Dubbing with Qwen3-TTS 🎙️
+
+Take a bilingual (or already-translated) subtitle file and turn it into **dubbed audio** — the original soundtrack's voice acting, re-spoken in your target language. Fully local, no cloud, no Python. 🐍❌
+
+```bash
+Centurion dub <SUBTITLE_FILE> -t <LANG> [options]
+```
+
+### The pipeline 🧠
+
+```
+bilingual subs ──► BilingualSubtitleParser (match source↔translation)
+              ──► SpeakerProfiling (SNR-scored selection of each speaker's cleanest sentence)
+              ──► TTS Synthesis (llama-tts / Qwen3-TTS 1.7B, parallel by speaker, long lines chunked)
+              ──► TimeAlignment (ffprobe actual length → atempo; overlap detection & compression)
+              ──► AudioMix (timeline placement + optional background ducking + loudnorm)
+              ──► Quality Report 📊 (translation coverage, alignment deviation, tempo stats)
+```
+
+### Options
+
+- `<SUBTITLE_FILE>` — input subtitle file; either **bilingual** (two tracks: source + translation) or a single already-translated track 📄
+- `-t, --target-language <LANG>` — TTS voice language: `en`, `zh`, `ja`, `ko`, `de`, `fr`, `es`, `it`, `pt`, `ru` (ISO 639-1)
+- `-o, --output <OUTPUT_FILE>` — output WAV path (defaults to `<input>.dub.wav`)
+- `--speaker-reference <DIR>` — directory of reference clips (`SPEAKER.wav` per speaker) for **voice cloning**; omit to auto-profile from the media 🎤
+- `--background <FILE>` — background / accompaniment audio; enables **sidechain ducking** (the TTS voice ducks the music) 🎼
+- `--no-ducking` — disable ducking even when `--background` is given
+- `--loudness-target <LUFS>` — output loudness target, default `-16` (loudnorm) 🔊
+- `--tts-parallelism <N>` — TTS synthesis parallelism, default `2` (speaker-bucketed, global throttle)
+- `--max-chunk-seconds <S>` — long-sentence chunking threshold, default `15` (lines exceeding it are split proportionally and re-joined on the timeline)
+- `--tts-engine <ENGINE>` — TTS engine, `llama` (default)
+- `--tts-model <MODEL>` — TTS model, `1.7b-base-q4` (default; ~1.4 GB, auto-downloaded)
+- `--strict-timing` — clamp out-of-range tempo to 0.5×–2.0× (default on; off keeps natural length)
+
+### How it works 🧠
+
+- **Bilingual matching**: the parser pairs source and translation lines by a center-time window (1500 ms); without a translation track, the whole file is treated as already-translated
+- **SNR-scored voice references**: with no manual clips, each speaker's candidate sentences (2–8 s) are scored by **ffmpeg astats** — speech RMS vs. media noise floor gives an SNR estimate; the cleanest, best-timed line is cropped as the TTS voice reference 🎚️
+- **Parallel synthesis**: sentences are bucketed by speaker (same speaker stays ordered), buckets synthesize in parallel under a global throttle — no more waiting for one slow line
+- **Long-line chunking**: lines whose target window exceeds the threshold are split proportionally by character and re-joined seamlessly on the timeline
+- **Time alignment**: every synthesized segment is measured (ffprobe) and sped up/slowed down (atempo, 0.5×–2.0×) to fit its subtitle window; out-of-range segments are clamped to the boundary and warned
+- **Overlap handling**: overlapping subtitle windows are detected and the later segment is compressed forward (`MixOffsetMs`) instead of stacking noisily
+- **Ducking & loudness**: with `--background`, the accompaniment is sidechain-compressed by the TTS voice (`asplit`-based graph for ffmpeg 7 compat), then everything is loudnorm'd to your target LUFS
+- **Auto-everything**: llama-tts + the GGUF models are downloaded on first use (GitHub mirrors → direct, hf-mirror fallback 🌏)
+
+### Examples 🧪
+
+```bash
+# Dub an anime with bilingual subs (eng voice track, chi translation) into Chinese
+Centurion dub episode.ass -t zh
+
+# Dub with per-character voice references
+Centurion dub movie.srt -t en --speaker-reference voices/
+
+# Dub over the original soundtrack with ducking, louder output
+Centurion dub subs.ass -t ja --background ost.wav --loudness-target -14
+
+# Strict timing + aggressive parallelism for fast dialogue
+Centurion dub subs.ass -t en --strict-timing --tts-parallelism 4 --max-chunk-seconds 10
+```
+
+> 🧾 Outputs: `<output>.wav` (the dub) + `<output>.quality.json` (per-segment report) + `<output>.context.json` (full run context).
+
+---
+
+## 📊 Quality Reports (Every Command)
+
+Every pipeline path — `spawn`, `from-script`, `correct`, `convert`, `translate`, `dub` — finishes by writing a **`<output>.quality.json`** next to its output. No flags, no opt-in. 📈
+
+```json
+{
+  "meta": { "command": "spawn", "input": "demo.mp4", "output": "demo.ass", "generatedAt": "…" },
+  "counts": { "sentences": 42, "words": 318, "characters": 2205, "speakers": 2, "durationSeconds": 124.6 },
+  "coverage": { "charactersPerSecond": 17.7, "coveredRatio": 0.93 },
+  "alignment": { "meanDriftMs": 180, "maxDriftMs": 940 },
+  "warnings": [ "…" ],
+  "errors": []
+}
+```
+
+- **Counts**: sentences / words / characters / distinct speakers / total duration
+- **Coverage**: characters-per-second vs. your reading-speed target, transcription coverage ratio
+- **Alignment**: mean & max drift against the reference timeline (drift > threshold shows up as a warning)
+- **Dub** (dub runs only): segment totals & skips, **translation coverage**, mean/max **alignment deviation (ms)**, applied tempo stats, and a clone-consistency heuristic
+- **Warnings & errors**: every non-fatal issue the pipeline shrugged off, visible at a glance
+
+It's your canary in the coal mine — script too dense? CPS way up. Alignment slipping? Drift way up. No more guessing why a subtitle looks off. 🐤
+
+---
+
+## 6️⃣ `update` — Self-Update 🔄
 
 Never touch GitHub by hand again. `update` checks `Remembering-in-Moskowien/Centurion` releases, downloads the matching build, and swaps itself out.
 
@@ -276,7 +393,7 @@ Centurion update --apply
 
 ---
 
-## 6️⃣ `translate` — Translation, Without the Timeline Drama 🌐
+## 7️⃣ `translate` — Translation, Without the Timeline Drama 🌐
 
 Got a subtitle file in a language you don't want? `translate` rewrites the **text only** — the timeline, the word details, everything spatial stays untouched. It's text alignment, not a remix. 🎯
 
@@ -464,6 +581,9 @@ Centurion spawn long_lecture.wav --device cuda
 
 # 🔄 Keep yourself fresh
 Centurion update --check
+
+# 🎙️ Dub a translated subtitle track into speech
+Centurion dub subtitles.ass -t zh --speaker-reference voices/
 ```
 
 ---

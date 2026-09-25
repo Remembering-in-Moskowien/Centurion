@@ -100,7 +100,7 @@ public sealed class AudioPreprocessOperator(
         catch (Exception ex)
         {
             TryDelete(outputPath);
-            LogError($"Audio preprocessing failed: {ex.Message}");
+            LogWarning($"Audio preprocessing failed: {ex.Message}");
             throw new AudioConversionException($"Audio preprocessing failed for '{inputPath}'", ex);
         }
     }

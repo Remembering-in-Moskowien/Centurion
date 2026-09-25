@@ -1,4 +1,5 @@
 using Centurion.Models.Workflow;
+using Centurion.Abstractions.Utils;
 
 using Centurion.Abstractions;
 using Centurion.Models.Metadata;
@@ -128,7 +129,9 @@ public class ToolManager : IDisposable
 
     private async Task DownloadAndExtractAsync(CancellationToken cancellationToken)
     {
-        var tempFile = Path.GetTempFileName();
+        // 下载临时文件统一放入程序根目录下的临时目录，随句柄自动清理
+        await using var tempDir = await _serviceProvider.GetRequiredService<ITempDirectoryManager>().CreateTempDirectoryAsync("tool_");
+        var tempFile = Path.Combine(tempDir.Path, "download_archive");
         try
         {
             // 1. 下载
@@ -209,7 +212,7 @@ public class ToolManager : IDisposable
         var foundFiles = Directory.GetFiles(ToolDirectory, exeName, SearchOption.AllDirectories);
         if (foundFiles.Length == 0)
         {
-            _logger.LogError("Executable '{ExeName}' not found anywhere in {ToolDirectory}. Tool may be broken.", exeName, ToolDirectory);
+            _logger.LogWarning("Executable '{ExeName}' not found anywhere in {ToolDirectory}. Tool may be broken.", exeName, ToolDirectory);
             return;
         }
 

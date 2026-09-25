@@ -7,19 +7,58 @@ using Centurion.Core.DependencyInjection;
 using Centurion.Core.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-// ----- Console setup -----
-ConsoleServices.Output = new SpectreConsoleOutput();
+// ----- Console setup（Output 在 serviceProvider 构建后注入 ILogger 设置）-----
 ConsoleServices.Progress = new DotnetStyleProgressReporter();
 ConsoleServices.Confirm = new SpectreConfirmPrompt();
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "alpha";
-AnsiConsole.Write(new FigletText($"Centurion {version}") { Color = Color.Yellow });
+AnsiConsole.Write(new FigletText("Centurion") { Color = Color.White });
+
+// --verbose / -v：显示完整执行信息（步骤耗时、各阶段日志）；默认仅输出 warn/fail，控制台保持干净
+var verbose = args.Any(a => a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
+    || a.Equals("-v", StringComparison.OrdinalIgnoreCase));
+// --lang <CODE>：运行时 UI 语言（如 zh-CN），决定 Localization/{code}.json 中的消息翻译
+var lang = args.Where((a, i) => i > 0 && args[i - 1].Equals("--lang", StringComparison.OrdinalIgnoreCase))
+    .Select(a => a.TrimStart('-'))
+    .FirstOrDefault();
+// --github-proxy <URL> / --no-github-proxy：GitHub 下载加速（默认启用 520 类镜像，失败自动回退直连）
+var githubProxyArg = args.Where((a, i) => i > 0 && args[i - 1].Equals("--github-proxy", StringComparison.OrdinalIgnoreCase))
+    .Select(a => a.TrimStart('-'))
+    .FirstOrDefault();
+if (args.Any(a => a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase)))
+    Centurion.Core.Utils.GitHubDownloadProxy.Disabled = true;
+else if (!string.IsNullOrWhiteSpace(githubProxyArg))
+    Centurion.Core.Utils.GitHubDownloadProxy.ProxyPrefix = githubProxyArg.EndsWith('/') ? githubProxyArg : githubProxyArg + "/";
+
+var filteredArgs = args
+    .Where((a, i) => !a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
+        && !a.Equals("-v", StringComparison.OrdinalIgnoreCase)
+        && !(i > 0 && args[i - 1].Equals("--lang", StringComparison.OrdinalIgnoreCase))
+        && !a.Equals("--lang", StringComparison.OrdinalIgnoreCase)
+        && !(i > 0 && args[i - 1].Equals("--github-proxy", StringComparison.OrdinalIgnoreCase))
+        && !a.Equals("--github-proxy", StringComparison.OrdinalIgnoreCase)
+        && !a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase))
+    .ToArray();
+
+if (!string.IsNullOrWhiteSpace(lang))
+{
+    try
+    {
+        var culture = new CultureInfo(lang);
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+    catch (CultureNotFoundException)
+    {
+        ConsoleServices.Output.WriteWarning($"Unknown language code '{lang}'; falling back to English.");
+    }
+}
 
 // Cancellation token
 var cts = new CancellationTokenSource();
@@ -27,16 +66,26 @@ Console.CancelKeyPress += (_, e) =>
 {
     e.Cancel = true;
     cts.Cancel();
-    Console.WriteLine("Cancellation requested...");
+    ConsoleServices.Output.WriteWarning(ConsoleServices.T("Cancellation requested..."));
 };
 
 // ----- DI Container -----
 var services = new ServiceCollection();
-services.AddLogging(logging => logging.AddSimpleConsole(options =>
+services.AddLogging(logging =>
 {
-    options.SingleLine = true;
-    options.TimestampFormat = "HH:mm:ss ";
-}));
+    logging.SetMinimumLevel(verbose ? LogLevel.Information : LogLevel.Warning);
+    // 文件日志记录全部级别（含 info），控制台仍按全局级别过滤
+    logging.AddFilter<Centurion.Core.Logging.FileLoggerProvider>(level => level >= LogLevel.Trace);
+    // 控制台侧：SpectreConsoleOutput 的信息行已由渲染层直接输出，屏蔽其 info 避免重复显示
+    logging.AddFilter<ConsoleLoggerProvider>("Centurion.Cli.Console.SpectreConsoleOutput", level => level >= LogLevel.Warning);
+    // 控制台与文件日志使用同一格式（HH:mm:ss level: message）；颜色仅按级别渲染
+    logging.AddConsole(options =>
+    {
+        options.FormatterName = "plain";
+    });
+    logging.AddConsoleFormatter<Centurion.Cli.Console.PlainConsoleFormatter, ConsoleFormatterOptions>();
+    logging.AddProvider(new Centurion.Core.Logging.FileLoggerProvider());
+});
 
 // 核心服务注册集中于此（基础设施、策略工厂、管道算子等）
 services.AddCenturionCore();
@@ -44,15 +93,26 @@ services.AddCenturionCore();
 // ----- Build service provider -----
 var serviceProvider = services.BuildServiceProvider();
 
+// 控制台输出统一接入日志系统：每条控制台内容同时写入 ILogger（进而写入 logs 目录）
+var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+ConsoleServices.Output = new SpectreConsoleOutput(loggerFactory.CreateLogger<SpectreConsoleOutput>());
+
+// JSON 本地化：消息按 --lang 选择的语言输出（Localization/{lang}.json，缺省英文）
+ConsoleServices.Localizer = new Centurion.Core.Localization.JsonStringLocalizerFactory().Create("Centurion");
+
+// 顶层 catch 使用的根日志器（Fatal/取消提示与日志文件逐字一致）
+var rootLogger = loggerFactory.CreateLogger("Centurion.Cli.Program");
+rootLogger.LogInformation("Centurion CLI started.");
+
 // 设备检测：打印 GPU/内存摘要（GPU 可用时工具将自动下载对应变体，如 whisper.cpp CUDA 版）
 try
 {
     var detected = serviceProvider.GetRequiredService<IDeviceDetector>().Detect();
-    AnsiConsole.MarkupLine($"[grey]Device: {detected.DeviceSummary}[/]");
+    ConsoleServices.Output.WriteInfo(ConsoleServices.T("Device: {0}", detected.DeviceSummary));
 }
 catch (Exception ex)
 {
-    AnsiConsole.MarkupLine($"[grey]Device detection failed: {ex.Message}[/]");
+    ConsoleServices.Output.WriteInfo(ConsoleServices.T("Device detection failed: {0}", ex.Message));
 }
 
 // ----- Configure Spectre.Cli -----
@@ -66,6 +126,7 @@ app.Configure(config =>
     config.AddCommand<FromScriptCommand>("from-script");
     config.AddCommand<CorrectCommand>("correct");
     config.AddCommand<TranslateCommand>("translate");
+    config.AddCommand<DubCommand>("dub");
     config.AddCommand<ConvertCommand>("convert");
     config.AddCommand<UpdateCommand>("update");
 });
@@ -73,18 +134,18 @@ app.Configure(config =>
 // ----- Run -----
 try
 {
-    return await app.RunAsync(args);
+    return await app.RunAsync(filteredArgs);
 }
 catch (OperationCanceledException)
 {
-    AnsiConsole.MarkupLine("[yellow]Operation cancelled by user.[/]");
+    // 经日志通道输出，控制台（黄）与日志文件（warn）逐字一致
+    rootLogger.LogWarning(ConsoleServices.T("Operation cancelled by user."));
     return 130;
 }
 catch (Exception ex)
 {
-    // 顶层兜底：任何未捕获异常都以明确的错误与退出码结束，避免裸栈崩溃
-    AnsiConsole.MarkupLine($"[red]Fatal: {MarkupEscape(ex.Message)}[/]");
+    // 顶层兜底：任何未捕获异常都以明确的错误与退出码结束，避免裸栈崩溃；
+    // 经日志通道输出，控制台（红）与日志文件（crit）逐字一致
+    rootLogger.LogCritical("{Fatal}", ConsoleServices.T("Fatal: {0}", ex.Message));
     return 1;
 }
-
-static string MarkupEscape(string text) => text.Replace("[", "[[").Replace("]", "]]");

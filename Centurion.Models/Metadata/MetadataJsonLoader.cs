@@ -178,7 +178,8 @@ public static class MetadataJsonLoader
             BuildModelDict(dtoModels, "qwen3Asr"),
             BuildModelDict(dtoModels, "qwen3ForcedAligner"),
             BuildModelDict(dtoModels, "diarization"),
-            BuildModelDict(dtoModels, "bertOnnx"));
+            BuildModelDict(dtoModels, "bertOnnx"),
+            BuildModelDict(dtoModels, "qwen3Tts"));
     }
 
     private static Dictionary<string, ModelMeta> BuildModelDict(
@@ -269,7 +270,8 @@ public static class MetadataJsonLoader
         var aligner = MergeModelDict(local.Qwen3ForcedAlignerModels, ModelRegistry.Default.Qwen3ForcedAlignerModels, ref changed);
         var diar = MergeModelDict(local.DiarizationModels, ModelRegistry.Default.DiarizationModels, ref changed);
         var bert = MergeModelDict(local.BertOnnxModels, ModelRegistry.Default.BertOnnxModels, ref changed);
-        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert);
+        var tts = MergeModelDict(local.Qwen3TtsModels, ModelRegistry.Default.Qwen3TtsModels, ref changed);
+        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert, tts);
     }
 
     private static Dictionary<string, ModelMeta> MergeModelDict(

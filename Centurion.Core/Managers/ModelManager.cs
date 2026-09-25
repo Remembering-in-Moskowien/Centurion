@@ -102,7 +102,7 @@ public class ModelManager : IDisposable
         var allFilesExist = _targetMeta.Files?.All(f => File.Exists(Path.Combine(dir, f))) ?? false;
         if (!allFilesExist)
         {
-            ConsoleServices.Output.WriteLine($"Model directory '{_modelName}' is incomplete. Downloading...");
+            ConsoleServices.Output.WriteInfo($"Model directory '{_modelName}' is incomplete. Downloading...");
             await DownloadDirectoryModelAsync(cancellationToken);
         }
     }
@@ -134,14 +134,14 @@ public class ModelManager : IDisposable
         });
 
         await Task.WhenAll(tasks);
-        ConsoleServices.Output.WriteLine($"Model '{_modelName}' downloaded successfully.");
+        ConsoleServices.Output.WriteInfo($"Model '{_modelName}' downloaded successfully.");
     }
 
     private async Task DownloadModelAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
         Directory.CreateDirectory(ModelFolder);
-        ConsoleServices.Output.WriteLine($"Model '{_modelName}' not found.");
+        ConsoleServices.Output.WriteInfo($"Model '{_modelName}' not found.");
         cancellationToken.ThrowIfCancellationRequested();
 
         using var aria = _serviceProvider.GetRequiredService<Operators.Downloader>();

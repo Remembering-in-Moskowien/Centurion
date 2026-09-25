@@ -8,6 +8,7 @@ using Centurion.Models.Metadata;
 using Centurion.Core.Operators;
 using Centurion.Core.Pipeline;
 using Centurion.Core.Pipeline.Operators;
+using Centurion.Core.SpellCheck;
 using Centurion.Core.Strategy.Diarization;
 using Centurion.Core.Strategy.SentenceSplit;
 using Centurion.Core.Strategy.Transcribe;
@@ -51,6 +52,18 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProcessManager>();
         services.AddSingleton<EncoderfileManager>();
         services.AddSingleton<FFmpegManager>();
+        services.AddSingleton<MkvToolNixChecker>();
+        services.AddSingleton<MkvtoolnixManager>();
+        services.AddTransient<QualityReportOperator>();
+        services.AddSingleton<LlamaTtsManager>();
+        services.AddSingleton<Centurion.Abstractions.Tts.ITtsEngine, Centurion.Core.Tts.LlamaTtsEngine>();
+        services.AddTransient<BilingualSubtitleParserOperator>();
+        services.AddTransient<SpeakerProfilingOperator>();
+        services.AddTransient<TtsSynthesisOperator>();
+        services.AddTransient<TimeAlignmentOperator>();
+        services.AddTransient<AudioMixOperator>();
+        services.AddSingleton<MediaSubtitleExtractor>();
+        services.AddSingleton<HunspellSpellChecker>();
 
         // ---------- 3. 策略工厂 ----------
         services.AddSingleton<ITranscriptionStrategyFactory, TranscriptionStrategyFactory>();
@@ -70,9 +83,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<PyannoteTitaNetDiarizationStrategy>();
 
         // ---------- 5. 分句策略 ----------
-        services.AddTransient<RuleBasedSplitStrategy>();
+        services.AddTransient<AggressiveRuleSplitStrategy>();
+        services.AddTransient<PassiveRuleSplitStrategy>();
 
         // ---------- 6. 管道算子 ----------
+        services.AddTransient<SubtitleTrackCheckerOperator>();
+        services.AddTransient<SpellCheckOperator>();
         services.AddTransient<FFmpegConvertOperator>();
         services.AddTransient<AudioPreprocessOperator>();
         services.AddTransient<VocalSeparationOperator>();

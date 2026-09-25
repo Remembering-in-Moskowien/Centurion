@@ -155,7 +155,10 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
     /// <summary>
     /// 解析 CrispASR 输出 JSON（实体模型反序列化），提取词级时间戳列表。
-    /// 同时兼容 whisper 与 qwen3 后端：两者均输出 words（text/offsets），仅 tokens 时间戳可能缺失。
+    /// 同时兼容 whisper 与 qwen3 后端。qwen3 后端的词级时间戳来自 forced-aligner，
+    /// 长音频上可能出现"对齐坍缩"（大量零时长词、段内词覆盖不全），
+    /// 此时回退到段级时间戳插值：按段文本的词长度比例在段 [From,To] 内分配时间。
+    /// 段级时间戳（CrispASR 按音频分块输出）经实测可靠。
     /// </summary>
     /// <param name="json">CrispASR -ojf 格式的 JSON 字符串。</param>
     /// <returns>解析得到的词级时间戳列表。</returns>
@@ -169,22 +172,15 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         var words = new List<Word>();
         foreach (var segment in root.Transcription)
         {
-            if (segment.Words is null)
-                continue;
-
-            foreach (var wordElement in segment.Words)
+            // 词级时间戳健康则直接采用；不健康（零时长占比高/覆盖不全）则段级插值
+            var segmentWords = ParseSegmentWords(segment);
+            if (segmentWords.Count > 0 && IsWordTimingHealthy(segmentWords, segment))
             {
-                var text = wordElement.Text;
-                if (string.IsNullOrWhiteSpace(text))
-                    continue;
-
-                words.Add(new Word
-                {
-                    Text = text,
-                    Start = wordElement.Offsets.From,
-                    End = wordElement.Offsets.To,
-                    Speaker = "SPEAKER_00"
-                });
+                words.AddRange(segmentWords);
+            }
+            else
+            {
+                words.AddRange(InterpolateSegmentWords(segment));
             }
         }
 
@@ -192,5 +188,103 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
             _logger.LogWarning("No words were parsed from the JSON output.");
 
         return words;
+    }
+
+    /// <summary>
+    /// 从段内 words 提取词（跳过空白文本）。
+    /// </summary>
+    /// <param name="segment">CrispASR 输出中的一个转录段。</param>
+    /// <returns>该段的词列表（时间戳未校验）。</returns>
+    private static List<Word> ParseSegmentWords(CrispAsrTranscriptionItem segment)
+    {
+        var result = new List<Word>();
+        if (segment.Words is null)
+            return result;
+
+        foreach (var wordElement in segment.Words)
+        {
+            var text = wordElement.Text;
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            result.Add(new Word
+            {
+                Text = text.Trim(),
+                Start = wordElement.Offsets.From,
+                End = wordElement.Offsets.To,
+                Speaker = "SPEAKER_00"
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 判定段内词级时间戳是否健康：零时长（或负时长）词占比不超过阈值，
+    /// 且词时间范围基本覆盖段时间范围（末尾覆盖不足意味着对齐坍缩）。
+    /// </summary>
+    /// <param name="segmentWords">该段的词列表。</param>
+    /// <param name="segment">对应的转录段（提供段级时间戳）。</param>
+    /// <returns>词级时间戳可信时为 true。</returns>
+    private static bool IsWordTimingHealthy(IReadOnlyList<Word> segmentWords, CrispAsrTranscriptionItem segment)
+    {
+        if (segmentWords.Count == 0)
+            return false;
+
+        var zeroDuration = 0;
+        foreach (var w in segmentWords)
+        {
+            if (w.End <= w.Start)
+                zeroDuration++;
+        }
+
+        var segmentDuration = segment.Offsets.To - segment.Offsets.From;
+        var covered = segmentWords[^1].End - segmentWords[0].Start;
+        var coverageRatio = segmentDuration > 0 ? covered / (double)segmentDuration : 0.0;
+
+        // 零时长词占比 ≤ 20% 且 词覆盖段时长 ≥ 80% 视为健康
+        return zeroDuration / (double)segmentWords.Count <= 0.2 && coverageRatio >= 0.8;
+    }
+
+    /// <summary>
+    /// 段级插值：把段文本按空白切分为词（保留标点），
+    /// 按各词文本长度占段文本总长度的比例，在段 [From,To] 内线性分配时间。
+    /// 保证时间轴单调、无零时长、覆盖整段。
+    /// </summary>
+    /// <param name="segment">CrispASR 输出中的一个转录段。</param>
+    /// <returns>插值得到的词列表。</returns>
+    private static List<Word> InterpolateSegmentWords(CrispAsrTranscriptionItem segment)
+    {
+        var result = new List<Word>();
+        var text = segment.Text;
+        if (string.IsNullOrWhiteSpace(text))
+            return result;
+
+        var tokens = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 0)
+            return result;
+
+        var from = segment.Offsets.From;
+        var to = segment.Offsets.To;
+        var totalLength = tokens.Sum(t => t.Length);
+        if (totalLength <= 0)
+            return result;
+
+        var cursor = (double)from;
+        foreach (var token in tokens)
+        {
+            var duration = (double)(to - from) * token.Length / totalLength;
+            var end = cursor + duration;
+            result.Add(new Word
+            {
+                Text = token,
+                Start = (long)cursor,
+                End = (long)end,
+                Speaker = "SPEAKER_00"
+            });
+            cursor = end;
+        }
+
+        return result;
     }
 }

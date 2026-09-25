@@ -47,7 +47,7 @@ public class SentenceSplitOperator(
         {
             const string message = "No current sentences are available for splitting.";
             context.State.Errors.Add(message);
-            LogError(message);
+            LogWarning(message);
             context.State.SplitSentences = [];
             context.State.CurrentSentences = context.State.SplitSentences;
             throw new InvalidOperationException(message);

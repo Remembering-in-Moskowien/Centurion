@@ -9,6 +9,7 @@ using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
+using Centurion.Abstractions.Utils;
 
 namespace Centurion.Cli.Commands;
 
@@ -20,6 +21,7 @@ namespace Centurion.Cli.Commands;
 public sealed class TranslateCommand(
     ConvertParseOperator convertParseOp,
     ITranslationStrategyFactory strategyFactory,
+    QualityReportOperator qualityReportOp,
     ILogger<TranslateCommand> logger) : AsyncCommand<TranslateSettings>
 {
     /// <summary>
@@ -44,6 +46,7 @@ public sealed class TranslateCommand(
 
             var config = new WorkflowConfig
             {
+                CommandName = "translate",
                 InputFilePath = subtitlePath,
                 SubtitleFilePath = subtitlePath,
                 OutputFilePath = outputPath,
@@ -92,16 +95,18 @@ public sealed class TranslateCommand(
             // 5) 输出富上下文 JSON（配置 + 翻译结果 + 诊断）
             var contextPath = await WorkflowContextDumper.WriteAsync(workflowContext, "translate", outputPath, ct);
 
+            // 6) 质量报告（句子数、翻译覆盖率、时间轴统计）
+            await qualityReportOp.ExecuteAsync(workflowContext, ct);
+
             var translatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText));
-            ConsoleServices.Output.WriteMarkupLine($"[green]Translation completed: {outputPath}[/]");
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Translated {translatedCount}/{sentences.Count} sentences -> {settings.TargetLanguage}[/]");
-            ConsoleServices.Output.WriteMarkupLine($"[grey]Context JSON: {contextPath}[/]");
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Translation completed: {0}", outputPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Translated {0}/{1} sentences -> {2}", translatedCount, sentences.Count, settings.TargetLanguage));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Context JSON: {0}", contextPath));
             return 0;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Translation pipeline execution failed.");
-            ConsoleServices.Output.WriteError(ex.Message);
+            FailLogGate.Log(logger, ex, "Translation pipeline execution failed.");
             return 1;
         }
     }

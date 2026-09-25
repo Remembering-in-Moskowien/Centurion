@@ -66,7 +66,7 @@ public sealed class ChineseSplitTests
             new() { Text = "真好！", Start = 2000, End = 2500, Speaker = string.Empty }
         };
 
-        var strategy = new RuleBasedSplitStrategy();
+        var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options(maxLength: 8));
 
         Assert.Equal(2, sentences.Count);
@@ -89,7 +89,7 @@ public sealed class ChineseSplitTests
             new() { Text = "会いましょう！", Start = 2000, End = 2500, Speaker = string.Empty }
         };
 
-        var strategy = new RuleBasedSplitStrategy();
+        var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options(maxLength: 12, language: "ja"));
 
         Assert.Equal(2, sentences.Count);
@@ -112,7 +112,7 @@ public sealed class ChineseSplitTests
             })
             .ToList();
 
-        var strategy = new RuleBasedSplitStrategy();
+        var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options(maxLength: 15));
 
         Assert.True(sentences.Count > 1);
