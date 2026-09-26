@@ -29,23 +29,23 @@ public sealed class InitCommand(
             var interactive = !settings.Yes && !System.Console.IsInputRedirected;
 
             // 1) 收集选项（缺省时交互提问，非交互用默认值）
-            var media = settings.Media?.FullName ?? AskText(interactive, "媒体文件路径（视频/音频）", "samples/test.mp4");
-            var workflow = (settings.Workflow ?? AskChoice(interactive, "选择工作流", Workflows, "asr")).ToLowerInvariant();
-            var format = (settings.Format ?? AskChoice(interactive, "输出字幕格式", Formats, "ass")).ToLowerInvariant();
-            var profile = (settings.Profile ?? AskChoice(interactive, "Provider 选型", Profiles, "offline")).ToLowerInvariant();
+            var media = settings.Media?.FullName ?? AskText(interactive, ConsoleServices.T("Media file path (video/audio)"), "samples/test.mp4");
+            var workflow = (settings.Workflow ?? AskChoice(interactive, ConsoleServices.T("Select workflow"), Workflows, "asr")).ToLowerInvariant();
+            var format = (settings.Format ?? AskChoice(interactive, ConsoleServices.T("Output subtitle format"), Formats, "ass")).ToLowerInvariant();
+            var profile = (settings.Profile ?? AskChoice(interactive, ConsoleServices.T("Provider profile"), Profiles, "offline")).ToLowerInvariant();
             var target = settings.Target ?? (workflow is "translate" or "dub"
-                ? AskText(interactive, "翻译目标语言（如 zh / en）", "zh")
+                ? AskText(interactive, ConsoleServices.T("Translation target language (e.g. zh / en)"), "zh")
                 : null);
 
             if (!Workflows.Contains(workflow))
-                throw new ArgumentException($"未知工作流 '{workflow}'。支持: {string.Join(", ", Workflows)}");
+                throw new ArgumentException(ConsoleServices.T("Unknown workflow '{0}'. Supported: {1}", workflow, string.Join(", ", Workflows)));
             if (!Formats.Contains(format))
-                throw new ArgumentException($"未知格式 '{format}'。支持: {string.Join(", ", Formats)}");
+                throw new ArgumentException(ConsoleServices.T("Unknown format '{0}'. Supported: {1}", format, string.Join(", ", Formats)));
             if (!Profiles.Contains(profile))
-                throw new ArgumentException($"未知 profile '{profile}'。支持: {string.Join(", ", Profiles)}");
+                throw new ArgumentException(ConsoleServices.T("Unknown profile '{0}'. Supported: {1}", profile, string.Join(", ", Profiles)));
             if (!File.Exists(media))
             {
-                ConsoleServices.Output.WriteWarning($"媒体文件不存在（将仍写入配置，可稍后替换路径）: {media}");
+                ConsoleServices.Output.WriteWarning(ConsoleServices.T("Media file does not exist (config written anyway; path can be replaced later): {0}", media));
             }
 
             // 2) 写入 centurion.config.json
@@ -72,21 +72,21 @@ public sealed class InitCommand(
             ProviderProfileResolver.Current = ProviderProfileResolver.FromString(profile);
 
             // 4) 输出引导
-            AnsiConsole.Write(new Rule("[bold green]配置完成[/]").RuleStyle("green"));
-            ConsoleServices.Output.WriteMarkupLine($"已生成 [bold]{configPath}[/]（profile={profile}，格式={format}）");
+            AnsiConsole.Write(new Rule($"[bold green]{ConsoleServices.T("Configuration complete")}[/]").RuleStyle("green"));
+            ConsoleServices.Output.WriteMarkupLine(ConsoleServices.T("Generated [bold]{0}[/] (profile={1}, format={2})", configPath, profile, format));
 
             var lines = recipe.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var table = new Table()
                 .Border(TableBorder.Rounded)
-                .Title($"[bold]推荐命令链 · {workflow}[/]")
+                .Title($"[bold]{ConsoleServices.T("Recommended command chain")} · {workflow}[/]")
                 .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn("#").Centered())
-                .AddColumn(new TableColumn("命令").LeftAligned());
+                .AddColumn(new TableColumn(ConsoleServices.T("Command")).LeftAligned());
             for (var i = 0; i < lines.Length; i++)
                 table.AddRow($"[dim]{i + 1}[/]", $"[cyan]{lines[i]}[/]");
             AnsiConsole.Write(table);
             ConsoleServices.Output.WriteMarkupLine(
-                "[dim]依次运行即可；每步都可加 --help 查看选项。更多示例见 samples/ 目录。[/]");
+                $"[dim]{ConsoleServices.T("Run them in order; add --help to any step for options. More examples in the samples/ directory.")}[/]");
             return ExitCodes.Success;
         }
         catch (Exception ex)

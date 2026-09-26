@@ -23,21 +23,21 @@ public static class CliErrorPrinter
         FailLogGate.Log(logger, ex, context);
         var hint = Suggest(ex);
         if (hint is not null)
-            ConsoleServices.Output.WriteWarning($"建议: {hint}");
+            ConsoleServices.Output.WriteWarning(ConsoleServices.T("Suggestion: {0}", hint));
     }
 
     /// <summary>把常见异常映射为可操作的修复建议；无法识别时给通用指引。</summary>
     public static string? Suggest(Exception ex) => ex switch
     {
         Centurion.Core.Capabilities.Managers.Media.ModelMissingException m =>
-            $"模型 '{m.ModelName}' 未安装。运行: Centurion models install {m.ModelName}",
-        FileNotFoundException => "输入文件不存在。请检查路径（可用 init 向导生成配置）",
-        DirectoryNotFoundException => "输出目录不存在。请先创建目录或修改 -o 路径",
-        JsonException => "文件不是有效的 JSON（或 Schema 不匹配）。运行: Centurion validate <file>",
-        UnauthorizedAccessException => "无写入权限。请检查输出目录权限或改用其它路径",
-        HttpRequestException => "网络请求失败。请检查网络连接，或调整 --github-proxy / 直连",
-        TaskCanceledException => "操作已取消（超时或用户中断）",
-        OperationCanceledException => "操作已取消",
-        _ => "加 --verbose 查看详细日志；若反复出现，请附带 logs 目录内容反馈问题"
+            ConsoleServices.T("Model '{0}' is not installed. Run: Centurion models install {0}", m.ModelName),
+        FileNotFoundException => ConsoleServices.T("Input file not found. Check the path (or use the init wizard)"),
+        DirectoryNotFoundException => ConsoleServices.T("Output directory not found. Create it or change the -o path"),
+        JsonException => ConsoleServices.T("File is not valid JSON (or schema mismatch). Run: Centurion validate <file>"),
+        UnauthorizedAccessException => ConsoleServices.T("No write permission. Check the output directory or use another path"),
+        HttpRequestException => ConsoleServices.T("Network request failed. Check connectivity, or adjust --github-proxy / direct"),
+        TaskCanceledException => ConsoleServices.T("Operation cancelled (timeout or user interrupt)"),
+        OperationCanceledException => ConsoleServices.T("Operation cancelled"),
+        _ => ConsoleServices.T("Add --verbose for detailed logs; if it recurs, attach the logs directory when reporting")
     };
 }

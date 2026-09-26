@@ -75,12 +75,12 @@ public sealed class ModelsListCommand(
 
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .Title("[bold]模型注册表[/]")
+            .Title($"[bold]{ConsoleServices.T("Model Registry")}[/]")
             .Width(CliLayout.TableWidth())
-            .AddColumn(new TableColumn("域").LeftAligned())
-            .AddColumn(new TableColumn("模型").LeftAligned())
-            .AddColumn(new TableColumn("类型").Centered())
-            .AddColumn(new TableColumn("状态").LeftAligned());
+            .AddColumn(new TableColumn(ConsoleServices.T("Domain")).LeftAligned())
+            .AddColumn(new TableColumn(ConsoleServices.T("Model")).LeftAligned())
+            .AddColumn(new TableColumn(ConsoleServices.T("Type")).Centered())
+            .AddColumn(new TableColumn(ConsoleServices.T("State")).LeftAligned());
             // 全宽排版：标题居中与表格视觉统一
 
         foreach (var domain in ModelCatalog.Domains(registry))
@@ -96,8 +96,8 @@ public sealed class ModelsListCommand(
                     _ => "file"
                 };
                 var state = ready
-                    ? "[green]● ready[/]"
-                    : "[red]○ missing[/]";
+                    ? $"[green]● {ConsoleServices.T("ready")}[/]"
+                    : $"[red]○ {ConsoleServices.T("missing")}[/]";
                 table.AddRow($"[dim]{domain.Name}[/]", $"[bold]{name}[/]", kind, state);
             }
         }
@@ -105,8 +105,8 @@ public sealed class ModelsListCommand(
         AnsiConsole.Write(table);
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(
-            $"总计 [green]{readyCount}[/] 就绪 / [red]{missingCount}[/] 缺失" +
-            (missingCount > 0 ? "  — 安装: [cyan]Centurion models install <model>[/]" : ""));
+            ConsoleServices.T("Total [green]{0}[/] ready / [red]{1}[/] missing", readyCount, missingCount) +
+            (missingCount > 0 ? ConsoleServices.T(" — install: [cyan]Centurion models install <model>[/]") : ""));
         await Task.CompletedTask;
         return 0;
     }
