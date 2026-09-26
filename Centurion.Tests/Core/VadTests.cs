@@ -136,4 +136,19 @@ public class VadTests
         Assert.Single(mapped);
         Assert.Equal("x", mapped[0].Text);
     }
+
+    [Fact]
+    public void SileroVad_ModelLoadsAndSilenceYieldsNoSegments()
+    {
+        // 模型未下载（新环境/离线）时静默跳过，不视为失败；下载后校验加载与静音行为。
+        var modelPath = Path.Combine(AppContext.BaseDirectory, "tools", "vad", "models", "silero_vad.onnx");
+        if (!File.Exists(modelPath))
+            return;
+
+        using var detector = new SileroVadDetector(modelPath);
+        var silence = new float[16000]; // 1s 静音
+        var segments = detector.Detect(silence, 16000, Options());
+
+        Assert.Empty(segments);
+    }
 }
