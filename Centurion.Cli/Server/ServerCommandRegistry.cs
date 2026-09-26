@@ -2,7 +2,7 @@ using Centurion.Cli.Commands;
 using Centurion.Cli.Commands.Settings;
 using Spectre.Console.Cli;
 
-namespace Centurion.Server.Commands;
+namespace Centurion.Cli.Server;
 
 /// <summary>
 /// 可执行命令注册表：命令名 →（Settings 类型, Command 类型）。

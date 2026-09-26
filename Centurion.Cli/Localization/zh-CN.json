@@ -111,5 +111,9 @@
   "Network request failed. Check connectivity, or adjust --github-proxy / direct": "网络请求失败。请检查网络连接，或调整 --github-proxy / 直连",
   "Operation cancelled (timeout or user interrupt)": "操作已取消（超时或用户中断）",
   "Operation cancelled": "操作已取消",
-  "Add --verbose for detailed logs; if it recurs, attach the logs directory when reporting": "加 --verbose 查看详细日志；若反复出现，请附带 logs 目录内容反馈问题"
+  "Add --verbose for detailed logs; if it recurs, attach the logs directory when reporting": "加 --verbose 查看详细日志；若反复出现，请附带 logs 目录内容反馈问题",
+  "HTTP service: expose packaged commands via POST /commands/{name} (REST)": "HTTP 服务：以 POST /commands/{name} 暴露打包命令（REST）",
+  "serve": "serve",
+  "listening on": "监听地址",
+  "Endpoints:": "端点："
 }

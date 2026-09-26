@@ -202,6 +202,8 @@ app.Configure(config =>
         .WithDescription(ConsoleServices.T("Media dubbing: speaker profiling → TTS → time alignment → mixing → dubbed wav"));
     config.AddCommand<ConvertCommand>("convert")
         .WithDescription(ConsoleServices.T("Subtitle conversion: parse ASS/SRT/TXT subtitles → Centurion intermediate file"));
+    config.AddCommand<ServeCommand>("serve")
+        .WithDescription(ConsoleServices.T("HTTP service: expose packaged commands via POST /commands/{name} (REST)"));
     config.AddCommand<BuildCommand>("build")
         .WithDescription(ConsoleServices.T("Subtitle build: intermediate file → ASS/SRT/TXT subtitles"));
     // ─── 质量与工具 ───
