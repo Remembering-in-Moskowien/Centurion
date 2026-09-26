@@ -150,6 +150,8 @@ app.Configure(config =>
     config.AddCommand<ValidateCommand>("validate");
     config.AddCommand<MigrateCommand>("migrate");
     config.AddCommand<QualityCommand>("quality");
+    // 管线 DAG 可视化（不执行，只渲染拓扑）
+    config.AddCommand<PipelineGraphCommand>("pipeline-graph");
     // 模型注册表管理 + Provider 选型/探测
     config.AddBranch("models", models =>
     {

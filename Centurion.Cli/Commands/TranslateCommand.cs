@@ -1,9 +1,12 @@
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Abstractions;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Workflow.Pipeline;using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Strategy;
 using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
@@ -20,6 +23,8 @@ namespace Centurion.Cli.Commands;
 public sealed class TranslateCommand(
     ITranslationStrategyFactory strategyFactory,
     QualityReportOperator qualityReportOp,
+    PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<TranslateCommand> logger, ICenturionDocumentStore store) : AsyncCommand<TranslateSettings>
 {
     /// <summary>
@@ -73,7 +78,15 @@ public sealed class TranslateCommand(
             var glossary = GlossaryLoader.Load(settings.Glossary?.FullName, logger);
             var targetScriptLines = LoadScriptLines(settings.TargetScript?.FullName, logger);
 
-            // 3) 创建翻译策略并执行（LLM 分批翻译；台本行数一致时 1:1 对齐采用）
+            // 3) 创建翻译算子并走 DAG 管线（Translation → Quality Report；
+            //    策略内部按批并行调用 LLM，台本行数一致时 1:1 对齐采用）
+            var options = new TranslationOptions
+            {
+                SourceLanguage = settings.SourceLanguage ?? "auto",
+                TargetLanguage = settings.TargetLanguage,
+                Glossary = glossary,
+                TargetScriptLines = targetScriptLines
+            };
             var strategy = strategyFactory.Create(settings.Strategy, new Centurion.Models.Llm.LlmOptions
             {
                 Model = settings.Model,
@@ -82,22 +95,14 @@ public sealed class TranslateCommand(
                 BaseUrl = settings.LlmBaseUrl
             });
             logger.LogInformation("Using translation strategy: {Strategy}", strategy.StrategyName);
+            var translationOp = ActivatorUtilities.CreateInstance<TranslationOperator>(
+                serviceProvider, strategy, options);
+            var dag = BuildTranslateDag(translationOp, qualityReportOp);
 
-            var options = new TranslationOptions
-            {
-                SourceLanguage = settings.SourceLanguage ?? "auto",
-                TargetLanguage = settings.TargetLanguage,
-                Glossary = glossary,
-                TargetScriptLines = targetScriptLines
-            };
-
-            await strategy.TranslateAsync(sentences, options, ct);
-            workflowContext.State.TranslatedSentences = sentences;
-            workflowContext.State.CurrentSentences = sentences;
-            workflowContext.State.IsTranslated = true;
-
-            // 4) 质量报告（句子数、翻译覆盖率、时间轴统计）
-            await qualityReportOp.ExecuteAsync(workflowContext, ct);
+            var stepResults = await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
+            var skipped = stepResults.Where(r => r.Status == PipelineStepStatus.Skipped).Select(r => r.Name).ToList();
+            if (skipped.Count > 0)
+                logger.LogInformation("Skipped {Count} conditional step(s): {Names}", skipped.Count, string.Join(", ", skipped));
 
             // 5) 保存翻译后的中间文件（译文写入各句 TranslatedText，时间轴保持不变）
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "translate", outputPath);
@@ -114,6 +119,20 @@ public sealed class TranslateCommand(
             FailLogGate.Log(logger, ex, "Translation pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 translate DAG（pipeline graph 命令与 translate 命令共享的单一事实源）。
+    /// </summary>
+    internal static PipelineDag BuildTranslateDag(
+        TranslationOperator translationOp,
+        QualityReportOperator qualityReportOp)
+    {
+        var builder = PipelineDag.CreateBuilder();
+        builder
+            .Add("Translation", translationOp, description: "LLM 分批并行翻译（含术语表/台本约束）")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Translation"], description: "翻译质量报告");
+        return builder.Build();
     }
 
     /// <summary>读取目标语言台本：每非空行视为一句目标语言译文。</summary>

@@ -62,14 +62,26 @@ public class LLMTranslationStrategy : ITranslationStrategy
                 options.TargetScriptLines.Count, sentences.Count);
         }
 
-        // 2) 分批 LLM 翻译
+        // 2) 分批 LLM 翻译：批次间互相独立（每批独立 prompt、独立填充译文），
+        //    以 MaxConcurrency 并行执行，翻译结果与串行逐批完全一致
         var batchSize = Math.Max(1, options.BatchSize);
+        var batches = new List<(int Offset, List<Sentence> Batch)>();
         for (var offset = 0; offset < sentences.Count; offset += batchSize)
+            batches.Add((offset, sentences.Skip(offset).Take(batchSize).ToList()));
+
+        using var gate = new SemaphoreSlim(Math.Max(1, options.MaxConcurrency));
+        await Task.WhenAll(batches.Select(async batch =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var batch = sentences.Skip(offset).Take(batchSize).ToList();
-            await TranslateBatchAsync(batch, offset, options, cancellationToken);
-        }
+            await gate.WaitAsync(cancellationToken);
+            try
+            {
+                await TranslateBatchAsync(batch.Batch, batch.Offset, options, cancellationToken);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
 
         return sentences;
     }
