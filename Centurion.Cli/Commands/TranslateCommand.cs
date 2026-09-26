@@ -116,8 +116,6 @@ public sealed class TranslateCommand(
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Translation completed"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Translated {0}/{1} sentences -> {2}", translatedCount, sentences.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
-            return 0;
-
             if (settings.Json)
             {
                 JsonOutput.Write(new

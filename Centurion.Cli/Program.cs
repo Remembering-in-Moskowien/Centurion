@@ -74,8 +74,18 @@ var globalJson = appConfig.Json == true || args.Any(a => a.Equals("--json", Stri
 if (!globalJson)
 {
     AnsiConsole.Write(new FigletText("Centurion").Centered().Color(Color.Aqua));
-    var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "dev";
-    AnsiConsole.Write(new Markup($"[dim]v{version} · {ConsoleServices.T("Subtitle Workflow CLI")}[/]").Centered());
+    var buildNumber = "0";
+    try
+    {
+        var buildFile = Path.Combine(AppContext.BaseDirectory, "build-number.txt");
+        if (File.Exists(buildFile))
+            buildNumber = File.ReadAllText(buildFile).Trim();
+    }
+    catch (Exception)
+    {
+        // 读取失败时按 0 处理，不影响启动
+    }
+    AnsiConsole.Write(new Markup($"[dim]Build #{buildNumber} · {ConsoleServices.T("Subtitle Workflow CLI")}[/]").Centered());
     AnsiConsole.Write(new Rule().RuleStyle("grey"));
 }
 

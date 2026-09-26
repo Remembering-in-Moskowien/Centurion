@@ -134,8 +134,6 @@ public sealed class SpawnCommand(
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", intermediatePath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
-            return 0;
-
             if (settings.Json)
             {
                 JsonOutput.Write(new

@@ -57,4 +57,20 @@
         <PublishReadyToRun Condition="'$(PublishReadyToRun)' == '' and '$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
     </PropertyGroup>
 
+    <!--
+      构建号：以 git HEAD 提交计数作为"第几号构建"，构建后写入输出目录 build-number.txt，
+      启动横幅显示 Build #N。发布包可用 -p:CenturionBuildNumber=N 显式覆盖；无 git 时按 0。
+    -->
+    <Target Name="WriteBuildNumber" AfterTargets="AfterBuild" Condition="Exists('$(OutputPath)Centurion.Cli.dll')">
+        <Exec Command="git rev-list --count HEAD" ConsoleToMsBuild="true" IgnoreExitCode="true"
+              WorkingDirectory="$(MSBuildProjectDirectory)" StandardOutputImportance="Low">
+            <Output TaskParameter="ConsoleOutput" PropertyName="CenturionBuildNumberRaw" />
+        </Exec>
+        <PropertyGroup>
+            <CenturionBuildNumber Condition="'$(CenturionBuildNumber)' == ''">$(CenturionBuildNumberRaw.Trim())</CenturionBuildNumber>
+            <CenturionBuildNumber Condition="'$(CenturionBuildNumber)' == ''">0</CenturionBuildNumber>
+        </PropertyGroup>
+        <WriteLinesToFile File="$(OutputPath)build-number.txt" Lines="$(CenturionBuildNumber)" Overwrite="true" Encoding="ASCII" />
+    </Target>
+
 </Project>

@@ -113,7 +113,6 @@ public sealed class CorrectCommand(
             await store.SaveAsync(outDoc, outputPath, cancellationToken);
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed"));
-
             if (settings.Json)
             {
                 JsonOutput.Write(new
@@ -124,10 +123,9 @@ public sealed class CorrectCommand(
                     output = outputPath,
                     steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
                 });
-            }
+            }            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
+
             return ExitCodes.Success;
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
-            return 0;
         }
         catch (OperationCanceledException)
         {
