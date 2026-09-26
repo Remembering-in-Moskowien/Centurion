@@ -29,11 +29,11 @@ public sealed class FromScriptCommand(
     ILogger<FromScriptCommand> logger, ICenturionDocumentStore store) : AsyncCommand<FromScriptSettings>
 {
     /// <summary>
-    /// 执行脚本对齐流程：转录、说话人分割、脚本映射与对齐，写出带时间轴的 Centurion 中间文件。
+    /// Runs the script-alignment flow: transcribe, diarize, map and align against the script, writing a timestamped IR.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">脚本对齐命令选项。</param>
-    /// <param name="ct">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The from-script command settings.</param>
+    /// <param name="ct">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, FromScriptSettings settings, CancellationToken ct)
     {
         try
@@ -121,9 +121,10 @@ public sealed class FromScriptCommand(
     }
 
     /// <summary>
-    /// 组装 from-script DAG（pipeline graph 命令与 from-script 命令共享的单一事实源）：
-    /// 轨道检查 → FFmpeg 转换 → 音频预处理 → 人声分离 → 转录 → 脚本加载 → 清洗 →
-    /// 时间线映射 → 强制对齐 → 质量报告；说话人分割/对齐按可用性与配置条件接入。
+    /// Assembles the from-script DAG (single source of truth shared with the pipeline graph command):
+    /// track check → FFmpeg convert → audio preprocess → vocal separation → transcription
+    /// → script load → cleaning → timeline mapping → forced alignment → quality report;
+    /// diarization/alignment join conditionally on availability and config.
     /// </summary>
     internal static PipelineDag BuildFromScriptDag(
         SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
@@ -139,12 +140,12 @@ public sealed class FromScriptCommand(
     {
         var builder = PipelineDag.CreateBuilder();
         builder
-            .Add("Track Check", subtitleTrackCheckerOp, description: "检查输入媒体轨道与格式")
-            .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "重采样/转码为统一音频")
-            .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "降噪/重采样/响度归一化")
-            .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs 人声分离")
+            .Add("Track Check", subtitleTrackCheckerOp, description: "Inspect input media tracks and format")
+            .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "Resample/transcode to a unified audio")
+            .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
+            .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs vocal separation")
             .Add("Transcribe", operatorFactory.CreateTranscribeOperator(config),
-                dependsOn: ["Vocal Separation"], maxRetries: 1, description: "ASR 转录（失败自动重试 1 次）");
+                dependsOn: ["Vocal Separation"], maxRetries: 1, description: "ASR transcription (auto-retry once on failure)");
 
         var afterTranscribe = "Transcribe";
         var diarizationOp = operatorFactory.CreateDiarizationOperator(config);
@@ -154,13 +155,13 @@ public sealed class FromScriptCommand(
                 dependsOn: [afterTranscribe],
                 maxRetries: 1,
                 degradeOnFailure: true,
-                description: "说话人分割标注（失败降级跳过，不中断）");
+                description: "Speaker diarization (degrade-skip on failure, non-fatal)");
             afterTranscribe = "Speaker Diarization";
         }
 
-        builder.Add("Script Load", scriptLoaderOp, dependsOn: [afterTranscribe], description: "加载台本/参考脚本")
-            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Script Load"], description: "标点/数字/缩写规范化")
-            .Add("Timeline Mapping", mapperOp, dependsOn: ["Text Cleaning"], description: "台本与转录时间线映射");
+        builder.Add("Script Load", scriptLoaderOp, dependsOn: [afterTranscribe], description: "Load the script/reference")
+            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Script Load"], description: "Normalize punctuation/digits/abbreviations")
+            .Add("Timeline Mapping", mapperOp, dependsOn: ["Text Cleaning"], description: "Map the script onto the transcription timeline");
 
         var afterMapping = "Timeline Mapping";
         var alignmentOp = operatorFactory.CreateAlignmentOperator(config);
@@ -170,11 +171,11 @@ public sealed class FromScriptCommand(
                 dependsOn: [afterMapping],
                 maxRetries: 1,
                 degradeOnFailure: true,
-                description: "词级强制对齐（失败降级跳过，不中断）");
+                description: "Word-level forced alignment (degrade-skip on failure, non-fatal)");
             afterMapping = "Force Alignment";
         }
 
-        builder.Add("Quality Report", qualityReportOp, dependsOn: [afterMapping], description: "质量报告收尾");
+        builder.Add("Quality Report", qualityReportOp, dependsOn: [afterMapping], description: "Quality report wrap-up");
         return builder.Build();
     }
 }

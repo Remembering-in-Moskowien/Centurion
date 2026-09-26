@@ -30,11 +30,11 @@ public sealed class CorrectCommand(
     ILogger<CorrectCommand> logger, ICenturionDocumentStore store) : AsyncCommand<CorrectSettings>
 {
     /// <summary>
-    /// 执行校正：按所选策略组装并运行校正管道，写出校正后的 ASS 字幕。
+    /// Runs correction: assembles and runs the correction pipeline per the chosen strategy, writing corrected ASS subtitles.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">校正命令选项。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The correct command settings.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, CorrectSettings settings, CancellationToken cancellationToken)
     {
         try
@@ -139,10 +139,11 @@ public sealed class CorrectCommand(
     }
 
     /// <summary>
-    /// 组装 correct DAG（pipeline graph 命令与 correct 命令共享的单一事实源）：
-    /// 文本分支（Script Load → Text Correct）与音频分支（FFmpeg → 预处理 → 人声分离 →
-    /// 说话人分割 → 强制对齐 → 重叠消解）按策略条件接入；两分支汇合后可选拼写检查 →
-    /// 校正报告 → 质量报告。
+    /// Assembles the correct DAG (single source of truth shared with the pipeline graph command):
+    /// the text branch (Script Load → Text Correct) and the audio branch (FFmpeg →
+    /// preprocess → vocal separation → diarization → forced alignment → overlap
+    /// resolution) join conditionally per strategy; after the branches merge, an
+    /// optional spell check → correction report → quality report.
     /// </summary>
     internal static PipelineDag BuildCorrectDag(
         ScriptLoaderOperator scriptLoaderOp,
@@ -167,17 +168,17 @@ public sealed class CorrectCommand(
         if (useText)
         {
             builder
-                .Add("Script Load", scriptLoaderOp, description: "加载参考脚本/台本")
-                .Add("Text Correct", textCorrectorOp, dependsOn: ["Script Load"], description: "按台本校正文本");
+                .Add("Script Load", scriptLoaderOp, description: "Load the reference script")
+                .Add("Text Correct", textCorrectorOp, dependsOn: ["Script Load"], description: "Correct text against the script");
             join.Add("Text Correct");
         }
 
         if (needsAudio)
         {
             builder
-                .Add("FFmpeg Convert", ffmpegOp, description: "重采样/转码为统一音频")
-                .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "降噪/重采样/响度归一化")
-                .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs 人声分离");
+                .Add("FFmpeg Convert", ffmpegOp, description: "Resample/transcode to a unified audio")
+                .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
+                .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs vocal separation");
             var afterAudio = "Vocal Separation";
 
             var diarizationOp = operatorFactory.CreateDiarizationOperator(config);
@@ -187,7 +188,7 @@ public sealed class CorrectCommand(
                     dependsOn: [afterAudio],
                     maxRetries: 1,
                     degradeOnFailure: true,
-                    description: "说话人分割标注（失败降级跳过）");
+                    description: "Speaker diarization (degrade-skip on failure)");
                 afterAudio = "Speaker Diarization";
             }
 
@@ -198,20 +199,20 @@ public sealed class CorrectCommand(
                     dependsOn: [afterAudio],
                     maxRetries: 1,
                     degradeOnFailure: true,
-                    description: "词级强制对齐（失败降级跳过）");
+                    description: "Word-level forced alignment (degrade-skip on failure)");
                 afterAudio = "Force Alignment";
             }
 
-            builder.Add("Resolve Overlaps", overlapOp, dependsOn: [afterAudio], description: "重叠时间轴消解");
+            builder.Add("Resolve Overlaps", overlapOp, dependsOn: [afterAudio], description: "Resolve overlapping timestamps");
             join.Add("Resolve Overlaps");
         }
 
-        builder.Add("Correction Report", reportOp, dependsOn: join.Count > 0 ? join : null, description: "校正报告（文本/时间轴修正明细）");
+        builder.Add("Correction Report", reportOp, dependsOn: join.Count > 0 ? join : null, description: "Correction report (text/timeline fix details)");
         builder.Add("Spell Check", spellCheckOp,
             dependsOn: ["Correction Report"],
             when: _ => runSpellCheck,
-            description: "Hunspell 拼写检查（按 --spellcheck 开启）");
-        builder.Add("Quality Report", qualityReportOp, dependsOn: ["Spell Check"], description: "质量报告收尾");
+            description: "Hunspell spell check (enabled by --spellcheck)");
+        builder.Add("Quality Report", qualityReportOp, dependsOn: ["Spell Check"], description: "Quality report wrap-up");
         return builder.Build();
     }
 

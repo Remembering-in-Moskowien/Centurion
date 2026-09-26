@@ -4,10 +4,10 @@ using Spectre.Console;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>把 DAG 管线渲染为 Mermaid / 文本拓扑 / HTML（供 pipeline graph 命令输出）。</summary>
+/// <summary>Renders a DAG pipeline as Mermaid / text topology / HTML (for the pipeline graph command).</summary>
 internal static class PipelineGraphRenderer
 {
-    /// <summary>渲染为 Mermaid flowchart（节点含条件/重试/降级标注，依赖为实线，条件节点虚线）。</summary>
+    /// <summary>Renders a Mermaid flowchart (nodes carry condition/retry/degrade labels; dependencies solid, conditional nodes dashed).</summary>
     public static string RenderMermaid(PipelineDag dag)
     {
         var sb = new StringBuilder();
@@ -46,7 +46,7 @@ internal static class PipelineGraphRenderer
         return sb.ToString();
     }
 
-    /// <summary>渲染为缩进文本拓扑（控制台友好）。</summary>
+    /// <summary>Renders an indented text topology (console-friendly).</summary>
     public static string RenderText(PipelineDag dag)
     {
         var sb = new StringBuilder();
@@ -83,7 +83,7 @@ internal static class PipelineGraphRenderer
         return sb.ToString();
     }
 
-    /// <summary>渲染为 Spectre Tree（控制台现代化拓扑：节点含条件/重试/降级标注，依赖为树层级）。</summary>
+    /// <summary>Renders a Spectre Tree (modern console topology: nodes carry condition/retry/degrade labels; dependencies as tree levels).</summary>
     public static Tree RenderTree(PipelineDag dag)
     {
         var tree = new Tree("[bold cyan]DAG Topology[/]");
@@ -123,7 +123,7 @@ internal static class PipelineGraphRenderer
         return tree;
     }
 
-    /// <summary>渲染为自包含 HTML（内嵌 Mermaid.js CDN；离线时退化为文本列表）。</summary>
+    /// <summary>Renders a self-contained HTML page (embeds the Mermaid.js CDN; degrades to a text list offline).</summary>
     public static string RenderHtml(PipelineDag dag)
     {
         var mermaid = RenderMermaid(dag);
@@ -154,7 +154,7 @@ internal static class PipelineGraphRenderer
     try { mermaid.run(); } catch (e) {
       document.querySelector(".mermaid")?.remove();
       document.body.insertAdjacentHTML("beforeend",
-        "<p>Mermaid CDN 不可达，已退化为文本拓扑（见下）。</p>");
+        "<p>Mermaid CDN unreachable — degraded to a text topology (below).</p>");
     }
   });
 </script>

@@ -6,19 +6,22 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Cli.Server;
 
 /// <summary>
-/// 请求体参数绑定器：把 REST 请求体（完整 <see cref="CommandRequest"/> 或裸参数对象）
-/// 解析为 <see cref="CommandRequest"/>，再反射绑定到命令的 Spectre Settings 实例。
-/// 键支持 kebab-case / snake_case / camelCase 三种写法；嵌套对象展开为「父.子」与「子」两个候选。
-/// 优先级：请求体显式提供的非默认值 &gt; 默认值（与 CLI 命令行优先级语义一致）。
+/// Request body parameter binder: parses a REST request body (a full
+/// <see cref="CommandRequest"/> or a bare parameter object) into a
+/// <see cref="CommandRequest"/>, then reflectively binds it onto the command's
+/// Spectre Settings instance. Keys accept kebab-case / snake_case / camelCase;
+/// nested objects expand to both "parent.child" and "child" candidates.
+/// Priority: non-default values explicitly provided in the body &gt; defaults
+/// (matching CLI command-line precedence).
 /// </summary>
 public static class ParameterBinder
 {
     /// <summary>
-    /// 解析请求体：支持完整 <see cref="CommandRequest"/>（含 parameters 对象）或裸参数对象两种形态。
+    /// Parses a request body: supports both a full <see cref="CommandRequest"/> (with a parameters object) and a bare parameter object.
     /// </summary>
-    /// <param name="body">请求体 JSON。</param>
-    /// <param name="commandName">路由命令名。</param>
-    /// <returns>命令请求。</returns>
+    /// <param name="body">The request body JSON.</param>
+    /// <param name="commandName">The routed command name.</param>
+    /// <returns>The command request.</returns>
     public static CommandRequest ParseBody(string body, string commandName)
     {
         using var document = JsonDocument.Parse(body);
@@ -38,12 +41,13 @@ public static class ParameterBinder
     }
 
     /// <summary>
-    /// 把命令请求的参数反射绑定到 Settings。
-    /// 优先级：请求体显式设置的非默认值 &gt; 默认值；未知键记录警告后忽略（便于向前兼容）。
+    /// Reflectively binds request parameters onto Settings.
+    /// Priority: non-default values explicitly set in the body &gt; defaults; unknown
+    /// keys are logged as warnings and ignored (for forward compatibility).
     /// </summary>
-    /// <param name="request">命令请求。</param>
-    /// <param name="settings">命令设置实例（新建，尚未绑定命令行）。</param>
-    /// <param name="logger">记录未知键与转换失败的日志器。</param>
+    /// <param name="request">The command request.</param>
+    /// <param name="settings">The settings instance (fresh, not yet bound to command line).</param>
+    /// <param name="logger">Logs unknown keys and conversion failures.</param>
     public static void Apply(CommandRequest request, object settings, ILogger logger)
     {
         var properties = settings.GetType()
@@ -77,15 +81,15 @@ public static class ParameterBinder
         }
     }
 
-    /// <summary>归一化键：去 kebab/snake 分隔符并转小写。</summary>
-    /// <param name="key">原始键。</param>
-    /// <returns>归一化键。</returns>
+    /// <summary>Normalizes a key: strips kebab/snake separators and lowercases.</summary>
+    /// <param name="key">The raw key.</param>
+    /// <returns>The normalized key.</returns>
     public static string NormalizeKey(string key) =>
         key.Replace("-", string.Empty, StringComparison.Ordinal)
             .Replace("_", string.Empty, StringComparison.Ordinal)
             .ToLowerInvariant();
 
-    /// <summary>递归把 JSON 对象/数组展开为扁平键值（嵌套对象保留「父.子」路径）。</summary>
+    /// <summary>Recursively flattens JSON objects/arrays into flat key-values (nested objects keep "parent.child" paths).</summary>
     private static void Flatten(JsonElement element, string prefix, Dictionary<string, object?> target)
     {
         switch (element.ValueKind)
@@ -104,7 +108,7 @@ public static class ParameterBinder
         }
     }
 
-    /// <summary>在属性集合中按归一化名匹配（含「父.子」路径的后段匹配）。</summary>
+    /// <summary>Matches properties by normalized name (including the tail segment of "parent.child" paths).</summary>
     private static PropertyInfo? FindProperty(List<PropertyInfo> properties, string normalizedKey)
     {
         foreach (var property in properties)
@@ -124,7 +128,7 @@ public static class ParameterBinder
         return null;
     }
 
-    /// <summary>把 JSON 元素转换为目标属性类型。</summary>
+    /// <summary>Converts a JSON element to the target property type.</summary>
     private static object? ConvertValue(object? value, Type targetType)
     {
         var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;

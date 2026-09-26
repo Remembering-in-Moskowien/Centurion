@@ -3,8 +3,8 @@ using Spectre.Console;
 namespace Centurion.Cli;
 
 /// <summary>
-/// CLI 排版常量与计算：统一表格总宽（标题居中与表格视觉一致，
-/// 列按内容分配不折行）。宽度 = 终端宽 - 4，限幅 [60, 120]。
+/// CLI layout constants and helpers: unified table width (title-centered, columns
+/// sized by content without wrapping). Width = terminal width - 4, clamped to [60, 120].
 /// </summary>
 public static class CliLayout
 {
@@ -20,13 +20,13 @@ public static class CliLayout
         return false;
     }
 
-    /// <summary>终端是否支持 Unicode 装饰符号（Windows Terminal/现代终端为 true；旧 conhost 降级 ASCII）。</summary>
+    /// <summary>Whether the terminal supports Unicode decorative symbols (Windows Terminal/modern terminals true; legacy conhost degrades to ASCII).</summary>
     public static bool UnicodeSafe { get; } = DetectUnicode();
 
-    /// <summary>统一表格边框：Unicode 终端用圆角，旧终端用 ASCII 边框避免乱码。</summary>
+    /// <summary>Unified table border: rounded in Unicode terminals, ASCII in legacy terminals to avoid mojibake.</summary>
     public static TableBorder Border => UnicodeSafe ? TableBorder.Rounded : TableBorder.Ascii;
 
-    /// <summary>主表格首选总宽（终端重定向/无宽度时按 96 处理）。</summary>
+    /// <summary>Preferred total width for main tables (96 when redirected or width is unavailable).</summary>
     public static int TableWidth()
     {
         try

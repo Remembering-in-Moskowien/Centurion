@@ -5,32 +5,33 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Console;
 
 /// <summary>
-/// 基于 Spectre.Console 的控制台输出实现。
+/// Spectre.Console-based console output implementation.
 /// <para>
-/// 每类输出都同时写入控制台（渲染层）与 ILogger（日志层，进而写入 logs 文件）：
-/// 信息类输出直接渲染为白色/绿色行，并转发 info 日志（控制台侧按类别过滤，
-/// 避免与格式化器重复显示）；警告与错误仅经日志通道输出，由
-/// <see cref="PlainConsoleFormatter"/> 统一渲染为黄/红行，保证与文件日志逐字一致。
+/// Every output class goes to both the console (render layer) and ILogger (log layer,
+/// and hence the logs file): info-class output renders as white/green lines and
+/// forwards info logs (console side filters by category to avoid duplicate display);
+/// warnings and errors go through the log channel only, rendered as yellow/red lines
+/// by <see cref="PlainConsoleFormatter"/> for byte-identical file-log parity.
 /// </para>
 /// </summary>
 public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConsoleOutput
 {
     private readonly ILogger<SpectreConsoleOutput> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    /// <summary>--json 模式开关：抑制人类可读行（日志仍记录），stdout 只保留 JSON。</summary>
+    /// <summary>--json mode switch: suppresses human-readable lines (logging still occurs); stdout keeps JSON only.</summary>
     public static bool SuppressHumanLines { get; set; }
 
-    /// <summary>生成与日志文件一致的 info 前缀（HH:mm:ss info:）。</summary>
+    /// <summary>Builds the info prefix matching the log file (HH:mm:ss info:).</summary>
     private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
 
-    /// <summary>成功徽章 + 日志式前缀（✔ 仅为控制台装饰，日志文件记录纯文本）。</summary>
+    /// <summary>Success badge + log-style prefix (✔ is console-only decoration; the log file records plain text).</summary>
     private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]{CliSymbols.Check}[/] ";
 
     /// <summary>
-    /// 以白色向控制台写入文本（不换行），并记录 info 日志。
-    /// 不换行的拼接语义不适合加前缀，保持原样（当前无调用点）。
+    /// Writes text to the console in white (no newline) and records an info log.
+    /// No-newline concatenation semantics do not suit a prefix, so the line is kept as-is (no current call sites).
     /// </summary>
-    /// <param name="message">要写入的文本。</param>
+    /// <param name="message">The text to write.</param>
     public void Write(string message)
     {
         if (SuppressHumanLines) return;
@@ -39,9 +40,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// 以白色向控制台写入一行文本（带日志式前缀），并记录 info 日志。
+    /// Writes a line of text to the console in white (with the log-style prefix) and records an info log.
     /// </summary>
-    /// <param name="message">要写入的文本。</param>
+    /// <param name="message">The text to write.</param>
     public void WriteLine(string message)
     {
         if (SuppressHumanLines) return;
@@ -50,22 +51,22 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// 输出一条错误信息（红色，经日志通道渲染，与文件日志逐字一致）。
+    /// Outputs an error message (red, rendered via the log channel, byte-identical to the file log).
     /// </summary>
-    /// <param name="message">错误信息文本。</param>
+    /// <param name="message">The error message text.</param>
     public void WriteError(string message) => _logger.LogError(message);
 
     /// <summary>
-    /// 输出一条警告信息（黄色，经日志通道渲染，与文件日志逐字一致）。
+    /// Outputs a warning message (yellow, rendered via the log channel, byte-identical to the file log).
     /// </summary>
-    /// <param name="message">警告信息文本。</param>
+    /// <param name="message">The warning message text.</param>
     public void WriteWarning(string message) => _logger.LogWarning(message);
 
     /// <summary>
-    /// 以绿色向控制台写入一条成功信息（✔ 徽章 + 日志式前缀），
-    /// 并记录纯文本 info 日志（无徽章，日志文件保持干净）。
+    /// Writes a success message to the console in green (✔ badge + log-style prefix)
+    /// and records a plain-text info log (no badge; the log file stays clean).
     /// </summary>
-    /// <param name="message">成功信息文本。</param>
+    /// <param name="message">The success message text.</param>
     public void WriteSuccess(string message)
     {
         if (SuppressHumanLines) return;
@@ -74,9 +75,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// 以白色向控制台写入一行提示信息（带日志式前缀），并记录 info 日志。
+    /// Writes a hint line to the console in white (with the log-style prefix) and records an info log.
     /// </summary>
-    /// <param name="message">提示信息文本。</param>
+    /// <param name="message">The hint message text.</param>
     public void WriteInfo(string message)
     {
         if (SuppressHumanLines) return;
@@ -85,9 +86,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// 向控制台写入 Spectre 标记文本（不换行），并记录剥离标记后的 info 日志。
+    /// Writes Spectre markup text to the console (no newline) and records an info log with markup stripped.
     /// </summary>
-    /// <param name="markup">Spectre 标记字符串。</param>
+    /// <param name="markup">The Spectre markup string.</param>
     public void WriteMarkup(string markup)
     {
         if (SuppressHumanLines) return;
@@ -96,9 +97,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// 向控制台写入一行 Spectre 标记文本（带日志式前缀），并记录剥离标记后的 info 日志。
+    /// Writes a Spectre markup line to the console (with the log-style prefix) and records an info log with markup stripped.
     /// </summary>
-    /// <param name="markup">Spectre 标记字符串。</param>
+    /// <param name="markup">The Spectre markup string.</param>
     public void WriteMarkupLine(string markup)
     {
         if (SuppressHumanLines) return;
@@ -106,7 +107,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
         _logger.LogInformation(StripMarkup(markup));
     }
 
-    /// <summary>剥离 Spectre 标记标签（如 [green]、[/]），保留纯文本用于日志记录。</summary>
+    /// <summary>Strips Spectre markup tags (e.g. [green], [/]), keeping plain text for logging.</summary>
     private static string StripMarkup(string markup) =>
         Regex.Replace(markup, @"\[[^\]]*\]", string.Empty);
 }

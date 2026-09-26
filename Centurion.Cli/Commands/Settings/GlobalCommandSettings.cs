@@ -4,21 +4,21 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// 所有命令共享的全局选项基类：
+/// Base class with global options shared by every command:
 /// <list type="bullet">
-/// <item><c>--json</c>：仅输出机器可读 JSON 摘要（抑制人类可读行，供脚本消费）；</item>
-/// <item><c>--dry-run</c>：预览将执行的 DAG、模型与预计成本，不实际执行。</item>
+/// <item><c>--json</c>: machine-readable JSON summary only (suppresses human lines; script-consumable);</item>
+/// <item><c>--dry-run</c>: preview the DAG, models and estimated cost without executing.</item>
 /// </list>
-/// 两个选项均可选，不影响旧命令用法（向后兼容）。
+/// Both options are optional and keep old usage backward compatible.
 /// </summary>
 public abstract class GlobalCommandSettings : CommandSettings
 {
-    /// <summary>以 JSON 输出命令结果摘要（脚本可消费；抑制普通控制台行）。</summary>
+    /// <summary>Output the result summary as machine-readable JSON (script-consumable; suppresses console lines).</summary>
     [CommandOption("--json")]
     [Description("Output the result summary as machine-readable JSON (suppresses human lines)")]
     public bool Json { get; init; }
 
-    /// <summary>预览将执行的 DAG 拓扑、涉及模型与预计成本，不执行任何算子。</summary>
+    /// <summary>Preview the DAG topology, involved models and estimated cost without running any operator.</summary>
     [CommandOption("--dry-run")]
     [Description("Preview DAG, models and estimated cost without executing")]
     public bool DryRun { get; init; }

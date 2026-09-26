@@ -116,5 +116,8 @@
   "serve": "serve",
   "listening on": "监听地址",
   "Endpoints:": "端点：",
-  "Detected a subtitle file; the chain starts with `Centurion convert` to turn it into IR first.": "检测到字幕文件：命令链已自动加入 `Centurion convert`，先把字幕转为 IR 中间文件。"
+  "Detected a subtitle file; the chain starts with `Centurion convert` to turn it into IR first.": "检测到字幕文件：命令链已自动加入 `Centurion convert`，先把字幕转为 IR 中间文件。",
+  "Path": "路径",
+  "Install": "安装",
+  "— Mermaid (file output) —": "— Mermaid（文件输出）—"
 }

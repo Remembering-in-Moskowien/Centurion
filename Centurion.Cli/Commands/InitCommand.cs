@@ -11,8 +11,9 @@ using System.Text.Json;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>init</c> 命令：交互式向导，为新手生成 <c>centurion.config.json</c> 与推荐命令链，
-/// 3 条命令即可完成「转写 → 翻译 → 出字幕」的完整链路。
+/// <c>init</c> command: an interactive wizard that generates <c>centurion.config.json</c>
+/// and a recommended command chain, so new users complete "transcribe → translate →
+/// subtitles" in three commands.
 /// </summary>
 public sealed class InitCommand(
     ILogger<InitCommand> logger) : AsyncCommand<InitSettings>
@@ -98,13 +99,13 @@ public sealed class InitCommand(
         }
     }
 
-    /// <summary>交互提问文本（非交互返回默认值）。</summary>
+    /// <summary>Asks a text question interactively (returns the default when non-interactive).</summary>
     private static string AskText(bool interactive, string prompt, string defaultValue)
         => interactive
             ? AnsiConsole.Prompt(new TextPrompt<string>($"[bold]{prompt}[/]").DefaultValue(defaultValue))
             : defaultValue;
 
-    /// <summary>交互选择（非交互返回默认值）。</summary>
+    /// <summary>Asks a choice interactively (returns the default when non-interactive).</summary>
     private static string AskChoice(bool interactive, string prompt, string[] choices, string defaultValue)
         => interactive
             ? AnsiConsole.Prompt(new SelectionPrompt<string>()
@@ -112,7 +113,7 @@ public sealed class InitCommand(
                 .AddChoices(choices))
             : defaultValue;
 
-    /// <summary>按工作流生成推荐命令链（3 条以内）。</summary>
+    /// <summary>Builds the recommended command chain per workflow (at most 3 commands).</summary>
     internal static string BuildRecipe(string media, string workflow, string format, string? target)
     {
         var baseName = Path.GetFileNameWithoutExtension(media);
@@ -150,7 +151,7 @@ public sealed class InitCommand(
         };
     }
 
-    /// <summary>输入为字幕文件（srt/ass/ssa/vtt/txt）时，链首插入 convert 步骤把字幕转为 IR。</summary>
+    /// <summary>When the input is a subtitle file (srt/ass/ssa/vtt/txt), prepends a convert step to turn it into IR.</summary>
     private static bool IsSubtitleFile(string media)
     {
         var ext = Path.GetExtension(media);
@@ -161,7 +162,7 @@ public sealed class InitCommand(
             || string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>字幕文件时在步骤前加 convert；否则原样。</summary>
+    /// <summary>Prepends convert for subtitle files; otherwise returns the steps unchanged.</summary>
     private static string[] WithConvertFirst(string media, string ir, params string[] steps) =>
         IsSubtitleFile(media)
             ? new[] { $"Centurion convert {media}" }.Concat(steps).ToArray()

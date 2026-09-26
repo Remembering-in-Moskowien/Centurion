@@ -28,12 +28,13 @@ public sealed class TranslateCommand(
     ILogger<TranslateCommand> logger, ICenturionDocumentStore store) : AsyncCommand<TranslateSettings>
 {
     /// <summary>
-    /// 执行翻译：解析已有字幕 → 按所选策略翻译文本 → 写出目标语言（或双语）字幕。
-    /// 时间轴保持不变，只做文本层翻译对齐。
+    /// Runs translation: parse existing subtitles → translate text with the chosen
+    /// strategy → write target-language (or bilingual) subtitles. Timestamps are kept;
+    /// this is text-layer alignment only.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">翻译命令选项。</param>
-    /// <param name="ct">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The translate command settings.</param>
+    /// <param name="ct">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, TranslateSettings settings, CancellationToken ct)
     {
         try
@@ -139,7 +140,7 @@ public sealed class TranslateCommand(
     }
 
     /// <summary>
-    /// 组装 translate DAG（pipeline graph 命令与 translate 命令共享的单一事实源）。
+    /// Assembles the translate DAG (single source of truth shared with the pipeline graph command).
     /// </summary>
     internal static PipelineDag BuildTranslateDag(
         TranslationOperator translationOp,
@@ -147,15 +148,15 @@ public sealed class TranslateCommand(
     {
         var builder = PipelineDag.CreateBuilder();
         builder
-            .Add("Translation", translationOp, description: "LLM 分批并行翻译（含术语表/台本约束）")
-            .Add("Quality Report", qualityReportOp, dependsOn: ["Translation"], description: "翻译质量报告");
+            .Add("Translation", translationOp, description: "Parallel batched LLM translation (glossary/script constraints)")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Translation"], description: "Translation quality report");
         return builder.Build();
     }
 
-    /// <summary>读取目标语言台本：每非空行视为一句目标语言译文。</summary>
-    /// <param name="path">台本文件路径；为空或不存在时返回空列表。</param>
-    /// <param name="logger">记录读取告警的日志器。</param>
-    /// <returns>台本行列表。</returns>
+    /// <summary>Reads the target-language script: each non-empty line is one target-language translation.</summary>
+    /// <param name="path">Script file path; returns an empty list when null or missing.</param>
+    /// <param name="logger">Logs read warnings.</param>
+    /// <returns>The script lines.</returns>
     private static List<string> LoadScriptLines(string? path, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(path))

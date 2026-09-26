@@ -19,9 +19,10 @@ using Centurion.Cli;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>quality</c> 命令：中间文件 → 质量报告（.quality.json + .quality.html），
-/// 可选自动修复（--fix）与 CI 阈值评估（--fail-on，任一不满足退出码 1）。
-/// 评估结果（Passed / FailedThresholds）写回 .quality.json 供 CI 消费。
+/// <c>quality</c> command: intermediate file → quality report (.quality.json + .quality.html),
+/// optional auto-fix (--fix) and CI threshold evaluation (--fail-on; exit code 1 on
+/// any unmet rule). The evaluation result (Passed / FailedThresholds) is written back
+/// to .quality.json for CI consumption.
 /// </summary>
 public sealed class QualityCommand(
     ITempDirectoryManager tempManager,
@@ -153,8 +154,8 @@ public sealed class QualityCommand(
     }
 
     /// <summary>
-    /// 报告路径 = 输入文件同名目录下的 <c>&lt;stem&gt;.quality.json</c>
-    /// （stem 去掉输入文件名的 .centurion.json 后缀）；与中间文件路径无关。
+    /// Report path = <c>&lt;stem&gt;.quality.json</c> next to the input file
+    /// (stem drops the .centurion.json suffix from the input name); independent of the IR path.
     /// </summary>
     private static string BuildReportPath(string inputPath, string outputPath)
     {

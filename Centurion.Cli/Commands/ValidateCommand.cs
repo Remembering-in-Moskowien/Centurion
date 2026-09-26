@@ -5,18 +5,18 @@ using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>validate 命令的选项。</summary>
+/// <summary>Options for the validate command.</summary>
 public sealed class ValidateSettings : GlobalCommandSettings
 {
-    /// <summary>待校验的中间文件路径（可多个）。</summary>
+    /// <summary>Intermediate file paths to validate (multiple allowed).</summary>
     [CommandArgument(0, "<files>")]
     public string[] Files { get; set; } = [];
 }
 
 /// <summary>
-/// <c>validate</c> 命令：校验一个或多个 *.centurion.json 是否符合 IR 契约
-/// （JSON 可解析、schemaVersion 受支持、config/state 结构齐全）。
-/// 非法文件列出全部问题并以非零退出码结束。
+/// <c>validate</c> command: checks one or more *.centurion.json files against the IR
+/// contract (parseable JSON, supported schemaVersion, complete config/state structure).
+/// Invalid files list every issue and exit with a non-zero code.
 /// </summary>
 public sealed class ValidateCommand(ICenturionDocumentStore store) : AsyncCommand<ValidateSettings>
 {

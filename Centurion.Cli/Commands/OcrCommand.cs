@@ -9,7 +9,7 @@ using Centurion.Core.Utils.Serialization;
 using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
-/// <summary><c>ocr</c> 命令：从视频或图片提取字幕文字，写入中间文件。</summary>
+/// <summary><c>ocr</c> command: extracts subtitle text from video or images into an intermediate file.</summary>
 public sealed class OcrCommand(
     OcrClient ocrClient,
     RapidOcrEngine rapidOcrEngine,
@@ -22,7 +22,7 @@ public sealed class OcrCommand(
     IServiceProvider serviceProvider,
     ILogger<OcrCommand> logger, ICenturionDocumentStore store) : AsyncCommand<OcrSettings>
 {
-    /// <summary>组装并运行 OCR、分句与文本清理管线。</summary>
+    /// <summary>Assembles and runs the OCR, splitting and text-cleaning pipeline.</summary>
     protected override async Task<int> ExecuteAsync(CommandContext context, OcrSettings settings, CancellationToken ct)
     {
         try
@@ -116,8 +116,8 @@ public sealed class OcrCommand(
     }
 
     /// <summary>
-    /// 组装 OCR DAG（pipeline graph 命令与 ocr 命令共享的单一事实源）：
-    /// 抽帧识别 → 分句 → 文本清洗 → 质量报告。
+    /// Assembles the OCR DAG (single source of truth shared with the pipeline graph command):
+    /// frame OCR → sentence splitting → text cleaning → quality report.
     /// </summary>
     internal static PipelineDag BuildOcrDag(
         OcrExtractOperator ocrExtractOp,
@@ -129,10 +129,10 @@ public sealed class OcrCommand(
         var splitOp = operatorFactory.CreateSentenceSplitOperator(config);
         var builder = PipelineDag.CreateBuilder();
         builder
-            .Add("OCR Extract", ocrExtractOp, description: "VSF/FFmpeg 抽帧 + RapidOCR/LLM 字幕识别")
-            .Add("Sentence Splitting", splitOp, dependsOn: ["OCR Extract"], description: "分句（合并/切分）")
-            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Sentence Splitting"], description: "标点/数字/缩写规范化")
-            .Add("Quality Report", qualityReportOp, dependsOn: ["Text Cleaning"], description: "质量报告收尾");
+            .Add("OCR Extract", ocrExtractOp, description: "VSF/FFmpeg frame extraction + RapidOCR/LLM subtitle recognition")
+            .Add("Sentence Splitting", splitOp, dependsOn: ["OCR Extract"], description: "Sentence splitting (merge/split)")
+            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Sentence Splitting"], description: "Normalize punctuation/digits/abbreviations")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Text Cleaning"], description: "Quality report wrap-up");
         return builder.Build();
     }
 }

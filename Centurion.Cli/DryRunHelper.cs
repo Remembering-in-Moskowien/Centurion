@@ -12,12 +12,14 @@ using Spectre.Console;
 namespace Centurion.Cli;
 
 /// <summary>
-/// <c>--dry-run</c> 预览：构建完成后输出将执行的 DAG 拓扑、涉及模型（本地就绪状态）、
-/// 相关 Provider 单价与 profile 取向，不执行任何算子。JSON 模式输出同构结构供脚本消费。
+/// <c>--dry-run</c> preview: after the DAG is built, prints the topology to be
+/// executed, involved models (local readiness), related provider unit prices and the
+/// profile orientation, without running any operator. JSON mode emits an isomorphic
+/// structure for scripts.
 /// </summary>
 public static class DryRunHelper
 {
-    /// <summary>输出 dry-run 预览（控制台树形 + 表格，或 --json 单行 JSON）。</summary>
+    /// <summary>Prints the dry-run preview (console tree + tables, or a single JSON line with --json).</summary>
     public static async Task<int> PreviewAsync(
         PipelineDag dag,
         WorkflowConfig config,
@@ -108,7 +110,7 @@ public static class DryRunHelper
                 .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn(ConsoleServices.T("Family")).LeftAligned())
                 .AddColumn(new TableColumn("Provider").LeftAligned().Width(18))
-                .AddColumn(new TableColumn("类型").Centered())
+                .AddColumn(new TableColumn(ConsoleServices.T("Type")).Centered())
                 .AddColumn(new TableColumn("$/1M tok").RightAligned())
                 .AddColumn(new TableColumn("$/min").RightAligned())
                 .AddColumn(new TableColumn(ConsoleServices.T("Quality")).Centered());
@@ -124,7 +126,7 @@ public static class DryRunHelper
         return ExitCodes.Success;
     }
 
-    /// <summary>按节点名推断相关模型域（子串匹配，含大小写不敏感）。</summary>
+    /// <summary>Infers the relevant model domains from node names (case-insensitive substring match).</summary>
     private static IReadOnlyList<ModelCatalog.ModelDomain> RelevantDomains(
         PipelineDag dag, IReadOnlyList<ModelCatalog.ModelDomain> domains)
     {
@@ -146,7 +148,7 @@ public static class DryRunHelper
         return domains.Where(d => wanted.Contains(d.Name, StringComparer.OrdinalIgnoreCase)).ToList();
     }
 
-    /// <summary>按节点名推断相关 Provider 接口族。</summary>
+    /// <summary>Infers the relevant provider interface family from a node name.</summary>
     private static IReadOnlyList<string> RelevantFamilies(PipelineDag dag)
     {
         var families = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

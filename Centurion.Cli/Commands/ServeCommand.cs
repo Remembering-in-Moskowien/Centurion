@@ -16,25 +16,26 @@ using System.Text.Json;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>serve 子命令选项：HTTP 服务（复用全部 DAG 命令，POST /commands/{name}）。</summary>
+/// <summary>Options for the serve subcommand: an HTTP service reusing all DAG commands (POST /commands/{name}).</summary>
 public sealed class ServeSettings : GlobalCommandSettings
 {
-    /// <summary>监听主机（默认 localhost）。</summary>
+    /// <summary>Listen host (default localhost).</summary>
     [CommandOption("--host <HOST>")]
     public string Host { get; init; } = "localhost";
 
-    /// <summary>监听端口（默认 8080）。</summary>
+    /// <summary>Listen port (default 8080).</summary>
     [CommandOption("-p|--port <PORT>")]
     public int Port { get; init; } = 8080;
 
-    /// <summary>完整监听地址列表（覆盖 --host/--port）。</summary>
+    /// <summary>Full listen URL list (overrides --host/--port).</summary>
     [CommandOption("--urls <URLS>")]
     public string? Urls { get; init; }
 }
 
 /// <summary>
-/// serve：以 HTTP 服务方式暴露全部打包命令（asr/from-script/correct/translate/dub/convert/build）。
-/// 复用 Cli 命令注册表与 Core 依赖注入；请求体为 CommandRequest JSON 或裸参数对象。
+/// serve: exposes all packaged commands as an HTTP service
+/// (asr/from-script/correct/translate/dub/convert/build). Reuses the Cli command
+/// registry and Core DI; the request body is a CommandRequest JSON or a bare parameter object.
 /// </summary>
 public sealed class ServeCommand(
     ILogger<ServeCommand> logger) : AsyncCommand<ServeSettings>

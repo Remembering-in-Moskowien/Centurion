@@ -8,12 +8,12 @@ using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>providers 子命令的公共选项。</summary>
+/// <summary>Common options for the providers subcommands.</summary>
 public class ProvidersSettings : GlobalCommandSettings
 {
 }
 
-/// <summary>providers list：列出全部已注册 Provider 及其能力与可用性（Spectre 表格 + 成本图表）。</summary>
+/// <summary>providers list: lists all registered providers with capabilities and availability (Spectre table + cost chart).</summary>
 public sealed class ProvidersListCommand(
     IProviderRegistry registry) : AsyncCommand<ProvidersSettings>
 {
@@ -77,7 +77,7 @@ public sealed class ProvidersListCommand(
         return 0;
     }
 
-    /// <summary>把 Provider 接口名映射为友好族名（IAsrProvider → ASR）。</summary>
+    /// <summary>Maps a provider interface name to a friendly family name (IAsrProvider → ASR).</summary>
     private static string FriendlyFamily(string? interfaceName)
     {
         if (string.IsNullOrWhiteSpace(interfaceName))
@@ -95,15 +95,15 @@ public sealed class ProvidersListCommand(
     }
 }
 
-/// <summary>providers test &lt;name&gt; 的选项。</summary>
+/// <summary>Options for providers test &lt;name&gt;.</summary>
 public sealed class ProvidersTestSettings : GlobalCommandSettings
 {
-    /// <summary>Provider 名称（见 providers list；如 whispercpp / openai / zhipu / ollama / llama-tts）。</summary>
+    /// <summary>Provider name (see providers list; e.g. whispercpp / openai / zhipu / ollama / llama-tts).</summary>
     [CommandArgument(0, "<name>")]
     public string Name { get; set; } = string.Empty;
 }
 
-/// <summary>providers test：探测指定 Provider 的可用性并显示能力声明。</summary>
+/// <summary>providers test: probes a provider's availability and shows its capability declaration.</summary>
 public sealed class ProvidersTestCommand(
     IProviderRegistry registry) : AsyncCommand<ProvidersTestSettings>
 {

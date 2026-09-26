@@ -3,9 +3,10 @@ using System.Text.Json;
 namespace Centurion.Cli;
 
 /// <summary>
-/// 机器可读 JSON 输出端口：直接写 stdout（不经 Spectre 渲染/日志前缀），
-/// 供 <c>--json</c> 模式被脚本安全消费。调用方应确保普通日志行已被抑制
-/// （Program 启动时 --json 会把日志级别提升到 Warning）。
+/// Machine-readable JSON output port: writes straight to stdout (bypassing Spectre
+/// rendering/log prefixes) so scripts can safely consume <c>--json</c> output.
+/// Callers must ensure normal log lines are suppressed (Program raises the log level
+/// to Warning when --json is set).
 /// </summary>
 public static class JsonOutput
 {
@@ -17,7 +18,7 @@ public static class JsonOutput
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    /// <summary>把任意对象序列化为 JSON 并写入 stdout（无尾随换行的普通行）。</summary>
+    /// <summary>Serializes any object to JSON and writes it to stdout (plain line, no trailing newline).</summary>
     public static void Write(object payload)
     {
         System.Console.Out.WriteLine(JsonSerializer.Serialize(payload, payload.GetType(), Options));

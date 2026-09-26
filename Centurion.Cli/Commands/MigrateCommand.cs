@@ -7,25 +7,26 @@ using Centurion.Cli;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>migrate 命令的选项。</summary>
+/// <summary>Options for the migrate command.</summary>
 public sealed class MigrateSettings : CommandSettings
 {
-    /// <summary>待迁移的中间文件路径。</summary>
+    /// <summary>Intermediate file path to migrate.</summary>
     [CommandArgument(0, "<file>")]
     public string File { get; set; } = string.Empty;
 
-    /// <summary>目标版本（当前仅 "1.0"）。</summary>
+    /// <summary>Target version (currently only "1.0").</summary>
     [CommandOption("--to <version>")]
     public string ToVersion { get; set; } = CenturionSchema.CurrentVersion;
 
-    /// <summary>输出路径；缺省时原地覆盖原文件。</summary>
+    /// <summary>Output path; overwrites the input in place when omitted.</summary>
     [CommandOption("-o|--output <path>")]
     public string? OutputFile { get; set; }
 }
 
 /// <summary>
-/// <c>migrate</c> 命令：把旧版 IR（meta/config/state）显式升级到当前 schema 版本，
-/// 使文件带上 schemaVersion/generator/provenance 契约字段。已是目标版本时原样重写。
+/// <c>migrate</c> command: explicitly upgrades older IR (meta/config/state) to the
+/// current schema version, adding the schemaVersion/generator/provenance contract
+/// fields. Rewrites the file as-is when it is already at the target version.
 /// </summary>
 public sealed class MigrateCommand(ICenturionDocumentStore store) : AsyncCommand<MigrateSettings>
 {

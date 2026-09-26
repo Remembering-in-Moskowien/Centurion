@@ -11,18 +11,19 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>build</c> 命令：把 Centurion 中间文件（*.centurion.json）渲染为字幕文件。
-/// 支持三种输出格式：ASS（默认，含样式/双语/卡拉OK/说话人）、SRT（纯文本时间轴）、TXT（纯文本行）。
-/// 格式由 --format 指定或从 -o 扩展名推断；中间文件由 spawn/from-script/correct/translate/dub/convert 生成。
+/// <c>build</c> command: renders Centurion intermediate files (*.centurion.json) into
+/// subtitle files. Three output formats: ASS (default; styles/bilingual/karaoke/speakers),
+/// SRT (plain-text timeline), TXT (plain-text lines). The format comes from --format or
+/// the -o extension; the IR is produced by spawn/from-script/correct/translate/dub/convert.
 /// </summary>
 public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCommand> logger) : AsyncCommand<BuildSettings>
 {
     /// <summary>
-    /// 执行构建：加载中间文件 → 按格式渲染 → 写出字幕文件。
+    /// Runs build: load the IR → render per format → write the subtitle file.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">build 命令选项。</param>
-    /// <param name="ct">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The build command settings.</param>
+    /// <param name="ct">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, BuildSettings settings, CancellationToken ct)
     {
         try
@@ -64,7 +65,7 @@ public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCom
         }
     }
 
-    /// <summary>按 --format / -o 扩展名解析目标格式。</summary>
+    /// <summary>Resolves the target format from --format / the -o extension.</summary>
     private static BuildFormat ResolveFormat(BuildSettings settings)
     {
         if (!string.IsNullOrWhiteSpace(settings.Format))
@@ -95,7 +96,7 @@ public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCom
         return BuildFormat.Ass;
     }
 
-    /// <summary>按格式计算默认输出路径：中间文件名去掉 .centurion.json 后加对应扩展名。</summary>
+    /// <summary>Computes the default output path per format: the IR name minus .centurion.json plus the matching extension.</summary>
     private static string DefaultOutputPath(string inputPath, BuildFormat format)
     {
         var baseName = CenturionFileIO.DefaultOutputPath(Path.GetFileName(inputPath))
@@ -113,13 +114,13 @@ public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCom
     }
 }
 
-/// <summary>build 命令支持的输出格式。</summary>
+/// <summary>Output formats supported by the build command.</summary>
 public enum BuildFormat
 {
-    /// <summary>ASS 字幕（默认，样式/双语/卡拉OK/说话人全支持）。</summary>
+    /// <summary>ASS subtitles (default; styles/bilingual/karaoke/speakers fully supported).</summary>
     Ass,
-    /// <summary>SRT 字幕（纯文本时间轴）。</summary>
+    /// <summary>SRT subtitles (plain-text timeline).</summary>
     Srt,
-    /// <summary>纯文本（每句一行）。</summary>
+    /// <summary>Plain text (one line per sentence).</summary>
     Txt
 }
