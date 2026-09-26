@@ -1,7 +1,5 @@
-using Centurion.Core.Infrastructure;
+using Centurion.Core.Capabilities.Infrastructure;using Microsoft.Extensions.Logging;
 using Centurion.Models.Console;
-using Microsoft.Extensions.Logging;
-
 namespace Centurion.Server.Console;
 
 /// <summary>

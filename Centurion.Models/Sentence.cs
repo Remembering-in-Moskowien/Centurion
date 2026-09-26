@@ -28,6 +28,7 @@ public class Sentence
     /// 句子无词级数据或全部为占位标签（如未运行说话人分割）时返回 null；
     /// 是否把结果渲染进字幕由工作流状态（IsDiarized）与显示开关决定。
     /// </summary>
+[System.Text.Json.Serialization.JsonIgnore]
     public string? Speaker
     {
         get

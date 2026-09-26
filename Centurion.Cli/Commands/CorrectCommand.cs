@@ -1,17 +1,13 @@
-using Centurion.Models.Console;
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
-using Centurion.Core.Infrastructure;
-using Centurion.Models.Ass;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Factories;using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
-using Centurion.Core.Pipeline;
-using Centurion.Core.Pipeline.Operators;
-using Centurion.Core.Utils;
-using Microsoft.Extensions.Logging;
+using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
-
+using Centurion.Core.Utils.Serialization;
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
@@ -25,13 +21,12 @@ public sealed class CorrectCommand(
     VocalSeparationOperator vocalSepOp,
     ScriptLoaderOperator scriptLoaderOp,
     SubtitleTextCorrectorOperator textCorrectorOp,
-    DiarizationOperator diarizationOp,
-    AlignmentOperator alignmentOp,
+    PipelineOperatorFactory operatorFactory,
     OverlapResolutionOperator overlapOp,
     CorrectionReportOperator reportOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
-    ILogger<CorrectCommand> logger) : AsyncCommand<CorrectSettings>
+    ILogger<CorrectCommand> logger, ICenturionDocumentStore store) : AsyncCommand<CorrectSettings>
 {
     /// <summary>
     /// 执行校正：按所选策略组装并运行校正管道，写出校正后的 ASS 字幕。
@@ -54,7 +49,8 @@ public sealed class CorrectCommand(
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("correct_");
 
-            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, cancellationToken);
+            var loadedDoc = await store.LoadAsync(inputPath, cancellationToken);
+            var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
             var outputPath = settings.OutputFile?.FullName
@@ -111,8 +107,12 @@ public sealed class CorrectCommand(
                 operators.Add(ffmpegOp);
                 operators.Add(audioPreprocessOp);
                 operators.Add(vocalSepOp);
-                operators.Add(diarizationOp);
-                operators.Add(alignmentOp);
+                var diarizationOperator = operatorFactory.CreateDiarizationOperator(config);
+                if (diarizationOperator is not null)
+                    operators.Add(diarizationOperator);
+                var alignmentOperator = operatorFactory.CreateAlignmentOperator(config);
+                if (alignmentOperator is not null)
+                    operators.Add(alignmentOperator);
                 operators.Add(overlapOp);
             }
 
@@ -124,9 +124,10 @@ public sealed class CorrectCommand(
             await pipelineExecutor.ExecuteAsync(operators, workflowContext, cancellationToken);
 
             // 保存校正后的中间文件（时间轴/文本修正全部写入状态）
-            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "correct", cancellationToken);
+            var outDoc = CenturionDocumentBuilder.Create(workflowContext, "correct", outputPath);
+            await store.SaveAsync(outDoc, outputPath, cancellationToken);
 
-            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed: {0}", outputPath));
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }

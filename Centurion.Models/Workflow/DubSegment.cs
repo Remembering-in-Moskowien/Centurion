@@ -46,5 +46,6 @@ public class DubSegment
     public string? Note { get; set; }
 
     /// <summary>目标时长（秒）。</summary>
+[System.Text.Json.Serialization.JsonIgnore]
     public double TargetDurationSec => Math.Max(0, (TargetEndMs - TargetStartMs) / 1000.0);
 }

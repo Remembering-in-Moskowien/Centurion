@@ -1,11 +1,12 @@
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Utils;
 using Centurion.Models.Ass;
-using Centurion.Core.Infrastructure;
-using Centurion.Abstractions.Utils;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Abstractions.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
-
+using Centurion.Core.Utils.Reporting;
+using Centurion.Core.Utils.Serialization;
+using Centurion.Models.Workflow;
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
@@ -13,7 +14,7 @@ namespace Centurion.Cli.Commands;
 /// 支持三种输出格式：ASS（默认，含样式/双语/卡拉OK/说话人）、SRT（纯文本时间轴）、TXT（纯文本行）。
 /// 格式由 --format 指定或从 -o 扩展名推断；中间文件由 spawn/from-script/correct/translate/dub/convert 生成。
 /// </summary>
-public sealed class BuildCommand(ILogger<BuildCommand> logger) : AsyncCommand<BuildSettings>
+public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCommand> logger) : AsyncCommand<BuildSettings>
 {
     /// <summary>
     /// 执行构建：加载中间文件 → 按格式渲染 → 写出字幕文件。
@@ -37,7 +38,8 @@ public sealed class BuildCommand(ILogger<BuildCommand> logger) : AsyncCommand<Bu
             var format = ResolveFormat(settings);
             var outputPath = settings.OutputFile?.FullName ?? DefaultOutputPath(inputPath, format);
 
-            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, ct);
+            var loadedDoc = await store.LoadAsync(inputPath, ct);
+            var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
 
             var content = format switch
             {

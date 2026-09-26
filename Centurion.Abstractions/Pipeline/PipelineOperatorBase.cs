@@ -1,9 +1,8 @@
-using Centurion.Models.Console;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Centurion.Abstractions.Utils;
-
+using Centurion.Models.Console;
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>

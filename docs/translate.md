@@ -61,7 +61,7 @@ Centurion translate subs.centurion.json -t zh --glossary terms.json --target-scr
 Centurion build subs.translated.centurion.json
 ```
 
-> 🤖 **LLM providers** — Centurion speaks the **OpenAI-compatible dialect** everyone uses. Set `--llm-provider` (or just `--llm-base-url`) and the right defaults are applied automatically; `auto` infers the provider from the endpoint host, or falls back to OpenAI when an API key is present and to local Ollama otherwise. Provider names are forgiving: `ds`, `kimi`, `glm`, `silicon`, `aliyun`, `volcano`… all work. The same options power LLM sentence splitting in `spawn` (`-s llm --llm-provider …`).
+> 🤖 **LLM providers** — Centurion speaks the **OpenAI-compatible dialect** everyone uses. Set `--llm-provider` (or just `--llm-base-url`) and the right defaults are applied automatically; `auto` infers the provider from the endpoint host, or falls back to OpenAI when an API key is present and to local Ollama otherwise. Provider names are forgiving: `ds`, `kimi`, `glm`, `silicon`, `aliyun`, `volcano`… all work. The same options power LLM sentence splitting in `asr` and `ocr` (`-s llm --llm-provider …`).
 
 > 💡 **Bilingual layout**: source line rides on top (`Default` style), translation hugs the bottom (`Sub` style) — a layout borrowed from classic dual-language fansubs.
 

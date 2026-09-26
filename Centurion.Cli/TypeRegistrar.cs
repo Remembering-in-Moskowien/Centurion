@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis; // 新增
+using System.Diagnostics.CodeAnalysis; // 新增
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 

@@ -2,13 +2,11 @@ using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Infrastructure;
-using Centurion.Core.Pipeline;
-using Centurion.Core.Utils;
-using Centurion.Models.Workflow;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Pipeline;using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
-
+using Centurion.Core.Utils.Serialization;
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
@@ -21,7 +19,7 @@ namespace Centurion.Cli.Commands;
 public abstract class OperatorCommandBase(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
-    ILogger logger) : AsyncCommand<OperatorSettings>
+    ILogger logger, ICenturionDocumentStore store) : AsyncCommand<OperatorSettings>
 {
     /// <summary>命令名（用于默认输出后缀与 meta 记录）。</summary>
     protected abstract string OpName { get; }
@@ -29,8 +27,8 @@ public abstract class OperatorCommandBase(
     /// <summary>是否接受媒体文件作为输入（源头命令为 true；纯中间文件命令为 false）。</summary>
     protected abstract bool AcceptsMedia { get; }
 
-    /// <summary>本命令要执行的算子序列（核心算子及其必要的前置依赖）。</summary>
-    protected abstract IEnumerable<IPipelineOperator> CreateOperators();
+    /// <summary>按工作流配置组装算子；策略命令应在此阶段完成策略解析。</summary>
+    protected abstract IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config);
 
     /// <summary>
     /// 媒体输入时初始化工作流配置的钩子：子类可覆盖以设置语言、设备、开关等。
@@ -55,7 +53,8 @@ public abstract class OperatorCommandBase(
             SubtitleWorkflowContext workflowContext;
             if (CenturionFileIO.IsCenturionFile(inputPath))
             {
-                workflowContext = await CenturionFileIO.LoadAsync(inputPath, ct);
+                var loadedDoc = await store.LoadAsync(inputPath, ct);
+                workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
             }
             else
             {
@@ -77,12 +76,15 @@ public abstract class OperatorCommandBase(
 
             workflowContext.Config.OutputFilePath = outputPath;
 
+            var operators = CreateOperators(workflowContext.Config).ToList();
+
             await using var tempDir = await tempManager.CreateTempDirectoryAsync($"{OpName}_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            await pipelineExecutor.ExecuteAsync(CreateOperators(), workflowContext, ct);
+            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
 
-            await CenturionFileIO.SaveAsync(workflowContext, outputPath, OpName, ct);
+            var outDoc = CenturionDocumentBuilder.Create(workflowContext, OpName, outputPath);
+            await store.SaveAsync(outDoc, outputPath, ct);
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("{0} completed: {1}", OpName, outputPath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T(

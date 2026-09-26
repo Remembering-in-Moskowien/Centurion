@@ -1,12 +1,9 @@
-using Centurion.Models.Console;
 using System.Diagnostics;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Infrastructure;
-using Centurion.Core.Update;
-using Microsoft.Extensions.Logging;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Capabilities.Update;using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
-
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>

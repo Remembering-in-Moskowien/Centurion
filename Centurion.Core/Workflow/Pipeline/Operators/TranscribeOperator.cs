@@ -1,0 +1,122 @@
+using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Providers;
+using Centurion.Core.Providers;
+using Centurion.Models;
+using Centurion.Models.Workflow;
+using Microsoft.Extensions.Logging;
+
+namespace Centurion.Core.Workflow.Pipeline.Operators;
+
+/// <summary>
+/// 转录算子：沿已解析的 ASR fallback 链执行语音识别。
+/// 链由 <see cref="Providers.ProviderFactory"/> 在组装时解析（本地/云互备；
+/// 无 API 密钥或云端失败时自动回退本地）；用量（token/音频秒/估算成本）聚合进
+/// <see cref="WorkflowState.ProviderUsages"/>。
+/// </summary>
+public class TranscribeOperator(
+    IReadOnlyList<IAsrProvider> chain,
+    IProviderFactory providerFactory,
+    ILogger<TranscribeOperator> logger) : PipelineOperatorBase<TranscribeOperator>(logger)
+{
+    private readonly IReadOnlyList<IAsrProvider> _chain = chain;
+    private readonly IProviderFactory _providerFactory = providerFactory;
+    private readonly ProviderPolicies _policies = new(providerFactory.Policies);
+
+    /// <inheritdoc />
+    public override string Name => "Transcribe";
+
+    /// <summary>
+    /// 转录：沿链执行，自动跳过不可用/失败的 Provider 并切换备用。
+    /// </summary>
+    /// <param name="context">字幕工作流上下文（输入音频、配置）。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <exception cref="NotSupportedException">转录引擎未被任何 Provider 支持（组装期已拦截）。</exception>
+    public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
+    {
+        var config = context.Config;
+        var inputPath = context.State.VocalsPath
+            ?? context.State.PreprocessedAudioPath
+            ?? context.State.ConvertedAudioPath
+            ?? config.InputFilePath;
+
+        if (_chain.Count == 0)
+            throw new NotSupportedException($"No ASR provider available for engine '{config.TranscriberEngine}'.");
+
+        var providerResult = await ProviderChain.ExecuteAsync(
+            _chain,
+            (provider, ct) => ((IAsrProvider)provider).TranscribeAsync(
+                inputPath, config.Language, config.TranscriberModel, config.InitialPrompt, ct),
+            _policies,
+            _providerFactory.Policies.BudgetUsdPerRun,
+            Logger,
+            cancellationToken);
+
+        var usage = providerResult.Usage with
+        {
+            AudioSeconds = await ProbeAudioSecondsAsync(inputPath, cancellationToken)
+        };
+        context.State.ProviderUsages.Add(usage);
+
+        if (context.State.TranscribeSentences.Count == 0)
+            context.State.TranscribeSentences = GroupIntoSentences(providerResult.Value);
+        context.State.CurrentSentences = [.. context.State.TranscribeSentences];
+        context.State.IsTranscribed = true;
+
+        OnProgress(100, "Transcription completed.");
+        LogInfo($"Transcribed {context.State.TranscribeSentences.Count} sentences " +
+                $"via {usage.ProviderName} (est. ${usage.EstimatedCostUsd:F4}).");
+    }
+
+    /// <summary>把词级结果按句分组（按标点启发式切句；无标点时整段为一句）。</summary>
+    internal static List<Sentence> GroupIntoSentences(IReadOnlyList<Word> words)
+    {
+        var sentences = new List<Sentence>();
+        if (words.Count == 0)
+            return sentences;
+
+        Sentence? current = null;
+        foreach (var word in words)
+        {
+            current ??= new Sentence
+            {
+                Start = word.Start,
+                End = word.End,
+                Text = word.Text,
+                Words = [word]
+            };
+            current.Words.Add(word);
+            current.Text = string.Concat(current.Words.Select(w => w.Text));
+            current.End = word.End;
+            if (IsSentenceBoundary(word.Text))
+            {
+                sentences.Add(current);
+                current = null;
+            }
+        }
+        if (current is not null)
+            sentences.Add(current);
+        return sentences;
+    }
+
+    private static bool IsSentenceBoundary(string text)
+    {
+        var trimmed = text.TrimEnd();
+        return trimmed.Length > 0 && (trimmed.EndsWith('。') || trimmed.EndsWith('！')
+            || trimmed.EndsWith('？') || trimmed.EndsWith('.') || trimmed.EndsWith('!')
+            || trimmed.EndsWith('?'));
+    }
+
+    /// <summary>探测音频时长（秒），失败返回 0（不影响转录结果）。</summary>
+    private static async Task<double> ProbeAudioSecondsAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var info = await FFMpegCore.FFProbe.AnalyseAsync(path, cancellationToken: cancellationToken);
+            return info.Duration.TotalSeconds;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+}

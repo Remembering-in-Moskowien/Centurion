@@ -16,7 +16,7 @@ title: Centurion
 dotnet build -c Release
 
 # 2. Transcribe a video → intermediate file
-Centurion spawn demo.mp4 --language en
+Centurion asr demo.mp4 --language en
 
 # 3. Render subtitles
 Centurion build demo.centurion.json
@@ -29,7 +29,7 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | Page | What's inside |
 |---|---|
 | [⚡ Quick Start](quickstart.md) | Prerequisites, install, build & typical workflows |
-| [🎮 Commands](commands.md) | The full command family — `convert`, `spawn`, `correct`, `from-script`, `build` with every option |
+| [🎮 Commands](commands.md) | The full command family — `convert`, `asr`, `ocr`, `correct`, `from-script`, `build` with every option |
 | [🌐 Translate](translate.md) | LLM translation, glossary, target-script alignment & karaoke timestamps |
 | [🎙️ Dub](dub.md) | Media dubbing with Qwen3-TTS — voice cloning, time alignment, ducking |
 | [🖥️ Server](server.md) | Centurion.Server — run the whole pipeline over a REST API |
@@ -41,7 +41,8 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | Command | What it does |
 |---|---|
 | `convert` | 🔄 **Entry point**: any subtitle file → intermediate file |
-| `spawn` | 🎬 Media → intermediate (ASR **or OCR** mode, cloud/local) |
+| `asr` | 🎬 Media → intermediate through speech recognition |
+| `ocr` | 👁️ Video/image → intermediate through visible text recognition |
 | `from-script` | 📜 Media + script → timed intermediate file |
 | `correct` | 🛠️ Calibrate timeline & text of an intermediate file |
 | `translate` | 🌐 Translate an intermediate file (LLM, glossary, script) |

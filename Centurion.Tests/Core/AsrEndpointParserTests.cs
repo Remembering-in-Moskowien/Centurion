@@ -1,5 +1,4 @@
-using Centurion.Core.Asr;
-using Centurion.Models.Asr;
+using Centurion.Core.Capabilities.Infrastructure.Asr;using Centurion.Models.Asr;
 using Xunit;
 
 namespace Centurion.Tests.Core;

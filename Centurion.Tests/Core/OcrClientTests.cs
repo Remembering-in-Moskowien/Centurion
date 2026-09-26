@@ -1,6 +1,4 @@
-using Centurion.Core.Ocr;
-using Centurion.Core.Pipeline.Operators;
-using Xunit;
+using Centurion.Core.Capabilities.Infrastructure.Ocr;using Centurion.Core.Workflow.Pipeline.Operators;using Xunit;
 
 namespace Centurion.Tests.Core;
 

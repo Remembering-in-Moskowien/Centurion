@@ -2,14 +2,11 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
-using Centurion.Core.Infrastructure;
-using Centurion.Core.Pipeline;
-using Centurion.Core.Pipeline.Operators;
-using Centurion.Core.Utils;
-using Centurion.Models.Workflow;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
-
+using Centurion.Core.Utils.Serialization;
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
@@ -25,7 +22,7 @@ public sealed class DubCommand(
     AudioMixOperator audioMixOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
-    ILogger<DubCommand> logger) : AsyncCommand<DubSettings>
+    ILogger<DubCommand> logger, ICenturionDocumentStore store) : AsyncCommand<DubSettings>
 {
     /// <summary>
     /// 执行译制流程：组装 dub 管线并运行，输出译制 wav。
@@ -49,7 +46,8 @@ public sealed class DubCommand(
                 throw new FileNotFoundException($"Media file not found: {mediaPath}", mediaPath);
 
             // 加载中间文件（含句子、翻译、说话人信息）
-            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, ct);
+            var loadedDoc = await store.LoadAsync(inputPath, ct);
+            var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
 
             // 更新配置：dub 相关字段
             var previous = workflowContext.Config;
@@ -76,7 +74,7 @@ public sealed class DubCommand(
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("dub_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
-            workflowContext.State.Extensions["DubOutputWavPath"] = wavPath;
+            workflowContext.State.DubOutputWavPath = wavPath;
 
             // 说话人参考目录是用户输入，保留在临时目录之外
             var operators = new List<IPipelineOperator>
@@ -94,12 +92,11 @@ public sealed class DubCommand(
             var dubbed = segments.Count(s => !s.Skipped);
 
             // 保存含译制分段的中间文件 + 写出译制 wav
-            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "dub", ct);
+            var outDoc = CenturionDocumentBuilder.Create(workflowContext, "dub", outputPath);
+            await store.SaveAsync(outDoc, outputPath, ct);
             if (segments.Count > 0)
             {
-                var mixerOutput = workflowContext.State.Extensions.TryGetValue("DubOutputWavPath", out var rawWav)
-                    ? rawWav as string
-                    : null;
+                var mixerOutput = workflowContext.State.DubOutputWavPath;
                 var finalWav = mixerOutput ?? wavPath;
                 if (File.Exists(finalWav) && !string.Equals(finalWav, wavPath, StringComparison.OrdinalIgnoreCase))
                     File.Copy(finalWav, wavPath, true);

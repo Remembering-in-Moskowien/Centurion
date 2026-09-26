@@ -96,16 +96,18 @@ public class WorkflowConfig
     /// </summary>
     public string VocalSeparationModel { get; set; } = "htdemucs";
 
-    // ---------- OCR 模式（spawn --mode ocr）----------
-    /// <summary>spawn OCR 模式：抽帧间隔（秒），默认 2 秒。</summary>
+    // ---------- OCR 命令配置 ----------
+    /// <summary>OCR 命令：抽帧间隔（秒），默认 2 秒。</summary>
     public double OcrIntervalSeconds { get; init; } = 2.0;
-    /// <summary>spawn OCR 模式：OCR 后端："zhipu"（云端 GLM-OCR，默认）| "ollama"（本地 Ollama 视觉模型）| "llamacpp"（本地 llama-server）。</summary>
+    /// <summary>OCR 命令：可选 VideoSubFinder CLI 可执行文件路径。</summary>
+    public string? OcrVideoSubFinderPath { get; init; }
+    /// <summary>OCR 命令：OCR 后端："zhipu"（云端 GLM-OCR，默认）| "ollama"（本地 Ollama 视觉模型）| "llamacpp"（本地 llama-server）。</summary>
     public string OcrBackend { get; init; } = "zhipu";
-    /// <summary>spawn OCR 模式：OCR 模型名（默认随后端：zhipu→glm-ocr，ollama→qwen2.5vl:7b，llamacpp→local-model）。</summary>
+    /// <summary>OCR 命令：OCR 模型名（默认随后端：zhipu→glm-ocr，ollama→qwen2.5vl:7b，llamacpp→local-model）。</summary>
     public string? OcrModel { get; init; }
-    /// <summary>spawn OCR 模式：GLM-OCR API 密钥。</summary>
+    /// <summary>OCR 命令：GLM-OCR API 密钥。</summary>
     public string? OcrApiKey { get; init; }
-    /// <summary>spawn OCR 模式：GLM-OCR 端点地址（默认智谱 v4 chat/completions）。</summary>
+    /// <summary>OCR 命令：GLM-OCR 端点地址（默认智谱 v4 chat/completions）。</summary>
     public string? OcrBaseUrl { get; init; }
 
     // ---------- 说话人分割 ----------

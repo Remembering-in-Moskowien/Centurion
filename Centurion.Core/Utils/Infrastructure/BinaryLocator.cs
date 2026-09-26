@@ -1,0 +1,77 @@
+using Centurion.Abstractions;
+using Centurion.Abstractions.Exceptions;
+
+// localization removed; strings hard-coded
+
+namespace Centurion.Core.Utils.Infrastructure;
+
+/// <summary>
+/// 跨平台二进制查找工具：本地目录 + PATH 环境变量检索，支持 DI 和本地化。
+/// </summary>
+public class BinaryLocator() : IBinaryLocator
+{
+    // localization removed
+    private readonly Dictionary<string, string> _binaryCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 按名称查找可执行文件：先在本地相对目录与程序基目录下检索，再回退到 PATH 环境变量；命中结果会被缓存。
+    /// </summary>
+    /// <param name="binaryName">可执行文件名。</param>
+    /// <param name="localSearchRelativeDirs">相对于程序基目录优先检索的子目录。</param>
+    /// <returns>找到的可执行文件完整路径。</returns>
+    /// <exception cref="BinaryNotFoundException">在本地与 PATH 中均未找到时抛出。</exception>
+    public string Locate(string binaryName, params string[] localSearchRelativeDirs)
+    {
+        // 命中缓存直接返回
+        if (_binaryCache.TryGetValue(binaryName, out var cached) && File.Exists(cached))
+            return cached;
+
+        var baseDir = AppContext.BaseDirectory;
+        var candidatePaths = localSearchRelativeDirs
+            .Select(subDir => Path.Combine(baseDir, subDir, binaryName))
+            .Select(full => Path.GetFullPath(full))
+            .ToList();
+
+        // 1. 拼接本地优先检索路径
+        candidatePaths.Add(Path.Combine(baseDir, "tools", binaryName));
+        candidatePaths.Add(Path.Combine(baseDir, binaryName));
+        candidatePaths.Add(Path.GetFullPath(Path.Combine(baseDir, "..", binaryName)));
+
+        // 2. 遍历本地候选
+        foreach (var path in candidatePaths.Distinct())
+        {
+            if (!File.Exists(path)) continue;
+            _binaryCache[binaryName] = path;
+            return path;
+        }
+
+        // 3. 读取 PATH 环境变量
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathEnv))
+            throw new BinaryNotFoundException($"Binary '{binaryName}' not found.", binaryName);
+
+        var separator = OperatingSystem.IsWindows() ? ';' : ':';
+        var envDirs = pathEnv.Split(separator)
+            .Where(d => !string.IsNullOrWhiteSpace(d))
+            .Distinct();
+
+        foreach (var dir in envDirs)
+        {
+            var fullPath = Path.Combine(dir, binaryName);
+            if (!File.Exists(fullPath)) continue;
+            _binaryCache[binaryName] = fullPath;
+            return fullPath;
+        }
+
+        throw new BinaryNotFoundException(
+            $"Binary '{binaryName}' not found.", binaryName);
+    }
+
+    /// <summary>
+    /// 清空已缓存的二进制查找结果。
+    /// </summary>
+    public void ClearCache()
+    {
+        _binaryCache.Clear();
+    }
+}

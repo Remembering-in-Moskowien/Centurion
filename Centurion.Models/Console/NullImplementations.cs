@@ -1,6 +1,5 @@
-using Centurion.Models.Console;
 
-namespace Centurion.Core.Infrastructure;
+namespace Centurion.Models.Console;
 
 /// <summary>
 /// 控制台端口的空实现（Null Object 模式）。
