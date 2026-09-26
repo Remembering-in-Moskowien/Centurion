@@ -82,13 +82,13 @@ public static class DryRunHelper
             return ExitCodes.Success;
         }
 
-        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]▶ {ConsoleServices.T("Dry-run")}[/] {ConsoleServices.T("command")} [bold]{config.CommandName}[/] · profile=[yellow]{profileName}[/]");
+        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]{CliSymbols.Play} {ConsoleServices.T("Dry-run")}[/] {ConsoleServices.T("command")} [bold]{config.CommandName}[/] {CliSymbols.MidDot} profile=[yellow]{profileName}[/]");
         AnsiConsole.Write(PipelineGraphRenderer.RenderTree(dag));
 
         if (models.Count > 0)
         {
             var table = new Table()
-                .Border(TableBorder.Rounded)
+                .Border(CliLayout.Border)
                 .Title($"[bold]{ConsoleServices.T("Models involved")}[/]")
                 .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn(ConsoleServices.T("Domain")).LeftAligned())
@@ -96,14 +96,14 @@ public static class DryRunHelper
                 .AddColumn(new TableColumn(ConsoleServices.T("State")).LeftAligned());
             foreach (var m in models.Cast<dynamic>())
                 table.AddRow($"[dim]{m.domain}[/]", $"[bold]{m.model}[/]",
-                    m.ready ? "[green]● ready[/]" : "[red]○ missing[/]");
+                    m.ready ? $"[green]{CliSymbols.Dot} ready[/]" : $"[red]{CliSymbols.Ring} missing[/]");
             AnsiConsole.Write(table);
         }
 
         if (providers.Count > 0)
         {
             var ptable = new Table()
-                .Border(TableBorder.Rounded)
+                .Border(CliLayout.Border)
                 .Title($"[bold]{ConsoleServices.T("Related providers (unit price; total billed by actual duration/tokens)")}[/]")
                 .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn(ConsoleServices.T("Family")).LeftAligned())

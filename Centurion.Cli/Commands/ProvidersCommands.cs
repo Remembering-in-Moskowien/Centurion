@@ -28,7 +28,7 @@ public sealed class ProvidersListCommand(
 
         var all = new List<(IProvider Provider, bool Available)>();
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(CliLayout.Border)
             .Title($"[bold]{ConsoleServices.T("Provider Registry")}[/]")
             .Width(CliLayout.TableWidth())
             .AddColumn(new TableColumn(ConsoleServices.T("Family")).LeftAligned())
@@ -45,8 +45,8 @@ public sealed class ProvidersListCommand(
                 var available = await provider.IsAvailableAsync(ct);
                 all.Add((provider, available));
                 var status = available
-                    ? $"[green]● {ConsoleServices.T("available")}[/]"
-                    : $"[red]○ {ConsoleServices.T("unavailable")}[/]";
+                    ? $"[green]{CliSymbols.Dot} {ConsoleServices.T("available")}[/]"
+                    : $"[red]{CliSymbols.Ring} {ConsoleServices.T("unavailable")}[/]";
                 table.AddRow(
                     $"[dim]{group.Key}[/]",
                     $"[bold]{provider.Name}[/]",
@@ -122,7 +122,7 @@ public sealed class ProvidersTestCommand(
         var available = await provider.IsAvailableAsync(ct);
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(CliLayout.Border)
             .Title($"[bold]{provider.Name}[/] — {provider.DisplayName}")
             .AddColumn(new TableColumn(ConsoleServices.T("Property")).Width(12))
             .AddColumn(new TableColumn(ConsoleServices.T("Value")));
@@ -134,8 +134,8 @@ public sealed class ProvidersTestCommand(
         table.AddRow(ConsoleServices.T("Cost"), $"{c.CostPerAudioMinuteUsd:F4} $/min · {c.CostPer1MTokensUsd:F2} $/1M tokens");
         table.AddRow(ConsoleServices.T("Description"), c.Description);
         table.AddRow(ConsoleServices.T("State"), available
-            ? $"[green]● {ConsoleServices.T("available")}[/]"
-            : $"[red]○ {ConsoleServices.T("unavailable")} ({ConsoleServices.T("missing API key or local service not running")})[/]");
+            ? $"[green]{CliSymbols.Dot} {ConsoleServices.T("available")}[/]"
+            : $"[red]{CliSymbols.Ring} {ConsoleServices.T("unavailable")} ({ConsoleServices.T("missing API key or local service not running")})[/]");
         AnsiConsole.Write(table);
         return available ? 0 : 1;
     }

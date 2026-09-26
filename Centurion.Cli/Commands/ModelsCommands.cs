@@ -74,7 +74,7 @@ public sealed class ModelsListCommand(
         var missingCount = 0;
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(CliLayout.Border)
             .Title($"[bold]{ConsoleServices.T("Model Registry")}[/]")
             .Width(CliLayout.TableWidth())
             .AddColumn(new TableColumn(ConsoleServices.T("Domain")).LeftAligned())
@@ -96,8 +96,8 @@ public sealed class ModelsListCommand(
                     _ => "file"
                 };
                 var state = ready
-                    ? $"[green]● {ConsoleServices.T("ready")}[/]"
-                    : $"[red]○ {ConsoleServices.T("missing")}[/]";
+                    ? $"[green]{CliSymbols.Dot} {ConsoleServices.T("ready")}[/]"
+                    : $"[red]{CliSymbols.Ring} {ConsoleServices.T("missing")}[/]";
                 table.AddRow($"[dim]{domain.Name}[/]", $"[bold]{name}[/]", kind, state);
             }
         }
@@ -178,7 +178,7 @@ public sealed class ModelsVerifyCommand(
         var ready = ModelCatalog.ExistsLocally(manager);
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(CliLayout.Border)
             .AddColumn(new TableColumn("属性").Width(12))
             .AddColumn(new TableColumn("值"));
         table.AddRow("模型", $"[bold]{domain.Name}/{modelName}[/]");

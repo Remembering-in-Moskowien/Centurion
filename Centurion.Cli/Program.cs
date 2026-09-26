@@ -15,6 +15,20 @@ using Spectre.Console.Cli;
 ConsoleServices.Progress = new DotnetStyleProgressReporter();
 ConsoleServices.Confirm = new SpectreConfirmPrompt();
 
+// Windows 控制台统一 UTF-8 输出（旧 conhost 需 SetConsoleOutputCP(65001) 才能正确显示中文）
+try
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    Console.InputEncoding = System.Text.Encoding.UTF8;
+}
+catch (Exception)
+{
+    // 编码设置失败时保持系统默认，不影响后续逻辑
+}
+
+// 终端符号能力：现代终端用 Unicode 装饰，旧 conhost 降级 ASCII（避免不可识别符号）
+Centurion.Models.Console.CliSymbols.Initialize(CliLayout.UnicodeSafe);
+
 // 系统 UI 语言快照：进程启动时 .NET 已按 OS 首选项初始化，先保存再统一强制 Invariant
 var systemUiLang = CultureInfo.CurrentUICulture.Name;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -231,7 +245,7 @@ catch (Exception ex)
     // 经日志通道输出，控制台（红）与日志文件（crit）逐字一致
     rootLogger.LogCritical("{Fatal}", ConsoleServices.T("Fatal: {0}", ex.Message));
     AnsiConsole.Write(new Panel(
-            new Markup($"[bold red]✖ {ex.Message.EscapeMarkup()}[/]\n[dim]{ex.GetType().Name} — {ConsoleServices.T("full stack trace in logs directory, or retry with --verbose")}[/]"))
+            new Markup($"[bold red]{Centurion.Models.Console.CliSymbols.Cross} {ex.Message.EscapeMarkup()}[/]\n[dim]{ex.GetType().Name} — {ConsoleServices.T("full stack trace in logs directory, or retry with --verbose")}[/]"))
         .Header(ConsoleServices.T("Error"), Justify.Center)
         .Border(BoxBorder.Rounded)
         .BorderColor(Color.Red));

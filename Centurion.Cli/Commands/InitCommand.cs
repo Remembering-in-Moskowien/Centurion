@@ -77,7 +77,7 @@ public sealed class InitCommand(
 
             var lines = recipe.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var table = new Table()
-                .Border(TableBorder.Rounded)
+                .Border(CliLayout.Border)
                 .Title($"[bold]{ConsoleServices.T("Recommended command chain")} · {workflow}[/]")
                 .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn("#").Centered())
