@@ -74,10 +74,26 @@ public class ModelManager : IDisposable
     }
 
     /// <summary>
-    /// 检查模型完整性；缺失或不完整时自动下载所需模型文件，未启用管理时直接返回。
+    /// 检查模型完整性；缺失时抛出 <see cref="ModelMissingException"/>（提示用
+    /// <c>Centurion models install &lt;model&gt;</c> 安装），不做任何自动下载。
+    /// 未启用管理时直接返回。
     /// </summary>
     /// <param name="cancellationToken">取消操作的取消令牌。</param>
     public async Task CheckHealthAsync(CancellationToken cancellationToken = default)
+    {
+        if (!ManagementEnabled) return;
+
+        var missing = FindMissingEntries();
+        if (missing.Count > 0)
+            throw new ModelMissingException(_modelName, ModelFilePath, missing);
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 安装模型：缺失/不完整时下载所需文件（models install 命令专用）。
+    /// </summary>
+    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    public async Task EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
 
@@ -90,6 +106,17 @@ public class ModelManager : IDisposable
             if (!File.Exists(ModelFilePath)) await DownloadModelAsync(cancellationToken);
             // 不再进行任何哈希校验
         }
+    }
+
+    /// <summary>返回缺失的模型文件条目（空列表 = 已就绪）。</summary>
+    private IReadOnlyList<string> FindMissingEntries()
+    {
+        if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
+        {
+            var files = _targetMeta.Files ?? [];
+            return files.Where(f => !File.Exists(Path.Combine(ModelFolder, f))).ToList();
+        }
+        return File.Exists(ModelFilePath) ? [] : [Path.GetFileName(ModelFilePath)];
     }
 
     private async Task EnsureDirectoryModelAsync(CancellationToken cancellationToken = default)

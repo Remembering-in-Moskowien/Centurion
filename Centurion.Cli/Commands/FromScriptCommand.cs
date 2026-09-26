@@ -79,28 +79,15 @@ public sealed class FromScriptCommand(
             };
 
             var workflowContext = new SubtitleWorkflowContext(config);
-            var operators = new List<IPipelineOperator>
-            {
-                subtitleTrackCheckerOp,
-                ffmpegOp,
-                audioPreprocessOp,
-                vocalSepOp,
-                operatorFactory.CreateTranscribeOperator(config),
-                scriptLoaderOp,
-                textCleaningOp,
-                mapperOp,
-            };
-            var diarizationOperator = operatorFactory.CreateDiarizationOperator(config);
-            if (diarizationOperator is not null)
-                operators.Insert(5, diarizationOperator);
-            var alignmentOperator = operatorFactory.CreateAlignmentOperator(config);
-            if (alignmentOperator is not null)
-                operators.Add(alignmentOperator);
-            operators.Add(qualityReportOp);
+
+            // from-script DAG：轨道检查→转换→预处理→人声分离→转录→脚本加载→清洗→映射→对齐→质量报告
+            var dag = BuildFromScriptDag(
+                subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                operatorFactory, scriptLoaderOp, textCleaningOp, mapperOp, qualityReportOp, config);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
-            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
+            await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
 
             // 保存为 Centurion 中间文件（含词级时间戳/说话人/脚本映射等全部详细信息）
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "from-script", outputPath);
@@ -115,5 +102,63 @@ public sealed class FromScriptCommand(
             FailLogGate.Log(logger, ex, "From-script pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 from-script DAG（pipeline graph 命令与 from-script 命令共享的单一事实源）：
+    /// 轨道检查 → FFmpeg 转换 → 音频预处理 → 人声分离 → 转录 → 脚本加载 → 清洗 →
+    /// 时间线映射 → 强制对齐 → 质量报告；说话人分割/对齐按可用性与配置条件接入。
+    /// </summary>
+    internal static PipelineDag BuildFromScriptDag(
+        SubtitleTrackCheckerOperator subtitleTrackCheckerOp,
+        FFmpegConvertOperator ffmpegOp,
+        AudioPreprocessOperator audioPreprocessOp,
+        VocalSeparationOperator vocalSepOp,
+        PipelineOperatorFactory operatorFactory,
+        ScriptLoaderOperator scriptLoaderOp,
+        TextPreprocessingOperator textCleaningOp,
+        ScriptTimelineMapperOperator mapperOp,
+        QualityReportOperator qualityReportOp,
+        Centurion.Models.Workflow.WorkflowConfig config)
+    {
+        var builder = PipelineDag.CreateBuilder();
+        builder
+            .Add("Track Check", subtitleTrackCheckerOp, description: "检查输入媒体轨道与格式")
+            .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "重采样/转码为统一音频")
+            .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "降噪/重采样/响度归一化")
+            .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs 人声分离")
+            .Add("Transcribe", operatorFactory.CreateTranscribeOperator(config),
+                dependsOn: ["Vocal Separation"], maxRetries: 1, description: "ASR 转录（失败自动重试 1 次）");
+
+        var afterTranscribe = "Transcribe";
+        var diarizationOp = operatorFactory.CreateDiarizationOperator(config);
+        if (diarizationOp is not null)
+        {
+            builder.Add("Speaker Diarization", diarizationOp,
+                dependsOn: [afterTranscribe],
+                maxRetries: 1,
+                degradeOnFailure: true,
+                description: "说话人分割标注（失败降级跳过，不中断）");
+            afterTranscribe = "Speaker Diarization";
+        }
+
+        builder.Add("Script Load", scriptLoaderOp, dependsOn: [afterTranscribe], description: "加载台本/参考脚本")
+            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Script Load"], description: "标点/数字/缩写规范化")
+            .Add("Timeline Mapping", mapperOp, dependsOn: ["Text Cleaning"], description: "台本与转录时间线映射");
+
+        var afterMapping = "Timeline Mapping";
+        var alignmentOp = operatorFactory.CreateAlignmentOperator(config);
+        if (alignmentOp is not null)
+        {
+            builder.Add("Force Alignment", alignmentOp,
+                dependsOn: [afterMapping],
+                maxRetries: 1,
+                degradeOnFailure: true,
+                description: "词级强制对齐（失败降级跳过，不中断）");
+            afterMapping = "Force Alignment";
+        }
+
+        builder.Add("Quality Report", qualityReportOp, dependsOn: [afterMapping], description: "质量报告收尾");
+        return builder.Build();
     }
 }

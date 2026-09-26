@@ -138,15 +138,8 @@ app.Configure(config =>
     config.AddCommand<ConvertCommand>("convert");
     config.AddCommand<BuildCommand>("build");
     config.AddCommand<UpdateCommand>("update");
+    // 单算子小命令已移除：全部核心命令统一走 DAG 管线（asr/ocr/from-script/translate/dub/correct/quality）
     // REST 服务：POST /commands/{name} 复用 CLI 命令内核（CommandRequest 契约）
-    // 独立算子小命令：把单个（或最小编排的）管道算子暴露为 CLI 命令
-    config.AddCommand<TranscribeCommand>("transcribe");
-    config.AddCommand<VocalSepCommand>("vocalsep");
-    config.AddCommand<DiarizeCommand>("diarize");
-    config.AddCommand<SplitCommand>("split");
-    config.AddCommand<CleanCommand>("clean");
-    config.AddCommand<AlignCommand>("align");
-    config.AddCommand<SpellCheckCommand>("spellcheck");
     config.AddCommand<ValidateCommand>("validate");
     config.AddCommand<MigrateCommand>("migrate");
     config.AddCommand<QualityCommand>("quality");

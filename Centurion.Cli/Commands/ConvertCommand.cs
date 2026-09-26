@@ -67,10 +67,9 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // 执行管道（仅包含解析算子）
-            var operators = _convertOperatorsFactory().ToList(); // 返回 [ConvertParseOperator]
-            operators.Add(_qualityReportOp);
-            await _executor.ExecuteAsync(operators, workflowContext, cancellationToken);
+            // convert DAG：解析算子 → 质量报告（pipeline-graph 命令共享同一装配）
+            var dag = BuildConvertDag(_convertOperatorsFactory().ToList(), _qualityReportOp);
+            await _executor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
             // 保存为 Centurion 中间文件（供后续命令继续处理）
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "convert", outputPath);
@@ -86,5 +85,32 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             FailLogGate.Log(_logger, ex, "Conversion pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 convert DAG（pipeline graph 命令与 convert 命令共享的单一事实源）：
+    /// 输入字幕解析 → 质量报告。
+    /// </summary>
+    internal static PipelineDag BuildConvertDag(
+        IReadOnlyList<Centurion.Abstractions.Pipeline.IPipelineOperator> parseOperators,
+        QualityReportOperator qualityReportOp)
+    {
+        var builder = PipelineDag.CreateBuilder();
+        var previous = (string?)null;
+        var index = 0;
+        foreach (var op in parseOperators)
+        {
+            var name = op.Name;
+            while (builder.Contains(name))
+                name = $"{op.Name}#{++index}";
+            builder.Add(name, op, dependsOn: previous is null ? null : [previous],
+                description: "解析输入字幕（ASS/SRT/TXT）为结构化句子");
+            previous = name;
+        }
+        if (previous is null)
+            throw new ArgumentException("convert pipeline requires at least one parse operator.");
+
+        builder.Add("Quality Report", qualityReportOp, dependsOn: [previous], description: "质量报告收尾");
+        return builder.Build();
     }
 }
