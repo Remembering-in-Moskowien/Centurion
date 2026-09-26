@@ -24,7 +24,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
 
     /// <summary>成功徽章 + 日志式前缀（✔ 仅为控制台装饰，日志文件记录纯文本）。</summary>
-    private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]✔[/] ";
+    private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]{CliSymbols.Check}[/] ";
 
     /// <summary>
     /// 以白色向控制台写入文本（不换行），并记录 info 日志。
