@@ -71,15 +71,16 @@ public sealed class ModelsListCommand(
         var readyCount = 0;
         var missingCount = 0;
 
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Title("[bold]模型注册表[/]")
+            .AddColumn(new TableColumn("域").LeftAligned())
+            .AddColumn(new TableColumn("模型").LeftAligned())
+            .AddColumn(new TableColumn("类型").Centered())
+            .AddColumn(new TableColumn("状态").LeftAligned());
+
         foreach (var domain in ModelCatalog.Domains(registry))
         {
-            var table = new Table()
-                .Border(TableBorder.Rounded)
-                .Title($"[bold]{domain.Name}[/] ({domain.Models.Count} models)")
-                .AddColumn(new TableColumn("模型").LeftAligned())
-                .AddColumn(new TableColumn("类型").Width(6))
-                .AddColumn(new TableColumn("状态").Width(10));
-
             foreach (var (name, meta) in domain.Models.OrderBy(m => m.Key, StringComparer.OrdinalIgnoreCase))
             {
                 var ready = ModelCatalog.ExistsLocally(ModelCatalog.CreateManager(serviceProvider, domain, name));
@@ -93,13 +94,11 @@ public sealed class ModelsListCommand(
                 var state = ready
                     ? "[green]● ready[/]"
                     : "[red]○ missing[/]";
-                table.AddRow($"[bold]{name}[/]", kind, state);
+                table.AddRow($"[dim]{domain.Name}[/]", $"[bold]{name}[/]", kind, state);
             }
-
-            AnsiConsole.Write(table);
-            AnsiConsole.WriteLine();
         }
 
+        AnsiConsole.Write(table);
         AnsiConsole.MarkupLine(
             $"总计 [green]{readyCount}[/] 就绪 / [red]{missingCount}[/] 缺失" +
             (missingCount > 0 ? "  — 安装: [cyan]Centurion models install <model>[/]" : ""));
