@@ -102,7 +102,6 @@ public sealed class DubCommand(
             }
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Dubbed audio completed: {0}", wavPath));
-
             if (settings.Json)
             {
                 JsonOutput.Write(new
@@ -113,11 +112,10 @@ public sealed class DubCommand(
                     output = wavPath,
                     steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
                 });
-            }
-            return ExitCodes.Success;
-            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Synthesized {0}/{1} segments -> {2}", dubbed, segments.Count, settings.TargetLanguage));
+            }            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Synthesized {0}/{1} segments -> {2}", dubbed, segments.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", outputPath));
-            return 0;
+
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {

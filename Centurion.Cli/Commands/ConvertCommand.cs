@@ -32,6 +32,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
     /// <param name="qualityReportOp">质量报告算子（管线末尾写出 .quality.json）。</param>
     /// <param name="logger">记录命令执行失败的日志器。</param>
     /// <param name="store">中间文件存储（*.centurion.json 读写/校验/迁移）。</param>
+    /// <param name="serviceProvider">服务容器（算子工厂/策略解析）。</param>
     public ConvertCommand(
         PipelineExecutor executor,
         Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory,
