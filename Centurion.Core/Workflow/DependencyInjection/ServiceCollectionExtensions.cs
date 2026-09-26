@@ -72,6 +72,8 @@ public static class ServiceCollectionExtensions
             new OcrClient(
                 new HttpClient { Timeout = TimeSpan.FromMinutes(10) },
                 sp.GetRequiredService<ILogger<OcrClient>>()));
+        services.AddSingleton<RapidOcrModelManager>();
+        services.AddSingleton<RapidOcrEngine>();
         services.AddTransient<OcrExtractOperator>();
 
         // ---------- 3. 策略工厂 ----------

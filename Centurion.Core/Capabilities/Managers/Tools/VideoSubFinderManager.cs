@@ -7,13 +7,28 @@ using SharpCompress.Archives;
 using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
-/// <summary>下载并缓存 VideoSubFinder CLI，供 OCR 字幕帧检测使用。</summary>
+/// <summary>
+/// 下载并缓存 VideoSubFinder CLI，供 OCR 字幕帧检测使用。
+/// 下载源（按平台，全部可经 GitHubDownloadProxy 加速）：
+///   - Windows x64：GitHub lionc2240/autovsf 镜像的官方 VideoSubFinder_6.10_x64.zip
+///     （官方包内含 VideoSubFinderWXW.exe，支持无头命令行模式；若含 VideoSubFinderCli.exe 则优先）。
+///   - Linux / macOS：GitHub eritpchy/videosubfinder-cli 的 CLI 构建。
+/// 安装失败（下载不可达 / 包内无可用可执行文件）返回 null，OCR 主链路降级为 FFmpeg 抽帧。
+/// </summary>
 public sealed class VideoSubFinderManager(
     ITempDirectoryManager tempManager,
     ILogger<VideoSubFinderManager> logger)
 {
-    private const string GitHubReleaseApi = "https://api.github.com/repos/eritpchy/videosubfinder-cli/releases/latest";
-    private const string SourceForgeReleaseApi = "https://sourceforge.net/projects/videosubfinder/best_release.json";
+    /// <summary>Windows 官方包的 GitHub 镜像（SourceForge 直连在部分网络不可达，故优先走 GitHub）。</summary>
+    private const string WindowsGitHubReleaseApi =
+        "https://api.github.com/repos/lionc2240/autovsf/releases/tags/VideoSubFinder_6.10_x64";
+
+    private const string LinuxMacGitHubReleaseApi =
+        "https://api.github.com/repos/eritpchy/videosubfinder-cli/releases/latest";
+
+    private const string SourceForgeReleaseApi =
+        "https://sourceforge.net/projects/videosubfinder/best_release.json";
+
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly SemaphoreSlim InstallGate = new(1, 1);
     private static readonly string ToolsRoot = Path.Combine(AppContext.BaseDirectory, "tools", "videosubfinder");
@@ -41,11 +56,11 @@ public sealed class VideoSubFinderManager(
             try
             {
                 var release = OperatingSystem.IsWindows()
-                    ? await GetWindowsReleaseAsync(cancellationToken)
-                    : await GetGitHubReleaseAsync(assetName, cancellationToken);
+                    ? await GetWindowsGitHubReleaseAsync(cancellationToken)
+                    : await GetGitHubReleaseAsync(LinuxMacGitHubReleaseApi, assetName, cancellationToken);
                 if (await WasRejectedReleaseAsync(release, cancellationToken))
                 {
-                    logger.LogInformation("The current VideoSubFinder release was already checked and did not contain the CLI.");
+                    logger.LogInformation("The current VideoSubFinder release was already checked and did not contain a usable executable.");
                     return null;
                 }
                 return await DownloadAndInstallAsync(release, assetName, executableNames, cancellationToken);
@@ -104,7 +119,9 @@ public sealed class VideoSubFinderManager(
             .FirstOrDefault();
         if (executable is null)
         {
-            logger.LogWarning("Downloaded VideoSubFinder archive '{Asset}' did not contain the CLI executable.", assetName);
+            logger.LogWarning(
+                "Downloaded VideoSubFinder archive '{Asset}' did not contain any usable executable ({Names}).",
+                assetName, string.Join(", ", executableNames));
             Directory.CreateDirectory(ToolsRoot);
             await File.WriteAllTextAsync(RejectedReleasePath, GetReleaseFingerprint(release), cancellationToken);
             return null;
@@ -135,7 +152,8 @@ public sealed class VideoSubFinderManager(
         if (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         {
             assetName = "VideoSubFinder_6.10_x64.zip";
-            executableNames = ["VideoSubFinderCli.exe"];
+            // 官方包内为 VideoSubFinderWXW.exe（支持无头命令行）；若未来含 VideoSubFinderCli.exe 则优先命中。
+            executableNames = ["VideoSubFinderCli.exe", "VideoSubFinderWXW.exe"];
             return true;
         }
 
@@ -159,10 +177,25 @@ public sealed class VideoSubFinderManager(
     }
 
     private static IReadOnlyList<string> GetExecutableNames() => OperatingSystem.IsWindows()
-        ? ["VideoSubFinderCli.exe"]
+        ? ["VideoSubFinderWXW_intel.exe", "VideoSubFinderWXW.exe", "VideoSubFinderCli.exe"]
         : ["VideoSubFinderCli.run", "VideoSubFinderCli"];
 
-    private static async Task<ReleaseArchive> GetWindowsReleaseAsync(CancellationToken cancellationToken)
+    /// <summary>Windows：GitHub autovsf 镜像（含 SHA-256 digest）；GitHub 失败时回退 SourceForge 官方。</summary>
+    private async Task<ReleaseArchive> GetWindowsGitHubReleaseAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await GetGitHubReleaseAsync(WindowsGitHubReleaseApi, "VideoSubFinder_6.10_x64.zip", cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or TaskCanceledException)
+        {
+            logger.LogInformation("Windows VideoSubFinder GitHub mirror unavailable ({Message}); trying SourceForge.", ex.Message);
+            return await GetWindowsSourceForgeReleaseAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>SourceForge 官方最佳版本（无 SHA-256，仅 URL；部分网络不可达）。</summary>
+    private async Task<ReleaseArchive> GetWindowsSourceForgeReleaseAsync(CancellationToken cancellationToken)
     {
         using var response = await HttpClient.GetAsync(SourceForgeReleaseApi, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -174,15 +207,15 @@ public sealed class VideoSubFinderManager(
         var sourceFileName = release.GetProperty("filename").GetString();
         var fileName = sourceFileName is null ? null : Path.GetFileName(sourceFileName);
         if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(hash) ||
-            !string.Equals(fileName, "VideoSubFinder_6.10_x64.zip", StringComparison.OrdinalIgnoreCase))
+            !fileName?.StartsWith("VideoSubFinder_", StringComparison.OrdinalIgnoreCase) == true)
             throw new InvalidDataException("SourceForge did not return the expected Windows VideoSubFinder package.");
 
         return new ReleaseArchive(RequireHttpsUrl(url), hash);
     }
 
-    private static async Task<ReleaseArchive> GetGitHubReleaseAsync(string assetName, CancellationToken cancellationToken)
+    private static async Task<ReleaseArchive> GetGitHubReleaseAsync(string apiUrl, string assetName, CancellationToken cancellationToken)
     {
-        using var response = await HttpClient.GetAsync(GitHubReleaseApi, cancellationToken);
+        using var response = await HttpClient.GetAsync(apiUrl, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
@@ -216,11 +249,22 @@ public sealed class VideoSubFinderManager(
                 await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
                 await using var output = File.Create(destination);
                 await input.CopyToAsync(output, cancellationToken);
+                if (new FileInfo(destination).Length == 0)
+                    throw new IOException("Downloaded archive is empty.");
                 return;
             }
             catch (Exception ex) when (ex is HttpRequestException or IOException)
             {
                 lastError = ex;
+                try
+                {
+                    if (File.Exists(destination))
+                        File.Delete(destination);
+                }
+                catch (IOException)
+                {
+                    // 忽略清理失败，下个候选覆盖写入
+                }
             }
         }
 

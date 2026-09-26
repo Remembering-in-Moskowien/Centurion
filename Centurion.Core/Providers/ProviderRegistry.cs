@@ -71,14 +71,19 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
                 CloudAsrProviders.CapabilitiesFor(asrProvider)));
         }
 
-        // ---- OCR：智谱（云）+ Ollama / llama.cpp（本地） ----
+        // ---- OCR：智谱（云）+ Ollama / llama.cpp / RapidOCR（本地） ----
         var ocrClient = sp.GetRequiredService<OcrClient>();
+        var rapidOcrEngine = sp.GetRequiredService<RapidOcrEngine>();
         foreach (var backend in new[] { OcrBackend.Zhipu, OcrBackend.Ollama, OcrBackend.LlamaCpp })
         {
             providers.Add(new OcrClientProvider(
                 OcrProviders.NameFor(backend), $"{backend} OCR", backend, ocrClient,
                 OcrProviders.CapabilitiesFor(backend)));
         }
+
+        providers.Add(new OcrClientProvider(
+            OcrProviders.NameFor(OcrBackend.RapidOcr), "RapidOCR OCR", OcrBackend.RapidOcr, ocrClient,
+            OcrProviders.CapabilitiesFor(OcrBackend.RapidOcr), rapidOcrEngine));
 
         // ---- LLM：11 提供商（Ollama 本地 + 云端） ----
         foreach (var llmProvider in Enum.GetValues<LlmProvider>())

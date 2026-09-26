@@ -23,8 +23,9 @@ public class ProcessManager(ILogger<ProcessManager> logger)
     public async Task<string> ExecuteAsync(
         string executablePath,
         string arguments,
-        CancellationToken cancellationToken = default)
-        => await ExecuteCoreAsync(executablePath, arguments, null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        bool throwOnNonZeroExit = true)
+        => await ExecuteCoreAsync(executablePath, arguments, null, cancellationToken, throwOnNonZeroExit);
 
     /// <summary>
     /// 执行外部程序（参数数组形式），返回标准输出字符串。
@@ -38,14 +39,16 @@ public class ProcessManager(ILogger<ProcessManager> logger)
     public async Task<string> ExecuteAsync(
         string executablePath,
         IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken = default)
-        => await ExecuteCoreAsync(executablePath, null, arguments, cancellationToken);
+        CancellationToken cancellationToken = default,
+        bool throwOnNonZeroExit = true)
+        => await ExecuteCoreAsync(executablePath, null, arguments, cancellationToken, throwOnNonZeroExit);
 
     private async Task<string> ExecuteCoreAsync(
         string executablePath,
         string? arguments,
         IReadOnlyList<string>? argumentList,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool throwOnNonZeroExit = true)
     {
         if (!File.Exists(executablePath))
             throw new FileNotFoundException($"Executable not found: {executablePath}");
@@ -109,6 +112,8 @@ public class ProcessManager(ILogger<ProcessManager> logger)
 
         if (process.ExitCode == 0) return outputBuilder.ToString();
         var error = errorBuilder.ToString();
+        if (!throwOnNonZeroExit)
+            return outputBuilder.ToString();
         // 进程失败属内部细节：以 warn 记录（异常继续上抛，由最外层统一输出一次 fail）
         logger.LogWarning(
             "Process '{Exe}' exited with code {ExitCode}. Error: {Error}",

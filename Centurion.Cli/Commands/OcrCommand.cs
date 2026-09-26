@@ -12,6 +12,7 @@ namespace Centurion.Cli.Commands;
 /// <summary><c>ocr</c> 命令：从视频或图片提取字幕文字，写入中间文件。</summary>
 public sealed class OcrCommand(
     OcrClient ocrClient,
+    RapidOcrEngine rapidOcrEngine,
     OcrExtractOperator ocrExtractOp,
     ITempDirectoryManager tempManager,
     PipelineOperatorFactory operatorFactory,
@@ -37,7 +38,13 @@ public sealed class OcrCommand(
             if (backend == OcrBackend.Zhipu && string.IsNullOrWhiteSpace(settings.OcrApiKey))
                 throw new ArgumentException(
                     "OCR with zhipu backend requires a GLM-OCR API key. Provide --ocr-api-key <KEY>, or use --ocr-backend ollama/llamacpp for local inference.");
-            if (backend != OcrBackend.Zhipu && !await ocrClient.ProbeAsync(backend, settings.OcrBaseUrl, ct))
+            if (backend == OcrBackend.RapidOcr)
+            {
+                if (!await rapidOcrEngine.IsAvailableAsync(ct))
+                    throw new InvalidOperationException(
+                        "RapidOCR engine is not available: model download failed or ONNX runtime missing.");
+            }
+            else if (backend != OcrBackend.Zhipu && !await ocrClient.ProbeAsync(backend, settings.OcrBaseUrl, ct))
                 throw new InvalidOperationException(
                     "Local OCR backend not reachable. Start 'ollama serve' or your llama-server, then retry.");
 

@@ -61,7 +61,7 @@ Centurion.Core/
 
 - **契约**（`Centurion.Abstractions.Providers`）：6 域接口 `IAsrProvider / IOcrProvider / ILlmProvider / ITtsProvider / IDiarizationProvider / IVocalSeparationProvider`，全部继承 `IProvider`（`Name / DisplayName / Capabilities / IsAvailableAsync`）。
 - **数据契约**（`Centurion.Models.Providers`）：`ProviderCapabilities`（本地/云、语言、GPU、成本、延迟、质量档）、`ProviderUsage`（token/音频秒/缓存/估算成本，含聚合 `+`）、`ProviderResult<T>` 与 `ProviderUnavailableException / ProviderExecutionException`。
-- **实现**（`Centurion.Core.Providers/`）：本地 ASR 3 变体（whispercpp / crispasr-qwen / crispasr-whisper）+ 云 ASR 4（openai/groq/dashscope/deepgram）、OCR 3（zhipu/ollama/llamacpp）、LLM 11（OpenAI 兼容 chat/completions）、TTS（llama-tts）、说话人分割 2（crispasr/pyannote）、人声分离（demucs）。
+- **实现**（`Centurion.Core.Providers/`）：本地 ASR 3 变体（whispercpp / crispasr-qwen / crispasr-whisper）+ 云 ASR 4（openai/groq/dashscope/deepgram）、OCR 4（zhipu/ollama/llamacpp/**rapidocr** 本地 PaddleOCR ONNX）、LLM 11（OpenAI 兼容 chat/completions）、TTS（llama-tts）、说话人分割 2（crispasr/pyannote）、人声分离（demucs）。
 - **装配**：`ProviderRegistry`（注册表）+ `ProviderFactory`（按配置解析 fallback 链：云优先→本地兜底 / 本地优先→云备用；`--profile offline/fast/quality/cheap` 调节主备与预算取向）。
 - **横切**：`ProviderPolicies`（指数退避重试/熔断/限流/跨链预算闸门）+ `ApiKeyStore`（显式配置 → 环境变量 `CENTURION_<域>_API_KEY/_BASE_URL` → null；无密钥时云端 `IsAvailable=false`，链自动回退本地，不崩溃）。
 - **命令**：`Centurion models list/install/verify/remove`（模型注册表管理）、`Centurion providers list/test`（能力与可用性探测）。

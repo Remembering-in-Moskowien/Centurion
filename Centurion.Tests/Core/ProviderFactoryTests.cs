@@ -123,4 +123,13 @@ public sealed class ProviderFactoryTests
         var factory = CreateFactory();
         Assert.Throws<NotSupportedException>(() => factory.CreateOcrProvider("nope", null, null, null));
     }
+
+    [Fact]
+    public void CreateOcrProvider_RapidOcr_Resolves()
+    {
+        var factory = CreateFactory();
+        var provider = factory.CreateOcrProvider("rapidocr", null, null, null);
+        Assert.Equal("rapidocr", provider.Name);
+        Assert.Equal(ProviderKind.Local, provider.Capabilities.Kind);
+    }
 }
