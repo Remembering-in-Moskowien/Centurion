@@ -158,7 +158,8 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             styles = [.. styles.Distinct()];
         }
 
-        builder = builder.WithStyles(styles).WithAddDefaultStyle();
+        // 解析出样式时保留原样；无任何样式时才补默认 Default
+        builder = styles.Count > 0 ? builder.WithStyles(styles) : builder.WithAddDefaultStyle();
 
         // 解析所有对话行并按起始时间排序
         var lines = new List<AssSubLine>();
@@ -197,6 +198,31 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         var builder = new AssSubBuilder().WithDefaultValues();
         if (!string.IsNullOrEmpty(context.Config.InputFilePath))
             builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
+
+        // 样式表：优先使用工作流状态中的自定义样式（Studio 前端经中间文件编辑）；
+        // 为空时回退到内置默认两套（Default + Sub）。始终保证 Default 存在，
+        // 双语布局时保证 Sub 次字幕样式存在。
+        var customStyles = context.State.Styles;
+        List<AssStyle> styles;
+        if (customStyles is { Count: > 0 })
+        {
+            styles = [.. customStyles];
+            if (styles.All(s => !string.Equals(s.Name, "Default", StringComparison.OrdinalIgnoreCase)))
+                styles.Add(new AssStyleBuilder().WithDefaultValues().Build());
+        }
+        else
+        {
+            styles =
+            [
+                new AssStyleBuilder().WithDefaultValues().Build(),
+                new AssStyleBuilder().WithSubtitleStyle().Build()
+            ];
+        }
+
+        if (context.Config.Bilingual && styles.All(s => !string.Equals(s.Name, "Sub", StringComparison.OrdinalIgnoreCase)))
+            styles.Add(new AssStyleBuilder().WithSubtitleStyle().Build());
+
+        builder = builder.WithStyles(styles);
 
         var sentences = context.State.CorrectedSentences is { Count: > 0 }
             ? context.State.CorrectedSentences
@@ -265,7 +291,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
                         ? TranslationKaraokeBuilder.Build(
                             sentence.TranslatedText, sentence.Start, sentence.End, targetLanguage)
                         : sentence.TranslatedText;
-                    lines.Add(BuildLine(sentence, subText, "Sub", speaker, false));
+                    lines.Add(BuildLine(sentence, subText, "Sub", speaker, false, useSentenceStyle: false));
                 }
                 else
                 {
@@ -289,8 +315,16 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         return builder.WithLines([.. lines.OrderBy(line => line.GetStart())]);
     }
 
-    private static AssSubLine BuildLine(Sentence sentence, string text, string style, string? speaker, bool showSpeakerPrefix)
+    /// <summary>
+    /// 构建对话行。style 为回退样式名；<paramref name="useSentenceStyle"/> 为 true 时
+    /// 优先使用句子绑定的 <see cref="Sentence.Style"/>（Studio 逐行指定）。
+    /// </summary>
+    private static AssSubLine BuildLine(Sentence sentence, string text, string style, string? speaker, bool showSpeakerPrefix, bool useSentenceStyle = true)
     {
+        var finalStyle = useSentenceStyle && !string.IsNullOrWhiteSpace(sentence.Style)
+            ? sentence.Style.Trim()
+            : style;
+
         var finalText = showSpeakerPrefix && !string.IsNullOrWhiteSpace(speaker)
             ? $"[{speaker}] {text}"
             : text;
@@ -299,7 +333,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             .WithLayer(0)
             .WithStart((long)sentence.Start)
             .WithEnd((long)sentence.End)
-            .WithStyle(style)
+            .WithStyle(finalStyle)
             .WithName(speaker ?? string.Empty)
             .WithMarginL(0)
             .WithMarginR(0)
