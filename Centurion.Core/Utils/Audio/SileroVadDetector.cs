@@ -7,12 +7,14 @@ namespace Centurion.Core.Utils.Audio;
 /// <summary>
 /// Silero VAD（ONNX，16 kHz 流式接口）语音活动检测器：
 /// 逐 512 样本帧（32ms）推理语音概率（state 跨帧保持），概率 ≥ 0.5 判为语音帧，
-/// 再按合并间隙/最短时长聚合成语音段。区分语音与纯器乐/静音，
-/// 供「去除器乐段」的聚合预处理使用；能量型 <see cref="VadDetector"/> 为无模型时的降级路径。
+/// 再按合并间隙/最短时长聚合成语音段。每帧输入按官方封装拼接上一帧末 64 样本
+/// （512+64=576），区分语音与纯器乐/静音，供「去除器乐段」的聚合预处理使用；
+/// 能量型 <see cref="VadDetector"/> 为无模型时的降级路径。
 /// </summary>
 public sealed class SileroVadDetector : IDisposable
 {
     private const int FrameSize = 512;      // 32ms @ 16kHz
+    private const int ContextSize = 64;     // 官方封装每帧拼接上一帧末 64 样本（512+64=576 输入）
     private const int StateSize = 128;      // LSTM state per layer
     private const double FrameSeconds = 0.032;
 
@@ -55,8 +57,8 @@ public sealed class SileroVadDetector : IDisposable
         if (frameCount == 0)
             return result;
 
-        // 1) 逐帧推理（state 跨帧保持）
-        var input = new float[FrameSize];
+        // 1) 逐帧推理（state 跨帧保持；每帧输入 = 上一帧末 64 样本 context + 512 帧，与官方封装一致）
+        var input = new float[FrameSize + ContextSize];
         var state = new float[2 * StateSize];
         var sr = new long[] { 16000 };
         var probs = new float[frameCount];
@@ -64,10 +66,19 @@ public sealed class SileroVadDetector : IDisposable
 
         for (var i = 0; i < frameCount; i++)
         {
-            Array.Copy(samples, i * FrameSize, input, 0, FrameSize);
+            if (i == 0)
+            {
+                Array.Clear(input, 0, ContextSize);
+            }
+            else
+            {
+                // context = 上一帧末尾 64 样本
+                Array.Copy(samples, (i - 1) * FrameSize + FrameSize - ContextSize, input, 0, ContextSize);
+            }
+            Array.Copy(samples, i * FrameSize, input, ContextSize, FrameSize);
             var inputTensor = _inputHasBatchDim
-                ? new DenseTensor<float>(input, new[] { 1, 1, FrameSize })
-                : new DenseTensor<float>(input, new[] { 1, FrameSize });
+                ? new DenseTensor<float>(input, new[] { 1, 1, FrameSize + ContextSize })
+                : new DenseTensor<float>(input, new[] { 1, FrameSize + ContextSize });
             var prob = 0f;
             float[]? stateN = null;
             using (var results = _session.Run(new[]
