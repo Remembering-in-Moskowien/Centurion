@@ -106,6 +106,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AudioPreprocessOperator>();
         services.AddTransient<VocalSeparationOperator>();
         services.AddTransient<VoiceActivityFilterOperator>();
+        services.AddSingleton<SileroVadModelManager>();
         services.AddTransient<TextPreprocessingOperator>();
         services.AddTransient<ScriptLoaderOperator>();
         services.AddTransient<ScriptTimelineMapperOperator>();
