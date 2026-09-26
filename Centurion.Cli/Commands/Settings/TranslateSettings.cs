@@ -46,10 +46,10 @@ public sealed class TranslateSettings : CommandSettings
     public string Strategy { get; init; } = "llm";
 
     /// <summary>
-    /// LLM 模型名称；为空时 OpenAI 默认 gpt-4o-mini、Ollama 默认 llama3.1。
+    /// LLM 模型名称；为空时 OpenAI 默认 gpt-4o-mini、Ollama 默认 llama3.2。
     /// </summary>
     [CommandOption("--model <MODEL>")]
-    [Description("LLM model name (OpenAI default gpt-4o-mini, Ollama default llama3.1)")]
+    [Description("LLM model name (OpenAI default gpt-4o-mini, Ollama default llama3.2)")]
     public string? Model { get; init; }
 
     /// <summary>

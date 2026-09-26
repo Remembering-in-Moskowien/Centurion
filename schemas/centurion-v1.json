@@ -1,0 +1,735 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "inputFile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outputFile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "operator": {
+            "type": "string"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parametersHash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "appliedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "inputFilePath": {
+          "type": "string"
+        },
+        "commandName": {
+          "type": "string"
+        },
+        "subtitleFilePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outputFilePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scriptFilePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "device": {
+          "enum": [
+            "Auto",
+            "Cpu",
+            "Cuda",
+            "Vulkan",
+            "DirectMl"
+          ]
+        },
+        "correctStrategy": {
+          "enum": [
+            "TimelineOnly",
+            "TextOnly",
+            "Both"
+          ]
+        },
+        "maxDriftMs": {
+          "type": "integer"
+        },
+        "fuzzyThreshold": {
+          "type": "number"
+        },
+        "hunspellDictionary": {
+          "type": "string"
+        },
+        "mapperStrategy": {
+          "type": "string"
+        },
+        "coverageThreshold": {
+          "type": "number"
+        },
+        "maxCps": {
+          "type": "number"
+        },
+        "maxCharsPerLine": {
+          "type": "integer"
+        },
+        "fillGapWithEllipsis": {
+          "type": "boolean"
+        },
+        "audioPreprocess": {
+          "type": "object",
+          "properties": {
+            "enableResampling": {
+              "type": "boolean"
+            },
+            "enableDownmixing": {
+              "type": "boolean"
+            },
+            "enableHighPass": {
+              "type": "boolean"
+            },
+            "enableLoudnessNormalization": {
+              "type": "boolean"
+            },
+            "enableNoiseReduction": {
+              "type": "boolean"
+            },
+            "snrThresholdDb": {
+              "type": "number"
+            },
+            "noiseReductionBackend": {
+              "enum": [
+                "BuiltInFfmpeg",
+                "ExternalCli"
+              ]
+            }
+          }
+        },
+        "transcriberEngine": {
+          "type": "string"
+        },
+        "transcriberModel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asrProvider": {
+          "type": "string"
+        },
+        "asrApiKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asrBaseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": "string"
+        },
+        "initialPrompt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "splitStrategy": {
+          "type": "string"
+        },
+        "maxSentenceLength": {
+          "type": "integer"
+        },
+        "targetSentenceLength": {
+          "type": "integer"
+        },
+        "spreadRange": {
+          "type": "integer"
+        },
+        "chunkGranularity": {
+          "type": "number"
+        },
+        "mergeGapSeconds": {
+          "type": "number"
+        },
+        "enablePunctuationRewrite": {
+          "type": "boolean"
+        },
+        "splitterModel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "splitterApiKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "splitterProvider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "splitterBaseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vocalSeparation": {
+          "type": "boolean"
+        },
+        "vocalSeparationModel": {
+          "type": "string"
+        },
+        "ocrIntervalSeconds": {
+          "type": "number"
+        },
+        "ocrVideoSubFinderPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ocrBackend": {
+          "type": "string"
+        },
+        "ocrModel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ocrApiKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ocrBaseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diarizationBackend": {
+          "type": "string"
+        },
+        "diarizationMethod": {
+          "type": "string"
+        },
+        "diarizationModel": {
+          "type": "string"
+        },
+        "numSpeakers": {
+          "type": "integer"
+        },
+        "diarizationMinSegmentSeconds": {
+          "type": "number"
+        },
+        "karaokeMode": {
+          "type": "boolean"
+        },
+        "showSpeakerLabels": {
+          "type": "boolean"
+        },
+        "cacheDirectory": {
+          "type": "string"
+        },
+        "enableAlignment": {
+          "type": "boolean"
+        },
+        "alignmentModel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alignmentChunkGapSeconds": {
+          "type": "number"
+        },
+        "alignmentMaxChunkSeconds": {
+          "type": "number"
+        },
+        "enableTextCleaning": {
+          "type": "boolean"
+        },
+        "removePunctuation": {
+          "type": "boolean"
+        },
+        "expandNumbers": {
+          "type": "boolean"
+        },
+        "expandAbbreviations": {
+          "type": "boolean"
+        },
+        "customDictPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetLanguage": {
+          "type": "string"
+        },
+        "translationStrategy": {
+          "type": "string"
+        },
+        "translationModel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "translationApiKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "translationProvider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "translationBaseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "glossaryPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetScriptPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bilingual": {
+          "type": "boolean"
+        },
+        "ttsEngine": {
+          "type": "string"
+        },
+        "ttsModel": {
+          "type": "string"
+        },
+        "ttsLanguage": {
+          "type": "string"
+        },
+        "speakerReferenceDir": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "translationSubtitlePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dubStrictTiming": {
+          "type": "boolean"
+        },
+        "dubBackgroundPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dubLoudnessTarget": {
+          "type": "number"
+        },
+        "ttsParallelism": {
+          "type": "integer"
+        },
+        "dubMaxChunkSeconds": {
+          "type": "number"
+        },
+        "dubDucking": {
+          "type": "boolean"
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "pipelineTempDirectory": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "convertedAudioPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preprocessedAudioPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vocalsPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transcribeSentences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "translatedText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cleanedText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              },
+              "skipRender": {
+                "type": "boolean"
+              },
+              "words": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "number"
+                    },
+                    "end": {
+                      "type": "number"
+                    },
+                    "speaker": {
+                      "type": "string"
+                    },
+                    "posTag": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "Matched",
+                        "ScriptMissing",
+                        "AudioExtra"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "speaker"
+                  ]
+                }
+              },
+              "style": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "subtitleSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "correctedSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "splitSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "diarizedSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "alignedSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "coarseSentences": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "scriptSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "currentSentences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "mapperCoverage": {
+          "type": "number"
+        },
+        "translatedSentences": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/properties/state/properties/transcribeSentences/items"
+          }
+        },
+        "isAudioConverted": {
+          "type": "boolean"
+        },
+        "isVocalsSeparated": {
+          "type": "boolean"
+        },
+        "isTranscribed": {
+          "type": "boolean"
+        },
+        "isSplit": {
+          "type": "boolean"
+        },
+        "isDiarized": {
+          "type": "boolean"
+        },
+        "isAligned": {
+          "type": "boolean"
+        },
+        "isTranslated": {
+          "type": "boolean"
+        },
+        "dubSegments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "speakerId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "referenceAudioPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "targetStartMs": {
+                "type": "number"
+              },
+              "targetEndMs": {
+                "type": "number"
+              },
+              "synthesizedWavPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "synthesizedDurationSec": {
+                "type": "number"
+              },
+              "alignedDurationSec": {
+                "type": "number"
+              },
+              "mixOffsetMs": {
+                "type": "number"
+              },
+              "alignmentTempo": {
+                "type": "number"
+              },
+              "emotionHint": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "skipped": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "dubOutputWavPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dubSpeakerReferences": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "styles": {
+          "type": "array"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "report": {
+          "type": "object",
+          "properties": {
+            "totalSentences": {
+              "type": "integer"
+            },
+            "textCorrected": {
+              "type": "integer"
+            },
+            "timelineShifted": {
+              "type": "integer"
+            },
+            "unmatched": {
+              "type": "integer"
+            },
+            "averageDriftMs": {
+              "type": "number"
+            },
+            "maxDriftMs": {
+              "type": "number"
+            },
+            "textCoverage": {
+              "type": "number"
+            },
+            "elapsed": {
+              "$comment": "Represents a System.TimeSpan value.",
+              "type": "string",
+              "pattern": "^-?(\\d\u002B\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Centurion intermediate file (v1.0)"
+}

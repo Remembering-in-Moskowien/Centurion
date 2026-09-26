@@ -21,9 +21,11 @@ public sealed class MkvTrackInfo
     public string? Name { get; init; }
 
     /// <summary>是否为字幕轨。</summary>
+[System.Text.Json.Serialization.JsonIgnore]
     public bool IsSubtitle => Type.Equals("subtitles", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>简洁的可读描述（用于警告文案）。</summary>
+[System.Text.Json.Serialization.JsonIgnore]
     public string Summary =>
         $"ID {TrackId} ({Codec})" + (Language is null ? "" : $", lang {Language}");
 }

@@ -28,6 +28,7 @@ using Newtonsoft.Json;
 /// <param name="marginR">右外边距</param>
 /// <param name="marginV">垂直外边距</param>
 /// <param name="encoding">文字编码ID</param>
+[System.Text.Json.Serialization.JsonConverter(typeof(Centurion.Models.Ass.AssStyleJsonConverter))]
 public class AssStyle(
     string name,
     string fontName,

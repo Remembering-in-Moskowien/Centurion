@@ -14,7 +14,7 @@
 dotnet build -c Release
 
 # 2. Transcribe a video → intermediate file
-Centurion spawn demo.mp4 --language en
+Centurion asr demo.mp4 --language en
 
 # 3. Render subtitles
 Centurion build demo.centurion.json
@@ -28,8 +28,8 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 
 | | |
 |---|---|
-| 🗣️ **Two transcription engines** | Whisper.cpp & CrispASR — plus **cloud ASR** (OpenAI / Groq / DashScope / Deepgram) |
-| 👁️ **OCR mode** | GLM-OCR from video frames — cloud or fully local (Ollama / llama.cpp) |
+| 🗣️ **Speech recognition** | Whisper.cpp & CrispASR — plus **cloud ASR** (OpenAI / Groq / DashScope / Deepgram) |
+| 👁️ **OCR command** | GLM-OCR from video frames or images — cloud or local (Ollama / llama.cpp) |
 | 👥 **Speaker diarization** | Who said what, on every path; speaker labels flow into the ASS |
 | 🎙️ **Dubbing** | `dub` re-voices translations with Qwen3-TTS — voice cloning, time-aligned, mixed in |
 | 🌐 **Translation** | LLM (11+ providers), glossary & target-script alignment, karaoke timestamps |
@@ -47,7 +47,8 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | Command | What it does | Usage |
 |---|---|---|
 | `convert` | 🔄 **Entry point**: any subtitle file → intermediate | `convert <INPUT_FILE>` |
-| `spawn` | 🎬 Media → intermediate (ASR **or** OCR, cloud/local) | `spawn <INPUT_FILE>` |
+| `asr` | 🎬 Media → intermediate (speech recognition) | `asr <INPUT_FILE>` |
+| `ocr` | 👁️ Video/image → intermediate (visible text recognition) | `ocr <INPUT_FILE>` |
 | `from-script` | 📜 Media + script → timed intermediate | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
 | `correct` | 🛠️ Calibrate timeline & text (+ Hunspell spell check) | `correct <CENTURION_FILE>` |
 | `translate` | 🌐 Translate an intermediate file (LLM, glossary, script) | `translate <CENTURION_FILE> -t <LANG>` |

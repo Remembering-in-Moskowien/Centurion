@@ -9,7 +9,8 @@ title: Commands
 | Command | What it does | Usage |
 |---|---|---|
 | `convert` | 🔄 **Entry point**: any subtitle file (SRT/VTT/ASS…) → intermediate file | `convert <INPUT_FILE>` |
-| `spawn` | 🎬 Standard transcription: media → intermediate file | `spawn <INPUT_FILE>` |
+| `asr` | 🎬 Speech recognition: media → intermediate file | `asr <INPUT_FILE>` |
+| `ocr` | 👁️ Subtitle text recognition from video or images | `ocr <INPUT_FILE>` |
 | `from-script` | 📜 Script timing: media + script → intermediate file | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
 | `correct` | 🛠️ Calibrate an intermediate file's timeline & text | `correct <CENTURION_FILE>` |
 | `translate` | 🌐 Translate an intermediate file (LLM, glossary, target-script) | `translate <CENTURION_FILE> -t <LANG>` |
@@ -42,49 +43,17 @@ Centurion convert episode.ass -o episode.centurion.json
 
 ---
 
-## 2️⃣ `spawn` — Transcription & OCR 🎬🔤
+## 2️⃣ `asr` — Speech Transcription 🎬
 
 The bread and butter: media file in, intermediate file out (then `build` renders the ASS).
 
 ```bash
-Centurion spawn <INPUT_FILE> [options]
+Centurion asr <INPUT_FILE> [options]
 ```
 
-`spawn` has **two modes**:
+The ASR pipeline runs audio conversion → preprocessing → optional vocal separation → transcription → optional diarization → splitting → cleaning → optional forced alignment.
 
-| Mode | Flag | What it does |
-|---|---|---|
-| `asr` (default) | `-m asr` | Speech recognition — audio conversion → preprocessing → vocal separation (optional) → transcription → diarization → splitting → cleaning → alignment 📣 |
-| `ocr` | `-m ocr` | **GLM-OCR** — extracts subtitle text from video frames or images (burned-in subtitles / video-game dialogue / sign text). Skips audio steps entirely 🔤 |
-
-OCR runs on **cloud or local** inference — pick with `--ocr-backend`:
-
-| Backend | What it is | Key? |
-|---|---|---|
-| `zhipu` (default) | [Zhipu AI](https://open.bigmodel.cn) GLM-OCR in the cloud | `--ocr-api-key` required |
-| `ollama` | **Local** Ollama vision model (`qwen2.5vl`, `llava`…) | none 🏠 |
-| `llamacpp` | **Local** llama-server with a vision GGUF | none 🏠 |
-
-It extracts frames at a fixed interval, OCRs each one, and merges consecutive identical lines into timed sentences — then the usual `split → clean → quality` stages take over. You can point it at a single image too. 🖼️
-
-```bash
-# Cloud GLM-OCR
-Centurion spawn episode.mkv -m ocr --ocr-api-key <KEY> --language zh
-
-# Local Ollama — no key, just a running `ollama serve`
-Centurion spawn episode.mkv -m ocr --ocr-backend ollama --ocr-model qwen2.5vl:7b
-
-# Local llama-server — bring your own vision GGUF
-Centurion spawn movie.mp4 -m ocr --ocr-backend llamacpp --ocr-base-url http://127.0.0.1:8080/v1
-
-# A screenshot / subtitle image
-Centurion spawn frame.png -m ocr --ocr-backend ollama
-
-# Tune the frame interval or swap the model
-Centurion spawn movie.mp4 -m ocr --ocr-api-key <KEY> --ocr-interval 1.5 --ocr-model glm-4v-plus
-```
-
-**Common Options**
+**Options**
 
 - `<INPUT_FILE>` — input audio/video file (required) 🎞️
 - `-o, --output <OUTPUT_FILE>` — output intermediate path (defaults to `<input>.centurion.json`)
@@ -105,39 +74,84 @@ Centurion spawn movie.mp4 -m ocr --ocr-api-key <KEY> --ocr-interval 1.5 --ocr-mo
 - `--disable-audio-resampling` / `--disable-audio-highpass` / `--disable-audio-loudness` — preprocess toggles
 - `-s, --splitter <STRATEGY>` — `rule` / `rule-aggressive` (default, fast-paced dialogue) / `rule-passive` (monologue, uniform speech) / `llm`
 - `--splitter-*` — sentence-splitting knobs (length, granularity, spread…)
-- `-a, --align` — forced alignment, **on by default** 📏 (ASR mode only)
+- `-a, --align` — forced alignment, **on by default** 📏
 - `--am, --alignment-model <MODEL>` — aligner model, default `qwen3-forced-aligner-0.6b-f16`
-- `-m, --mode <MODE>` — `asr` (default, speech recognition) or `ocr` (GLM-OCR from frames/images) 🔤
-- `--ocr-interval <SECONDS>` — frame interval for OCR mode, default `2`
-- `--ocr-backend <BACKEND>` — `zhipu` (default, cloud) / `ollama` (local) / `llamacpp` (local)
-- `--ocr-model <MODEL>` — OCR model (per backend: `glm-ocr` / `qwen2.5vl:7b` / server-loaded)
-- `--ocr-api-key <KEY>` — GLM-OCR API key — required for `-m ocr` **only with zhipu backend**
-- `--ocr-base-url <URL>` — custom endpoint (per backend default)
 
 **Examples** 🧪
 
 ```bash
 # The classic: transcribe → build ASS in two steps
-Centurion spawn demo.mp4 --language en
+Centurion asr demo.mp4 --language en
 Centurion build demo.centurion.json
 
 # Cloud ASR: OpenAI Whisper
-Centurion spawn demo.mp4 -t openai --asr-api-key <KEY> --language en
+Centurion asr demo.mp4 -t openai --asr-api-key <KEY> --language en
 
 # Cloud ASR: Groq (fast & cheap)
-Centurion spawn demo.mp4 -t groq --asr-api-key <KEY> --language en
+Centurion asr demo.mp4 -t groq --asr-api-key <KEY> --language en
 
 # Cloud ASR: Alibaba DashScope (great for Chinese)
-Centurion spawn lecture.wav -t dashscope --asr-api-key <KEY> --language zh
+Centurion asr lecture.wav -t dashscope --asr-api-key <KEY> --language zh
 
 # Chinese lecture, custom output
-Centurion spawn lecture.wav -o lecture.centurion.json --language zh
+Centurion asr lecture.wav -o lecture.centurion.json --language zh
 Centurion build lecture.centurion.json -o lecture.ass
 
 # Meeting + karaoke + speaker labels
-Centurion spawn meeting.mp4 --karaoke --num-speakers 2
+Centurion asr meeting.mp4 --karaoke --num-speakers 2
 Centurion build meeting.centurion.json
 ```
+
+---
+
+## OCR — Subtitle Text Recognition 👁️
+
+Extract burned-in subtitles, game dialogue, or other visible text from video frames or a single image.
+
+```bash
+Centurion ocr <INPUT_FILE> [options]
+```
+
+OCR inference can run in the cloud or locally:
+
+| Backend | What it is | Key? |
+|---|---|---|
+| `zhipu` (default) | [Zhipu AI](https://open.bigmodel.cn) GLM-OCR in the cloud | `--ocr-api-key` required |
+| `ollama` | Local Ollama vision model (`qwen2.5vl`, `llava`...) | none |
+| `llamacpp` | Local llama-server with a vision GGUF | none |
+
+For video, `ocr` uses `VideoSubFinderCli` from `PATH` or downloads and caches it on supported x64 systems. If unavailable or no frames are found, it falls back to fixed-interval FFmpeg extraction. Images are passed directly.
+
+```bash
+# Cloud GLM-OCR
+Centurion ocr episode.mkv --ocr-api-key <KEY> --language zh
+
+# Local Ollama
+Centurion ocr episode.mkv --ocr-backend ollama --ocr-model qwen2.5vl:7b
+
+# Local llama-server
+Centurion ocr movie.mp4 --ocr-backend llamacpp --ocr-base-url http://127.0.0.1:8080/v1
+
+# A screenshot / subtitle image
+Centurion ocr frame.png --ocr-backend ollama
+
+# Override VideoSubFinder and tune fallback interval
+Centurion ocr movie.mp4 --ocr-api-key <KEY> --ocr-interval 1.5 --ocr-videosubfinder-path "C:\\VideoSubFinder\\VideoSubFinderCli.exe"
+```
+
+**OCR Options**
+
+- `<INPUT_FILE>` — supported video, audio, or image file
+- `-o, --output <OUTPUT_FILE>` — output intermediate file
+- `-l, --language <LANG>` — text language, default `en`
+- `--ocr-interval <SECONDS>` — fallback frame interval, default `2`
+- `--ocr-videosubfinder-path <PATH>` — VideoSubFinder CLI path override
+- `--ocr-backend <BACKEND>` — `zhipu` (default) / `ollama` / `llamacpp`
+- `--ocr-model <MODEL>` — OCR model name
+- `--ocr-api-key <KEY>` — GLM-OCR API key, required for `zhipu`
+- `--ocr-base-url <URL>` — custom OCR endpoint
+- `-s, --splitter <STRATEGY>` and `--splitter-*` — configure text splitting
+- `--llm-provider <PROVIDER>` / `--llm-base-url <URL>` — LLM splitter service
 
 ---
 

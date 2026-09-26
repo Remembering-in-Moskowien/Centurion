@@ -32,7 +32,7 @@ Output lands in `Centurion.Cli/bin/Release/net10.0/` — run it directly:
 
 ```bash
 # Transcribe → build ASS in two steps
-Centurion spawn demo.mp4 --language en
+Centurion asr demo.mp4 --language en
 Centurion build demo.centurion.json
 ```
 
@@ -42,7 +42,7 @@ That's it. Whisper/CrispASR, models and tools download themselves on first use. 
 
 ```bash
 # 🎬 Just make the subtitles
-Centurion spawn video.mp4 --language en --karaoke
+Centurion asr video.mp4 --language en --karaoke
 
 # 📜 Script → timed subtitles
 Centurion from-script podcast.wav transcript.txt --language en
@@ -51,10 +51,10 @@ Centurion from-script podcast.wav transcript.txt --language en
 Centurion correct subs.srt --audio episode.mp4 --strategy timeline-only
 
 # 🎤 Music video with vocal separation + speakers
-Centurion spawn concert.mp4 --vocal-separation --num-speakers 2
+Centurion asr concert.mp4 --vocal-separation --num-speakers 2
 
 # 🖥️ Big GPU? Take off
-Centurion spawn long_lecture.wav --device cuda
+Centurion asr long_lecture.wav --device cuda
 
 # 🔄 Keep yourself fresh
 Centurion update --check

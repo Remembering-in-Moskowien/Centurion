@@ -1,6 +1,5 @@
-using Centurion.Models.Console;
 using Spectre.Console;
-
+using Centurion.Models.Console;
 namespace Centurion.Cli.Console;
 
 /// <summary>

@@ -1,6 +1,4 @@
 using Centurion.Models.Console;
-using Centurion.Core.Infrastructure;
-
 namespace Centurion.Abstractions;
 
 /// <summary>

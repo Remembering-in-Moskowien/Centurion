@@ -1,9 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using Centurion.Models.Console;
 using Microsoft.Extensions.Localization;
 
-namespace Centurion.Core.Infrastructure;
+namespace Centurion.Models.Console;
 
 /// <summary>
 /// 控制台输出端口门面（Facade）。

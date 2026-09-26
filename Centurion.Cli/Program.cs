@@ -1,11 +1,10 @@
+using Centurion.Core.Utils.Infrastructure;
 using Centurion.Models.Console;
 using System.Globalization;
 using Centurion.Cli.Commands;
 using Centurion.Cli.Console;
 using Centurion.Abstractions;
-using Centurion.Core.DependencyInjection;
-using Centurion.Core.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
+using Centurion.Core.Workflow.DependencyInjection;using Centurion.Core.Capabilities.Infrastructure;using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Spectre.Console;
@@ -18,7 +17,7 @@ ConsoleServices.Confirm = new SpectreConfirmPrompt();
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-AnsiConsole.Write(new FigletText("Centurion") { Color = Color.White });
+AnsiConsole.Write(new FigletText("Centurion"));
 
 // --verbose / -v：显示完整执行信息（步骤耗时、各阶段日志）；默认仅输出 warn/fail，控制台保持干净
 var verbose = args.Any(a => a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
@@ -32,9 +31,16 @@ var githubProxyArg = args.Where((a, i) => i > 0 && args[i - 1].Equals("--github-
     .Select(a => a.TrimStart('-'))
     .FirstOrDefault();
 if (args.Any(a => a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase)))
-    Centurion.Core.Utils.GitHubDownloadProxy.Disabled = true;
+    Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.Disabled = true;
 else if (!string.IsNullOrWhiteSpace(githubProxyArg))
-    Centurion.Core.Utils.GitHubDownloadProxy.ProxyPrefix = githubProxyArg.EndsWith('/') ? githubProxyArg : githubProxyArg + "/";
+    Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.ProxyPrefix = githubProxyArg.EndsWith('/') ? githubProxyArg : githubProxyArg + "/";
+// --profile <offline|fast|quality|cheap>：Provider 选型 profile（本地/云互备策略、预算取向）
+var profileArg = args.Where((a, i) => i > 0 && args[i - 1].Equals("--profile", StringComparison.OrdinalIgnoreCase))
+    .Select(a => a.TrimStart('-'))
+    .FirstOrDefault();
+if (!string.IsNullOrWhiteSpace(profileArg))
+    Centurion.Core.Providers.ProviderProfileResolver.Current =
+        Centurion.Core.Providers.ProviderProfileResolver.FromString(profileArg);
 
 var filteredArgs = args
     .Where((a, i) => !a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
@@ -43,7 +49,8 @@ var filteredArgs = args
         && !a.Equals("--lang", StringComparison.OrdinalIgnoreCase)
         && !(i > 0 && args[i - 1].Equals("--github-proxy", StringComparison.OrdinalIgnoreCase))
         && !a.Equals("--github-proxy", StringComparison.OrdinalIgnoreCase)
-        && !a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase))
+        && !a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase)        && !(i > 0 && args[i - 1].Equals("--profile", StringComparison.OrdinalIgnoreCase))
+        && !a.Equals("--profile", StringComparison.OrdinalIgnoreCase))
     .ToArray();
 
 if (!string.IsNullOrWhiteSpace(lang))
@@ -75,7 +82,7 @@ services.AddLogging(logging =>
 {
     logging.SetMinimumLevel(verbose ? LogLevel.Information : LogLevel.Warning);
     // 文件日志记录全部级别（含 info），控制台仍按全局级别过滤
-    logging.AddFilter<Centurion.Core.Logging.FileLoggerProvider>(level => level >= LogLevel.Trace);
+    logging.AddFilter<Centurion.Core.Capabilities.Logging.FileLoggerProvider>(level => level >= LogLevel.Trace);
     // 控制台侧：SpectreConsoleOutput 的信息行已由渲染层直接输出，屏蔽其 info 避免重复显示
     logging.AddFilter<ConsoleLoggerProvider>("Centurion.Cli.Console.SpectreConsoleOutput", level => level >= LogLevel.Warning);
     // 控制台与文件日志使用同一格式（HH:mm:ss level: message）；颜色仅按级别渲染
@@ -84,7 +91,7 @@ services.AddLogging(logging =>
         options.FormatterName = "plain";
     });
     logging.AddConsoleFormatter<Centurion.Cli.Console.PlainConsoleFormatter, ConsoleFormatterOptions>();
-    logging.AddProvider(new Centurion.Core.Logging.FileLoggerProvider());
+    logging.AddProvider(new Centurion.Core.Capabilities.Logging.FileLoggerProvider());
 });
 
 // 核心服务注册集中于此（基础设施、策略工厂、管道算子等）
@@ -98,7 +105,7 @@ var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 ConsoleServices.Output = new SpectreConsoleOutput(loggerFactory.CreateLogger<SpectreConsoleOutput>());
 
 // JSON 本地化：消息按 --lang 选择的语言输出（Localization/{lang}.json，缺省英文）
-ConsoleServices.Localizer = new Centurion.Core.Localization.JsonStringLocalizerFactory().Create("Centurion");
+ConsoleServices.Localizer = new Centurion.Core.Capabilities.Localization.JsonStringLocalizerFactory().Create("Centurion");
 
 // 顶层 catch 使用的根日志器（Fatal/取消提示与日志文件逐字一致）
 var rootLogger = loggerFactory.CreateLogger("Centurion.Cli.Program");
@@ -122,7 +129,8 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetApplicationName("Centurion");
-    config.AddCommand<SpawnCommand>("spawn");
+    config.AddCommand<SpawnCommand>("asr");
+    config.AddCommand<OcrCommand>("ocr");
     config.AddCommand<FromScriptCommand>("from-script");
     config.AddCommand<CorrectCommand>("correct");
     config.AddCommand<TranslateCommand>("translate");
@@ -139,7 +147,24 @@ app.Configure(config =>
     config.AddCommand<CleanCommand>("clean");
     config.AddCommand<AlignCommand>("align");
     config.AddCommand<SpellCheckCommand>("spellcheck");
+    config.AddCommand<ValidateCommand>("validate");
+    config.AddCommand<MigrateCommand>("migrate");
     config.AddCommand<QualityCommand>("quality");
+    // 模型注册表管理 + Provider 选型/探测
+    config.AddBranch("models", models =>
+    {
+        models.SetDescription("Model registry management (list/install/verify/remove).");
+        models.AddCommand<ModelsListCommand>("list");
+        models.AddCommand<ModelsInstallCommand>("install");
+        models.AddCommand<ModelsVerifyCommand>("verify");
+        models.AddCommand<ModelsRemoveCommand>("remove");
+    });
+    config.AddBranch("providers", providers =>
+    {
+        providers.SetDescription("Provider inspection (list/test).");
+        providers.AddCommand<ProvidersListCommand>("list");
+        providers.AddCommand<ProvidersTestCommand>("test");
+    });
 });
 
 // ----- Run -----

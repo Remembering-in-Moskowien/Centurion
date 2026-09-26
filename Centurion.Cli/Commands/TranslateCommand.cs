@@ -1,16 +1,15 @@
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Infrastructure;
-using Centurion.Abstractions;
+using Centurion.Core.Capabilities.Infrastructure;using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Strategy;
-using Centurion.Core.Pipeline.Operators;
-using Centurion.Core.Utils;
-using Centurion.Models.Ass;
+using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
-
+using Centurion.Core.Utils.Parsing;
+using Centurion.Core.Utils.Serialization;
+using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
@@ -21,7 +20,7 @@ namespace Centurion.Cli.Commands;
 public sealed class TranslateCommand(
     ITranslationStrategyFactory strategyFactory,
     QualityReportOperator qualityReportOp,
-    ILogger<TranslateCommand> logger) : AsyncCommand<TranslateSettings>
+    ILogger<TranslateCommand> logger, ICenturionDocumentStore store) : AsyncCommand<TranslateSettings>
 {
     /// <summary>
     /// 执行翻译：解析已有字幕 → 按所选策略翻译文本 → 写出目标语言（或双语）字幕。
@@ -43,7 +42,8 @@ public sealed class TranslateCommand(
             var outputPath = settings.OutputFile?.FullName ??
                              CenturionFileIO.DefaultOutputPath(inputPath, "translated");
 
-            var workflowContext = await CenturionFileIO.LoadAsync(inputPath, ct);
+            var loadedDoc = await store.LoadAsync(inputPath, ct);
+            var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
 
             // 更新配置：翻译相关字段
             workflowContext.Config = new WorkflowConfig
@@ -100,10 +100,11 @@ public sealed class TranslateCommand(
             await qualityReportOp.ExecuteAsync(workflowContext, ct);
 
             // 5) 保存翻译后的中间文件（译文写入各句 TranslatedText，时间轴保持不变）
-            await CenturionFileIO.SaveAsync(workflowContext, outputPath, "translate", ct);
+            var outDoc = CenturionDocumentBuilder.Create(workflowContext, "translate", outputPath);
+            await store.SaveAsync(outDoc, outputPath, ct);
 
             var translatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText));
-            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Translation completed: {0}", outputPath));
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Translation completed"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Translated {0}/{1} sentences -> {2}", translatedCount, sentences.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;

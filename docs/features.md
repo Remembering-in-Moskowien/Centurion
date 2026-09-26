@@ -52,8 +52,8 @@ Background music drowning out the speech? Separate the vocals first, then transc
 - Turn it on only for music / MV / BGM-heavy media:
 
 ```bash
-Centurion spawn song.mp4 --vocal-separation
-Centurion spawn song.mp4 --vocal-separation --vocal-separation-model htdemucs_ft
+Centurion asr song.mp4 --vocal-separation
+Centurion asr song.mp4 --vocal-separation --vocal-separation-model htdemucs_ft
 ```
 
 ---
@@ -67,8 +67,8 @@ Centurion **detects your hardware** at startup and downloads the right tool buil
 - 🎯 Override detection anytime with `--device`:
 
 ```bash
-Centurion spawn audio.mp3 --device cuda     # force CUDA builds
-Centurion spawn audio.mp3 --device cpu      # stay cozy on CPU
+Centurion asr audio.mp3 --device cuda     # force CUDA builds
+Centurion asr audio.mp3 --device cpu      # stay cozy on CPU
 ```
 
 Startup banner example:
@@ -114,8 +114,8 @@ Centurion no longer assumes your audio speaks English with spaces. 🎉
 - **Model-agnostic stages**: diarization & vocal separation don't care about language at all
 
 ```bash
-Centurion spawn 讲座.wav -l zh --transcriber qwen3-asr-1.7b
-Centurion spawn anime.mkv -l ja
+Centurion asr 讲座.wav -l zh --transcriber qwen3-asr-1.7b
+Centurion asr anime.mkv -l ja
 ```
 
 ---

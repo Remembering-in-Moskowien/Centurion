@@ -2,9 +2,8 @@ using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Pipeline;
-using Centurion.Core.Pipeline.Operators;
-using Centurion.Models.Workflow;
+using Centurion.Core.Workflow.Factories;using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Workflow;
+using Centurion.Core.Utils.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Cli.Commands;
@@ -18,9 +17,10 @@ public sealed class TranscribeCommand(
     PipelineExecutor pipelineExecutor,
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
-    TranscribeOperator transcribeOp,
-    ILogger<TranscribeCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    PipelineOperatorFactory operatorFactory,
+    ILogger<TranscribeCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "transcribe";
@@ -29,8 +29,8 @@ public sealed class TranscribeCommand(
     protected override bool AcceptsMedia => true;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() =>
-        [ffmpegOp, audioPreprocessOp, transcribeOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) =>
+        [ffmpegOp, audioPreprocessOp, operatorFactory.CreateTranscribeOperator(config)];
 }
 
 /// <summary>
@@ -42,8 +42,9 @@ public sealed class VocalSepCommand(
     PipelineExecutor pipelineExecutor,
     FFmpegConvertOperator ffmpegOp,
     VocalSeparationOperator vocalSepOp,
-    ILogger<VocalSepCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    ILogger<VocalSepCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "vocalsep";
@@ -52,7 +53,7 @@ public sealed class VocalSepCommand(
     protected override bool AcceptsMedia => true;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [ffmpegOp, vocalSepOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [ffmpegOp, vocalSepOp];
 
     /// <inheritdoc />
     protected override void ApplyMediaConfig(WorkflowConfig config, OperatorSettings settings)
@@ -68,9 +69,10 @@ public sealed class VocalSepCommand(
 public sealed class DiarizeCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
-    DiarizationOperator diarizationOp,
-    ILogger<DiarizeCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    PipelineOperatorFactory operatorFactory,
+    ILogger<DiarizeCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "diarize";
@@ -79,7 +81,11 @@ public sealed class DiarizeCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [diarizationOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config)
+    {
+        var diarizationOperator = operatorFactory.CreateDiarizationOperator(config);
+        return diarizationOperator is null ? [] : [diarizationOperator];
+    }
 }
 
 /// <summary>
@@ -88,9 +94,10 @@ public sealed class DiarizeCommand(
 public sealed class SplitCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
-    SentenceSplitOperator splitOp,
-    ILogger<SplitCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    PipelineOperatorFactory operatorFactory,
+    ILogger<SplitCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "split";
@@ -99,7 +106,8 @@ public sealed class SplitCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [splitOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) =>
+        [operatorFactory.CreateSentenceSplitOperator(config)];
 }
 
 /// <summary>
@@ -109,8 +117,9 @@ public sealed class CleanCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
     TextPreprocessingOperator textCleaningOp,
-    ILogger<CleanCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    ILogger<CleanCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "clean";
@@ -119,7 +128,7 @@ public sealed class CleanCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [textCleaningOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [textCleaningOp];
 }
 
 /// <summary>
@@ -128,9 +137,10 @@ public sealed class CleanCommand(
 public sealed class AlignCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
-    AlignmentOperator alignmentOp,
-    ILogger<AlignCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    PipelineOperatorFactory operatorFactory,
+    ILogger<AlignCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "align";
@@ -139,7 +149,11 @@ public sealed class AlignCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [alignmentOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config)
+    {
+        var alignmentOperator = operatorFactory.CreateAlignmentOperator(config);
+        return alignmentOperator is null ? [] : [alignmentOperator];
+    }
 }
 
 /// <summary>
@@ -149,8 +163,9 @@ public sealed class SpellCheckCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
     SpellCheckOperator spellCheckOp,
-    ILogger<SpellCheckCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    ILogger<SpellCheckCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "spellcheck";
@@ -159,7 +174,7 @@ public sealed class SpellCheckCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [spellCheckOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [spellCheckOp];
 }
 
 /// <summary>
@@ -169,8 +184,9 @@ public sealed class QualityCommand(
     ITempDirectoryManager tempManager,
     PipelineExecutor pipelineExecutor,
     QualityReportOperator qualityReportOp,
-    ILogger<QualityCommand> logger)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger)
+    ILogger<QualityCommand> logger,
+    ICenturionDocumentStore store)
+    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
 {
     /// <inheritdoc />
     protected override string OpName => "quality";
@@ -179,5 +195,5 @@ public sealed class QualityCommand(
     protected override bool AcceptsMedia => false;
 
     /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators() => [qualityReportOp];
+    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [qualityReportOp];
 }

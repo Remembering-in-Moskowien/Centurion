@@ -1,5 +1,4 @@
 using Centurion.Models.Console;
-
 namespace Centurion.Cli.Console;
 
 /// <summary>

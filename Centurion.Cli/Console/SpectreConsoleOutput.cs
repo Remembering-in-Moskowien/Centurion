@@ -1,8 +1,7 @@
 using System.Text.RegularExpressions;
-using Centurion.Models.Console;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
-
+using Centurion.Models.Console;
 namespace Centurion.Cli.Console;
 
 /// <summary>
@@ -19,7 +18,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     private readonly ILogger<SpectreConsoleOutput> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>生成与日志文件一致的 info 前缀（HH:mm:ss info:）。</summary>
-    private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} info: ";
+    private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
+
+    private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]succ[/]: ";
 
     /// <summary>
     /// 以白色向控制台写入文本（不换行），并记录 info 日志。
@@ -28,7 +29,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">要写入的文本。</param>
     public void Write(string message)
     {
-        AnsiConsole.Markup($"[white]{message.EscapeMarkup()}[/]");
+        AnsiConsole.Markup($"{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
 
@@ -38,7 +39,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">要写入的文本。</param>
     public void WriteLine(string message)
     {
-        AnsiConsole.MarkupLine($"[white]{InfoPrefix}{message.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
 
@@ -61,8 +62,8 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">成功信息文本。</param>
     public void WriteSuccess(string message)
     {
-        AnsiConsole.MarkupLine($"[green]{InfoPrefix}[[SUCCESS]] {message.EscapeMarkup()}[/]");
-        _logger.LogInformation($"[SUCCESS] {message}");
+        AnsiConsole.MarkupLine($"{SuccessPrefix}{message.EscapeMarkup()}");
+        _logger.LogInformation($"{message}");
     }
 
     /// <summary>
@@ -71,7 +72,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">提示信息文本。</param>
     public void WriteInfo(string message)
     {
-        AnsiConsole.MarkupLine($"[white]{InfoPrefix}{message.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
 
@@ -91,7 +92,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="markup">Spectre 标记字符串。</param>
     public void WriteMarkupLine(string markup)
     {
-        AnsiConsole.MarkupLine($"[white]{InfoPrefix}[/]{markup}");
+        AnsiConsole.MarkupLine($"{InfoPrefix}{markup}");
         _logger.LogInformation(StripMarkup(markup));
     }
 

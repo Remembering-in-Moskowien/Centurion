@@ -26,10 +26,10 @@ public sealed class FromScriptSettings : CommandSettings
     public required FileInfo ScriptFile { get; init; }
 
     /// <summary>
-    /// 输出 ASS 字幕文件路径；省略时以输入文件名加 .ass 扩展名输出。
+    /// 输出中间文件路径；省略时以输入文件名加 .centurion.json 输出。
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
-    [Description("Output ASS subtitle file")]
+    [Description("Output IR intermediate file")]
     public FileInfo? OutputFile { get; init; }
 
     /// <summary>

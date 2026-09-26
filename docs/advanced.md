@@ -6,7 +6,7 @@ title: Advanced
 
 ## Operator Micro-Commands
 
-`spawn`/`from-script`/`correct`/`translate`/`dub` are **packaged** pipelines — they run several operators back to back. Sometimes you only want **one stage**. Every major operator is also exposed as its own micro-command. Input/output stay on the intermediate file (source commands also accept media), so you can drive the pipeline stage by stage, inspect between steps, and re-run a single stage without touching the rest.
+`asr`/`ocr`/`from-script`/`correct`/`translate`/`dub` are **packaged** pipelines — they run several operators back to back. Sometimes you only want **one stage**. Every major operator is also exposed as its own micro-command. Input/output stay on the intermediate file (source commands also accept media), so you can drive the pipeline stage by stage, inspect between steps, and re-run a single stage without touching the rest.
 
 ```bash
 # Stage-by-stage chain: convert → transcribe → split → clean → align
@@ -37,11 +37,11 @@ Each stage is checkpointed — re-running `split` on an already-split file skips
 
 ## 📊 Quality Reports (Every Command)
 
-Every pipeline path — `spawn`, `from-script`, `correct`, `convert`, `translate`, `dub` — finishes by writing a **`<output>.quality.json`** next to its output (e.g. `demo.centurion.quality.json`). No flags, no opt-in. 📈
+Every pipeline path — `asr`, `ocr`, `from-script`, `correct`, `convert`, `translate`, `dub` — finishes by writing a **`<output>.quality.json`** next to its output (e.g. `demo.centurion.quality.json`). No flags, no opt-in. 📈
 
 ```json
 {
-  "meta": { "command": "spawn", "input": "demo.mp4", "output": "demo.centurion.json", "generatedAt": "…" },
+  "meta": { "command": "asr", "input": "demo.mp4", "output": "demo.centurion.json", "generatedAt": "…" },
   "counts": { "sentences": 42, "words": 318, "characters": 2205, "speakers": 2, "durationSeconds": 124.6 },
   "coverage": { "charactersPerSecond": 17.7, "coveredRatio": 0.93 },
   "alignment": { "meanDriftMs": 180, "maxDriftMs": 940 },
@@ -99,7 +99,7 @@ Centurion update --apply
 
 ```bash
 # run in Chinese
-Centurion.Cli.exe --lang zh-CN spawn video.mp4 -o out.ass
+Centurion.Cli.exe --lang zh-CN asr video.mp4
 # omit --lang → English (default)
 
 # GitHub downloads (update / dictionaries / tools) auto-try 520 mirrors then direct
