@@ -19,42 +19,47 @@ public sealed class ProvidersListCommand(
     protected override async Task<int> ExecuteAsync(CommandContext context, ProvidersSettings settings, CancellationToken ct)
     {
         var groups = registry.All
-            .GroupBy(p => p.GetType().GetInterfaces().FirstOrDefault(i => i.Name.StartsWith("I") && i.Name.EndsWith("Provider"))?.Name ?? "Other")
+            .GroupBy(p => FriendlyFamily(
+                p.GetType().GetInterfaces()
+                    .FirstOrDefault(i => i.Name.StartsWith("I") && i.Name.EndsWith("Provider"))?.Name))
             .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
         var all = new List<(IProvider Provider, bool Available)>();
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Title("[bold]Provider 注册表[/]")
+            .AddColumn(new TableColumn("接口族").LeftAligned())
+            .AddColumn(new TableColumn("Provider").LeftAligned())
+            .AddColumn(new TableColumn("类型").Centered())
+            .AddColumn(new TableColumn("$/1M tok").RightAligned())
+            .AddColumn(new TableColumn("延迟").Centered())
+            .AddColumn(new TableColumn("质量").Centered())
+            .AddColumn(new TableColumn("状态").LeftAligned());
+
         foreach (var group in groups)
         {
-            var table = new Table()
-                .Border(TableBorder.Rounded)
-                .Title($"[bold]{group.Key}[/] ({group.Count()} providers)")
-                .AddColumn(new TableColumn("Provider").LeftAligned())
-                .AddColumn(new TableColumn("Kind").Width(8))
-                .AddColumn(new TableColumn("成本 $/1M tok").RightAligned())
-                .AddColumn(new TableColumn("$/音频分钟").RightAligned())
-                .AddColumn(new TableColumn("延迟").Width(9))
-                .AddColumn(new TableColumn("质量").Width(9))
-                .AddColumn(new TableColumn("状态").Width(12));
-
             foreach (var provider in group.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var c = provider.Capabilities;
                 var available = await provider.IsAvailableAsync(ct);
                 all.Add((provider, available));
                 var status = available ? "[green]● 可用[/]" : "[red]○ 不可用[/]";
+                var kind = c.Kind == Centurion.Models.Providers.ProviderKind.Cloud
+                    ? "[cyan]C[/]"
+                    : "[dim]L[/]";
                 table.AddRow(
+                    $"[dim]{group.Key}[/]",
                     $"[bold]{provider.Name}[/]",
-                    $"{c.Kind}",
-                    $"{c.CostPer1MTokensUsd,10:F2}",
-                    $"{c.CostPerAudioMinuteUsd,10:F4}",
+                    kind,
+                    $"{c.CostPer1MTokensUsd:F2}",
                     $"{c.Latency}",
                     $"{c.Quality}",
                     status);
             }
-
-            AnsiConsole.Write(table);
-            AnsiConsole.WriteLine();
         }
+
+        AnsiConsole.Write(table);
+        AnsiConsole.WriteLine();
 
         // 成本对比图：每 1M token 成本（本地为 0，直观展示云/本地成本差）
         var chart = new BarChart()
@@ -71,6 +76,23 @@ public sealed class ProvidersListCommand(
         AnsiConsole.MarkupLine(
             $"可用 [green]{availableCount}[/]/{all.Count} — 探测: [cyan]Centurion providers test <name>[/]");
         return 0;
+    }
+
+    /// <summary>把 Provider 接口名映射为友好族名（IAsrProvider → ASR）。</summary>
+    private static string FriendlyFamily(string? interfaceName)
+    {
+        if (string.IsNullOrWhiteSpace(interfaceName))
+            return "Other";
+        var name = interfaceName.StartsWith("I", StringComparison.Ordinal)
+            ? interfaceName[1..]
+            : interfaceName;
+        if (name.EndsWith("Provider", StringComparison.Ordinal))
+            name = name[..^"Provider".Length];
+        return name switch
+        {
+            "VocalSeparation" => "VocalSep",
+            _ => name
+        };
     }
 }
 
