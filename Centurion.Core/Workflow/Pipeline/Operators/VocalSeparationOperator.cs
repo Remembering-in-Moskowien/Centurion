@@ -1,4 +1,5 @@
-using Centurion.Core.Workflow.Factories;using Centurion.Abstractions;
+using Centurion.Core.Workflow.Factories;
+using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Models.Workflow;
@@ -64,9 +65,8 @@ public sealed class VocalSeparationOperator(
             return;
         }
 
-        // 3. 输入音频（优先 VAD 聚合后的语音音频，再退到预处理后的音频）
-        var inputPath = context.State.VadAggregatedPath
-            ?? context.State.PreprocessedAudioPath
+        // 3. 输入音频（优先预处理后的音频，再退到转换后的音频）
+        var inputPath = context.State.PreprocessedAudioPath
             ?? context.State.ConvertedAudioPath
             ?? config.InputFilePath;
         if (!File.Exists(inputPath))
@@ -121,6 +121,7 @@ public sealed class VocalSeparationOperator(
             context.State.IsVocalsSeparated = true;
             OnProgress(100, "Vocal separation completed.");
             LogInfo($"Vocals saved to: {finalPath}");
+
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -85,27 +85,6 @@ public class WorkflowConfig
     /// <summary>LLM 分句自定义端点；为空时使用所选提供商默认端点。</summary>
     public string? SplitterBaseUrl { get; init; }
 
-    // ---------- VAD 过滤（器乐/静音剔除 + 聚合，默认开启） ----------
-    /// <summary>
-    /// 是否启用 VAD：检测语音段、剔除器乐/静音段并聚合为连续语音音频，
-    /// 再交给人声分离与转录（避免杂音干扰分离质量），转录后按映射还原时间轴。
-    /// </summary>
-    public bool EnableVadFilter { get; init; } = true;
-    /// <summary>VAD 能量窗口（秒），默认 0.5。</summary>
-    public double VadWindowSeconds { get; init; } = 0.5;
-    /// <summary>相邻语音段间隔小于该秒数时合并为一段，默认 1.0。</summary>
-    public double VadMergeGapSeconds { get; init; } = 1.0;
-    /// <summary>短于该秒数的语音段丢弃（过滤能量毛刺），默认 0.3。</summary>
-    public double VadMinSpeechSeconds { get; init; } = 0.3;
-    /// <summary>
-    /// 能量阈值系数：窗口 RMS 低于 全局均值×该系数 视为无语音（器乐/静音），默认 0.2。
-    /// </summary>
-    public double VadEnergyThresholdRatio { get; init; } = 0.2;
-    /// <summary>绝对能量下限（dBFS），低于视为静音，默认 -50。</summary>
-    public double VadAbsoluteFloorDb { get; init; } = -50;
-    /// <summary>聚合时段间插入的静音缓冲（秒），防止分离/转写时段边界互渗，默认 0.1。</summary>
-    public double VadPadSeconds { get; init; } = 0.1;
-
     // ---------- 人声分离（可选增强，默认关闭） ----------
     /// <summary>
     /// 是否启用 Demucs 人声分离（将人声与伴奏/音乐分离后再转录）。
