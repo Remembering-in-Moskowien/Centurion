@@ -7,6 +7,7 @@ using Centurion.Core.Workflow.Pipeline.Operators;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
@@ -90,9 +91,8 @@ public sealed class PipelineGraphCommand(
                 return 0;
             }
 
-            ConsoleServices.Output.WriteLine(PipelineGraphRenderer.RenderMermaid(dag));
-            ConsoleServices.Output.WriteLine(ConsoleServices.T("— Topology —"));
-            ConsoleServices.Output.WriteLine(PipelineGraphRenderer.RenderText(dag));
+            AnsiConsole.Write(PipelineGraphRenderer.RenderTree(dag));
+            ConsoleServices.Output.WriteLine(ConsoleServices.T("— Mermaid (文件输出用) —"));
             return 0;
         }
         catch (Exception ex)

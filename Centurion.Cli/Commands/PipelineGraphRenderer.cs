@@ -1,5 +1,6 @@
 using System.Text;
 using Centurion.Abstractions.Pipeline;
+using Spectre.Console;
 
 namespace Centurion.Cli.Commands;
 
@@ -80,6 +81,46 @@ internal static class PipelineGraphRenderer
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>渲染为 Spectre Tree（控制台现代化拓扑：节点含条件/重试/降级标注，依赖为树层级）。</summary>
+    public static Tree RenderTree(PipelineDag dag)
+    {
+        var tree = new Tree("[bold cyan]DAG Topology[/]");
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        void AddChildren(TreeNode? parent, string name)
+        {
+            if (!visited.Add(name))
+                return;
+            var node = dag.Find(name)!;
+            var label = new StringBuilder(Markup.Escape(node.Name));
+            var ann = new List<string>();
+            if (node.When is not null) ann.Add("[yellow]when[/]");
+            if (node.MaxRetries > 0) ann.Add($"[dim]retry x{node.MaxRetries}[/]");
+            if (node.DegradeOnFailure) ann.Add("[dim]degrade[/]");
+            if (node.Timeout is not null) ann.Add($"[dim]timeout {node.Timeout.Value.TotalSeconds:F0}s[/]");
+            if (node.Description is not null) ann.Add($"[grey]{Markup.Escape(node.Description)}[/]");
+            var labelText = ann.Count > 0
+                ? $"{label} [dim]({string.Join(", ", ann)})[/]"
+                : label.ToString();
+
+            var child = parent is null
+                ? tree.AddNode(labelText)
+                : parent.AddNode(labelText);
+            foreach (var childNode in dag.Nodes.Where(n => n.DependsOn.Contains(name, StringComparer.Ordinal)))
+                AddChildren(child, childNode.Name);
+        }
+
+        foreach (var node in dag.Nodes.Where(n => n.DependsOn.Count == 0))
+            AddChildren(null, node.Name);
+        // 保护：环或孤立节点仍全量展示
+        foreach (var node in dag.Nodes)
+        {
+            if (!visited.Contains(node.Name))
+                AddChildren(null, node.Name);
+        }
+        return tree;
     }
 
     /// <summary>渲染为自包含 HTML（内嵌 Mermaid.js CDN；离线时退化为文本列表）。</summary>

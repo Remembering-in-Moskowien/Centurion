@@ -17,7 +17,11 @@ ConsoleServices.Confirm = new SpectreConfirmPrompt();
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-AnsiConsole.Write(new FigletText("Centurion"));
+// ----- Brand banner -----
+AnsiConsole.Write(new FigletText("Centurion").Centered().Color(Color.Aqua));
+var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "dev";
+AnsiConsole.Write(new Markup($"[dim]v{version} · 字幕工作流 CLI[/]").Centered());
+AnsiConsole.Write(new Rule().RuleStyle("grey"));
 
 // --verbose / -v：显示完整执行信息（步骤耗时、各阶段日志）；默认仅输出 warn/fail，控制台保持干净
 var verbose = args.Any(a => a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
@@ -196,5 +200,10 @@ catch (Exception ex)
     // 顶层兜底：任何未捕获异常都以明确的错误与退出码结束，避免裸栈崩溃；
     // 经日志通道输出，控制台（红）与日志文件（crit）逐字一致
     rootLogger.LogCritical("{Fatal}", ConsoleServices.T("Fatal: {0}", ex.Message));
+    AnsiConsole.Write(new Panel(
+            new Markup($"[bold red]✖ {ex.Message.EscapeMarkup()}[/]\n[dim]{ex.GetType().Name} — 完整堆栈见 logs 目录，或加 --verbose 重试[/]"))
+        .Header("错误", Justify.Center)
+        .Border(BoxBorder.Rounded)
+        .BorderColor(Color.Red));
     return 1;
 }
