@@ -3,7 +3,7 @@ using System.Text.Json;
 using Centurion.Abstractions.Commands;
 using Microsoft.Extensions.Logging;
 
-namespace Centurion.Server.Commands;
+namespace Centurion.Cli.Server;
 
 /// <summary>
 /// 请求体参数绑定器：把 REST 请求体（完整 <see cref="CommandRequest"/> 或裸参数对象）

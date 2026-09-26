@@ -1,6 +1,6 @@
 using Centurion.Core.Capabilities.Infrastructure;using Microsoft.Extensions.Logging;
 using Centurion.Models.Console;
-namespace Centurion.Server.Console;
+namespace Centurion.Cli.Server;
 
 /// <summary>
 /// 控制台输出适配器：把命令内部经 <see cref="ConsoleServices"/> 输出的消息
