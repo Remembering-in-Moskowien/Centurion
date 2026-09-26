@@ -8,7 +8,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <summary>
 /// <c>correct</c> 命令的选项：对照源音频和/或参考脚本校正已有字幕（输入为 Centurion 中间文件）。
 /// </summary>
-public sealed class CorrectSettings : CommandSettings
+public sealed class CorrectSettings : GlobalCommandSettings
 {
 
     /// <summary>

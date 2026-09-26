@@ -17,6 +17,9 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
 {
     private readonly ILogger<SpectreConsoleOutput> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+    /// <summary>--json 模式开关：抑制人类可读行（日志仍记录），stdout 只保留 JSON。</summary>
+    public static bool SuppressHumanLines { get; set; }
+
     /// <summary>生成与日志文件一致的 info 前缀（HH:mm:ss info:）。</summary>
     private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
 
@@ -30,6 +33,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">要写入的文本。</param>
     public void Write(string message)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.Markup($"{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
@@ -40,6 +44,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">要写入的文本。</param>
     public void WriteLine(string message)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
@@ -63,6 +68,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">成功信息文本。</param>
     public void WriteSuccess(string message)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{SuccessPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation($"{message}");
     }
@@ -73,6 +79,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">提示信息文本。</param>
     public void WriteInfo(string message)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
@@ -83,6 +90,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="markup">Spectre 标记字符串。</param>
     public void WriteMarkup(string markup)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.Write(markup);
         _logger.LogInformation(StripMarkup(markup));
     }
@@ -93,6 +101,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="markup">Spectre 标记字符串。</param>
     public void WriteMarkupLine(string markup)
     {
+        if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{InfoPrefix}{markup}");
         _logger.LogInformation(StripMarkup(markup));
     }

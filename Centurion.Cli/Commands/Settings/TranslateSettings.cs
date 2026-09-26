@@ -7,7 +7,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <c>translate</c> 命令的选项：把已有字幕翻译到目标语言，只做文本层翻译对齐（时间轴保持不变）。
 /// 输入/输出均为 Centurion 中间文件。
 /// </summary>
-public sealed class TranslateSettings : CommandSettings
+public sealed class TranslateSettings : GlobalCommandSettings
 {
 
     /// <summary>

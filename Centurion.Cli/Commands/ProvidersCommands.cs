@@ -1,3 +1,5 @@
+using Centurion.Cli.Commands.Settings;
+using Centurion.Abstractions;
 using Centurion.Abstractions.Providers;
 using Centurion.Models.Console;
 using Centurion.Models.Providers;
@@ -7,7 +9,7 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands;
 
 /// <summary>providers 子命令的公共选项。</summary>
-public class ProvidersSettings : CommandSettings
+public class ProvidersSettings : GlobalCommandSettings
 {
 }
 
@@ -97,7 +99,7 @@ public sealed class ProvidersListCommand(
 }
 
 /// <summary>providers test &lt;name&gt; 的选项。</summary>
-public sealed class ProvidersTestSettings : CommandSettings
+public sealed class ProvidersTestSettings : GlobalCommandSettings
 {
     /// <summary>Provider 名称（见 providers list；如 whispercpp / openai / zhipu / ollama / llama-tts）。</summary>
     [CommandArgument(0, "<name>")]
@@ -116,7 +118,7 @@ public sealed class ProvidersTestCommand(
         {
             ConsoleServices.Output.WriteError(
                 $"Unknown provider '{settings.Name}'. Run 'Centurion providers list' to see registered providers.");
-            return 1;
+            return ExitCodes.Failure;
         }
 
         var c = provider.Capabilities;

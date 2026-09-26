@@ -19,6 +19,7 @@ public sealed class OcrCommand(
     TextPreprocessingOperator textCleaningOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<OcrCommand> logger, ICenturionDocumentStore store) : AsyncCommand<OcrSettings>
 {
     /// <summary>组装并运行 OCR、分句与文本清理管线。</summary>
@@ -83,6 +84,10 @@ public sealed class OcrCommand(
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("ocr_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
+
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "ocr", intermediatePath);
             await store.SaveAsync(outDoc, intermediatePath, ct);
@@ -91,11 +96,24 @@ public sealed class OcrCommand(
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", intermediatePath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "ocr",
+                    status = "ok",
+                    input = inputPath,
+                    output = intermediatePath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "OCR pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "OCR pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

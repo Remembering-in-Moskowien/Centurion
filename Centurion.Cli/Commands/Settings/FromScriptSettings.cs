@@ -8,7 +8,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <summary>
 /// <c>from-script</c> 命令的选项：将纯文本脚本对齐到音视频并生成带时间轴的字幕。
 /// </summary>
-public sealed class FromScriptSettings : CommandSettings
+public sealed class FromScriptSettings : GlobalCommandSettings
 {
 
     /// <summary>

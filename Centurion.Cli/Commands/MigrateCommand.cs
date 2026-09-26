@@ -1,7 +1,9 @@
 using Centurion.Core.Utils.Serialization;
+using Centurion.Abstractions;
 using Centurion.Models.Console;
 using Centurion.Models.Schema;
 using Spectre.Console.Cli;
+using Centurion.Cli;
 
 namespace Centurion.Cli.Commands;
 
@@ -35,7 +37,7 @@ public sealed class MigrateCommand(ICenturionDocumentStore store) : AsyncCommand
             if (string.IsNullOrWhiteSpace(settings.File))
             {
                 ConsoleServices.Output.WriteError(ConsoleServices.T("Usage: Centurion migrate <file.centurion.json> --to <version>"));
-                return 1;
+                return ExitCodes.Failure;
             }
 
             var document = await store.MigrateAsync(settings.File, settings.ToVersion, ct);
@@ -50,17 +52,17 @@ public sealed class MigrateCommand(ICenturionDocumentStore store) : AsyncCommand
         catch (FileNotFoundException ex)
         {
             ConsoleServices.Output.WriteError(ex.Message);
-            return 1;
+            return ExitCodes.Failure;
         }
         catch (NotSupportedException ex)
         {
             ConsoleServices.Output.WriteError(ex.Message);
-            return 1;
+            return ExitCodes.Failure;
         }
         catch (InvalidDataException ex)
         {
             ConsoleServices.Output.WriteError(ex.Message);
-            return 1;
+            return ExitCodes.Failure;
         }
     }
 }

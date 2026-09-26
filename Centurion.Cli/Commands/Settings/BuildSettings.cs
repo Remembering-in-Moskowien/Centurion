@@ -7,7 +7,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <c>build</c> 命令设置：把 Centurion 中间文件渲染为字幕文件（ASS / SRT / TXT）。
 /// 输出格式由 --format 指定，或从 -o 输出文件扩展名推断，默认 ASS。
 /// </summary>
-public sealed class BuildSettings : CommandSettings
+public sealed class BuildSettings : GlobalCommandSettings
 {
     /// <summary>输入的 Centurion 中间文件（.centurion.json）。</summary>
     [CommandArgument(0, "<CENTURION_FILE>")]

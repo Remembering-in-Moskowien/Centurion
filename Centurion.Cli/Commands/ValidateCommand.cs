@@ -1,3 +1,4 @@
+using Centurion.Cli.Commands.Settings;
 using Centurion.Core.Utils.Serialization;
 using Centurion.Models.Console;
 using Spectre.Console.Cli;
@@ -5,7 +6,7 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands;
 
 /// <summary>validate 命令的选项。</summary>
-public sealed class ValidateSettings : CommandSettings
+public sealed class ValidateSettings : GlobalCommandSettings
 {
     /// <summary>待校验的中间文件路径（可多个）。</summary>
     [CommandArgument(0, "<files>")]

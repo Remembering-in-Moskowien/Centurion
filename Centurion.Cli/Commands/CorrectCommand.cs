@@ -26,6 +26,7 @@ public sealed class CorrectCommand(
     CorrectionReportOperator reportOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<CorrectCommand> logger, ICenturionDocumentStore store) : AsyncCommand<CorrectSettings>
 {
     /// <summary>
@@ -101,6 +102,10 @@ public sealed class CorrectCommand(
                 scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, overlapOp, spellCheckOp, reportOp, qualityReportOp,
                 config, strategy, needsAudio, settings.SpellCheck);
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, cancellationToken);
+
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
             // 保存校正后的中间文件（时间轴/文本修正全部写入状态）
@@ -108,6 +113,19 @@ public sealed class CorrectCommand(
             await store.SaveAsync(outDoc, outputPath, cancellationToken);
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Correction completed"));
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "correct",
+                    status = "ok",
+                    input = inputPath,
+                    output = outputPath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
         }
@@ -117,8 +135,8 @@ public sealed class CorrectCommand(
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Correction pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Correction pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

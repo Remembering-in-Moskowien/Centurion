@@ -7,7 +7,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <c>dub</c> 命令设置：媒体译制（Centurion 中间文件 → 译制 wav + 中间文件）。
 /// Phase 2/3 扩展：伴奏混音（ducking）、响度归一化、TTS 并行、长句分块、重叠降级。
 /// </summary>
-public sealed class DubSettings : CommandSettings
+public sealed class DubSettings : GlobalCommandSettings
 {
 
     /// <summary>输入的 Centurion 中间文件（含句子、翻译与说话人信息）。</summary>

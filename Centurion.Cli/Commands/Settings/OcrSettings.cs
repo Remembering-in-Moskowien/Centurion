@@ -5,7 +5,7 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary><c>ocr</c> 命令的 OCR 后端、抽帧和输出设置。</summary>
-public sealed class OcrSettings : CommandSettings
+public sealed class OcrSettings : GlobalCommandSettings
 {
     /// <summary>输入视频或图片文件。</summary>
     [CommandArgument(0, "<INPUT_FILE>")]

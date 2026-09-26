@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Centurion.Abstractions;
 using Centurion.Cli.Commands.Settings;
 using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Capabilities.Update;using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
@@ -87,8 +88,8 @@ public sealed class UpdateCommand(
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Update failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Update failed.");
+            return ExitCodes.Failure;
         }
     }
 
