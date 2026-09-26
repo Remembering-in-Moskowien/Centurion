@@ -90,6 +90,7 @@ public static class DryRunHelper
             var table = new Table()
                 .Border(TableBorder.Rounded)
                 .Title("[bold]涉及模型[/]")
+                .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn("域").LeftAligned())
                 .AddColumn(new TableColumn("模型").LeftAligned())
                 .AddColumn(new TableColumn("状态").LeftAligned());
@@ -104,8 +105,9 @@ public static class DryRunHelper
             var ptable = new Table()
                 .Border(TableBorder.Rounded)
                 .Title("[bold]相关 Provider（单价，总价按实际时长/token 计）[/]")
+                .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn("接口族").LeftAligned())
-                .AddColumn(new TableColumn("Provider").LeftAligned())
+                .AddColumn(new TableColumn("Provider").LeftAligned().Width(18))
                 .AddColumn(new TableColumn("类型").Centered())
                 .AddColumn(new TableColumn("$/1M tok").RightAligned())
                 .AddColumn(new TableColumn("$/min").RightAligned())
