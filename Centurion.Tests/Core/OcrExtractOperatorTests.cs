@@ -1,3 +1,4 @@
+using Centurion.Core.Capabilities.Infrastructure.Ocr;
 using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models;
 using Xunit;
 using Centurion.Core.Utils.Parsing;
@@ -184,5 +185,18 @@ public sealed class OcrExtractOperatorTests
 
         Assert.All(words, w => Assert.Equal(5000, w.Start));
         Assert.All(words, w => Assert.Equal(5000, w.End));
+    }
+
+    [Theory]
+    [InlineData("rapidocr", OcrBackend.RapidOcr)]
+    [InlineData("rapid-ocr", OcrBackend.RapidOcr)]
+    [InlineData("rapid", OcrBackend.RapidOcr)]
+    [InlineData("RAPIDOCR", OcrBackend.RapidOcr)]
+    [InlineData("zhipu", OcrBackend.Zhipu)]
+    [InlineData("ollama", OcrBackend.Ollama)]
+    [InlineData("llamacpp", OcrBackend.LlamaCpp)]
+    public void ParseBackend_RapidOcrAndExistingAliases(string value, OcrBackend expected)
+    {
+        Assert.Equal(expected, OcrExtractOperator.ParseBackend(value));
     }
 }

@@ -10,10 +10,10 @@ public static class GitHubDownloadProxy
     /// <summary>默认加速镜像链（按顺序尝试，越靠前越优先）。</summary>
     public static readonly string[] DefaultMirrors =
     [
-        "https://ghfast.top/",
         "https://gh-proxy.com/",
-        "https://gh.llkk.cc/",
-        "https://github.moeyy.xyz/"
+        "https://ghproxy.net/",
+        "https://ghfast.top/",
+        "https://gh.llkk.cc/"
     ];
 
     /// <summary>用户通过 --github-proxy 指定的镜像前缀；为 null 时使用默认镜像链。</summary>

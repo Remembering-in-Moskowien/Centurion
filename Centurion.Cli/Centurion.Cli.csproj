@@ -36,6 +36,17 @@
         <RemoveDir Directories="@(SatelliteAssembliesToMove->'%(RootDir)%(Directory)')" Condition="Exists('%(RootDir)%(Directory)')" />
     </Target>
 
+    <!--
+      RapidOcrNet 的内置 PP-OCRv5 模型由包的 build target 只复制到直接引用它的
+      Centurion.Core 输出；CLI 作为运行入口也需要 models/v5，这里从 NuGet 包缓存补复制。
+    -->
+    <Target Name="CopyRapidOcrModels" AfterTargets="AfterBuild" Condition="'$(NuGetPackageRoot)' != ''">
+        <ItemGroup>
+            <RapidOcrModels Include="$(NuGetPackageRoot)rapidocrnet\4.2.0\models\v5\*.*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(RapidOcrModels)" DestinationFolder="$(OutputPath)models\v5\" SkipUnchangedFiles="true" />
+    </Target>
+
     <PropertyGroup>
         <ApplicationIcon>app.ico</ApplicationIcon>
         <!--

@@ -13,7 +13,8 @@ public sealed class OcrClientProvider(
     string displayName,
     OcrBackend backend,
     OcrClient client,
-    ProviderCapabilities capabilities) : IOcrProvider
+    ProviderCapabilities capabilities,
+    RapidOcrEngine? rapidOcrEngine = null) : IOcrProvider
 {
     private readonly OcrClient _client = client ?? throw new ArgumentNullException(nameof(client));
 
@@ -40,6 +41,8 @@ public sealed class OcrClientProvider(
     {
         if (backend == OcrBackend.Zhipu)
             return !string.IsNullOrWhiteSpace(ApiKey);
+        if (backend == OcrBackend.RapidOcr)
+            return rapidOcrEngine is not null && await rapidOcrEngine.IsAvailableAsync(cancellationToken);
         return await _client.ProbeAsync(backend, BaseUrl, cancellationToken);
     }
 
@@ -48,8 +51,12 @@ public sealed class OcrClientProvider(
         string imagePath, string? model, CancellationToken cancellationToken)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var text = await _client.OcrImageAsync(
-            imagePath, backend, model ?? DefaultModel, ApiKey, BaseUrl, cancellationToken);
+        var text = backend == OcrBackend.RapidOcr
+            ? await (rapidOcrEngine
+                ?? throw new InvalidOperationException("RapidOCR engine is not registered."))
+                .OcrImageAsync(imagePath, cancellationToken)
+            : await _client.OcrImageAsync(
+                imagePath, backend, model ?? DefaultModel, ApiKey, BaseUrl, cancellationToken);
         sw.Stop();
 
         var usage = ProviderUsage.ForTokens(DisplayName, model, 0, EstimateTokens(text),
@@ -75,6 +82,7 @@ public static class OcrProviders
         OcrBackend.Zhipu => "zhipu",
         OcrBackend.Ollama => "ollama",
         OcrBackend.LlamaCpp => "llamacpp",
+        OcrBackend.RapidOcr => "rapidocr",
         _ => backend.ToString().ToLowerInvariant()
     };
 
@@ -87,6 +95,8 @@ public static class OcrProviders
             "本地 Ollama 视觉模型（qwen2.5vl 等，免密钥）"),
         OcrBackend.LlamaCpp => ProviderCapabilities.Local(false, ProviderLatency.Medium, ProviderQualityLevel.Normal,
             "本地 llama-server（GGUF 视觉模型，服务需已启动）"),
+        OcrBackend.RapidOcr => ProviderCapabilities.Local(false, ProviderLatency.Low, ProviderQualityLevel.Normal,
+            "本地 RapidOCR（PaddleOCR ONNX，纯 CPU，多语言字幕识别）"),
         _ => ProviderCapabilities.Local(false, ProviderLatency.Medium, ProviderQualityLevel.Normal, "Unknown OCR")
     };
 }

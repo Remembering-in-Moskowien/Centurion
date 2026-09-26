@@ -27,6 +27,7 @@
         <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.12" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
         <PackageReference Include="OllamaSharp" Version="5.4.30" />
+        <PackageReference Include="RapidOcrNet" Version="4.2.0" />
         <PackageReference Include="SharpCompress" Version="0.50.4" />
         <PackageReference Include="Soenneker.Utils.String.NeedlemanWunsch" Version="4.0.1000" />
         <PackageReference Include="SubtitlesParserV2" Version="2.4.0" />

@@ -20,6 +20,7 @@ public sealed partial class OcrExtractOperator(
     OcrClient ocrClient,
     ProcessManager processManager,
     VideoSubFinderManager videoSubFinderManager,
+    RapidOcrEngine? rapidOcrEngine,
     ILogger<OcrExtractOperator> logger) : PipelineOperatorBase<OcrExtractOperator>(logger)
 {
     private static readonly HashSet<string> ImageExtensions =
@@ -106,9 +107,14 @@ public sealed partial class OcrExtractOperator(
 
             OnProgress(5 + 90 * i / Math.Max(1, frames.Count), $"Frame {i + 1}/{frames.Count}...");
 
-            var raw = await ocrClient.OcrImageAsync(
-                frame.Path, ParseBackend(config.OcrBackend), config.OcrModel,
-                config.OcrApiKey, config.OcrBaseUrl, cancellationToken);
+            var backend = ParseBackend(config.OcrBackend);
+            var raw = backend == OcrBackend.RapidOcr
+                ? await (rapidOcrEngine
+                    ?? throw new InvalidOperationException("RapidOCR engine is not registered."))
+                    .OcrImageAsync(frame.Path, cancellationToken)
+                : await ocrClient.OcrImageAsync(
+                    frame.Path, backend, config.OcrModel,
+                    config.OcrApiKey, config.OcrBaseUrl, cancellationToken);
 
             var text = NormalizeText(raw);
             if (string.IsNullOrEmpty(text))
@@ -136,7 +142,7 @@ public sealed partial class OcrExtractOperator(
 
         var windows = isWindows ?? OperatingSystem.IsWindows();
         var executableNames = windows
-            ? new[] { "VideoSubFinderCli.exe" }
+            ? new[] { "VideoSubFinderWXW_intel.exe", "VideoSubFinderWXW.exe", "VideoSubFinderCli.exe" }
             : new[] { "VideoSubFinderCli", "VideoSubFinderCli.run" };
         var directories = searchDirectories ??
             (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
@@ -168,15 +174,20 @@ public sealed partial class OcrExtractOperator(
         try
         {
             OnProgress(1, "Detecting subtitle frames with VideoSubFinder...");
+            // VSF WXW（wxWidgets GUI 程序）即使正常完成也返回退出码 -1，
+            // 因此忽略退出码，仅以输出产物（RGBImages + SRT）判定成功。
             await processManager.ExecuteAsync(executablePath,
             [
-                "--clear_dirs",
-                "--run_search",
+                "-c", // clear dirs
+                "-r", // run search
                 "--create_empty_sub", timecodesPath,
-                "--input_video", inputPath,
-                "--output_dir", outputDir,
-                "--open_video_ffmpeg"
-            ], cancellationToken);
+                "-i", inputPath,
+                "-o", outputDir,
+                "-te", "0.2102", // 字幕区顶部（视频高度比例，VSF 6.10 实测有效）
+                "-be", "0",
+                "-le", "0",
+                "-re", "1"
+            ], cancellationToken, throwOnNonZeroExit: false);
 
             var imageDir = Path.Combine(outputDir, "RGBImages");
             if (!Directory.Exists(imageDir))
@@ -310,6 +321,7 @@ public sealed partial class OcrExtractOperator(
     {
         "ollama" => OcrBackend.Ollama,
         "llamacpp" or "llama-cpp" => OcrBackend.LlamaCpp,
+        "rapidocr" or "rapid-ocr" or "rapid" => OcrBackend.RapidOcr,
         _ => OcrBackend.Zhipu
     };
 

@@ -15,7 +15,10 @@ public enum OcrBackend
     Ollama,
 
     /// <summary>本地 llama-server（GGUF 视觉模型，免密钥，服务需已启动）。</summary>
-    LlamaCpp
+    LlamaCpp,
+
+    /// <summary>本地 RapidOCR（RapidOcrNet，PaddleOCR ONNX，纯 CPU，多语言）。</summary>
+    RapidOcr
 }
 
 /// <summary>
@@ -69,6 +72,7 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
         OcrBackend.LlamaCpp => (
             string.IsNullOrWhiteSpace(baseUrl) ? LlamaCppBaseUrl : baseUrl,
             string.IsNullOrWhiteSpace(model) ? LlamaCppDefaultModel : model),
+        OcrBackend.RapidOcr => (string.Empty, string.IsNullOrWhiteSpace(model) ? "rapidocr" : model),
         _ => throw new ArgumentOutOfRangeException(nameof(backend), backend, "Unknown OCR backend")
     };
 
