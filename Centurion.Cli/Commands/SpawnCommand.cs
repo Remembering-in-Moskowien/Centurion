@@ -1,9 +1,14 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Capabilities.Infrastructure.Asr;using Centurion.Core.Workflow.Factories;using Centurion.Models.Ass;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Capabilities.Infrastructure.Asr;
+using Centurion.Core.Workflow.Factories;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
-using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Microsoft.Extensions.Logging;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
 using Centurion.Core.Utils.Serialization;
@@ -19,7 +24,6 @@ public sealed class SpawnCommand(
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
-    VoiceActivityFilterOperator vadOp,
     PipelineOperatorFactory operatorFactory,
     TextPreprocessingOperator textCleaningOp,
     QualityReportOperator qualityReportOp,
@@ -85,9 +89,6 @@ public sealed class SpawnCommand(
                 VocalSeparationModel = settings.VocalSeparationModel,
                 Device = settings.Device,
 
-                EnableVadFilter = !settings.DisableVadFilter,
-                VadEnergyThresholdRatio = settings.VadEnergyThresholdRatio,
-
                 SplitStrategy = settings.Splitter,
                 MaxSentenceLength = settings.MaxLength,
                 TargetSentenceLength = settings.TargetLength,
@@ -111,7 +112,7 @@ public sealed class SpawnCommand(
 
             // ─── 组装 ASR DAG：节点=算子、边=数据依赖；条件节点按配置跳过，diarization 失败可降级 ───
             var dag = BuildAsrDag(
-                subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
+                subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, textCleaningOp, qualityReportOp, config);
 
             // Create pipeline temp directory after all configured strategies resolve.
@@ -168,7 +169,6 @@ public sealed class SpawnCommand(
         FFmpegConvertOperator ffmpegOp,
         AudioPreprocessOperator audioPreprocessOp,
         VocalSeparationOperator vocalSepOp,
-        VoiceActivityFilterOperator vadOp,
         PipelineOperatorFactory operatorFactory,
         TextPreprocessingOperator textCleaningOp,
         QualityReportOperator qualityReportOp,
@@ -184,12 +184,8 @@ public sealed class SpawnCommand(
             .Add("Track Check", trackChecker, description: "Inspect input media tracks and format")
             .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "Resample/transcode to a unified audio")
             .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
-            .Add("Voice Activity Filter", vadOp,
-                dependsOn: ["Audio Preprocess"],
-                when: c => c.Config.EnableVadFilter,
-                description: "VAD filter: aggregate speech, drop instrumental/silence segments")
             .Add("Vocal Separation", vocalSepOp,
-                dependsOn: ["Audio Preprocess", "Voice Activity Filter"],
+                dependsOn: ["Audio Preprocess"],
                 when: c => c.Config.VocalSeparation,
                 description: "Demucs vocal separation (enabled by config; skipped when off)")
             .Add("Transcribe", transcribeOp,

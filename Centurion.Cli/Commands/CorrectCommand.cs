@@ -1,9 +1,13 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Factories;using Centurion.Models.Ass;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Workflow.Factories;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
-using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Microsoft.Extensions.Logging;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
 using Centurion.Core.Utils.Serialization;
@@ -19,7 +23,6 @@ public sealed class CorrectCommand(
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
-    VoiceActivityFilterOperator vadOp,
     ScriptLoaderOperator scriptLoaderOp,
     SubtitleTextCorrectorOperator textCorrectorOp,
     PipelineOperatorFactory operatorFactory,
@@ -86,8 +89,6 @@ public sealed class CorrectCommand(
                 VocalSeparation = settings.VocalSeparation || previous.VocalSeparation,
                 VocalSeparationModel = settings.VocalSeparationModel,
                 Device = settings.Device,
-                EnableVadFilter = !settings.DisableVadFilter,
-                VadEnergyThresholdRatio = settings.VadEnergyThresholdRatio,
                 SplitStrategy = previous.SplitStrategy,
                 MaxSentenceLength = previous.MaxSentenceLength,
                 TargetSentenceLength = previous.TargetSentenceLength,
@@ -102,7 +103,7 @@ public sealed class CorrectCommand(
             // correct DAG：文本分支（脚本加载→文本校正）与音频分支（转换→预处理→人声分离→
             // 说话人分割→对齐→重叠消解）并行，汇合后拼写检查 → 校正报告 → 质量报告
             var dag = BuildCorrectDag(
-                scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
+                scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, overlapOp, spellCheckOp, reportOp, qualityReportOp,
                 config, strategy, needsAudio, settings.SpellCheck);
             // --dry-run：预览 DAG / 模型 / 成本，不执行
@@ -154,7 +155,6 @@ public sealed class CorrectCommand(
         FFmpegConvertOperator ffmpegOp,
         AudioPreprocessOperator audioPreprocessOp,
         VocalSeparationOperator vocalSepOp,
-        VoiceActivityFilterOperator vadOp,
         PipelineOperatorFactory operatorFactory,
         OverlapResolutionOperator overlapOp,
         SpellCheckOperator spellCheckOp,
@@ -182,10 +182,7 @@ public sealed class CorrectCommand(
             builder
                 .Add("FFmpeg Convert", ffmpegOp, description: "Resample/transcode to a unified audio")
                 .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
-                .Add("Voice Activity Filter", vadOp, dependsOn: ["Audio Preprocess"],
-                    when: c => c.Config.EnableVadFilter,
-                    description: "VAD filter: aggregate speech, drop instrumental/silence segments")
-                .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess", "Voice Activity Filter"], description: "Demucs vocal separation");
+                .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs vocal separation");
             var afterAudio = "Vocal Separation";
 
             var diarizationOp = operatorFactory.CreateDiarizationOperator(config);

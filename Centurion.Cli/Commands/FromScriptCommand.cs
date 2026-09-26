@@ -1,9 +1,13 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Factories;using Centurion.Models.Ass;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Workflow.Factories;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
-using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Microsoft.Extensions.Logging;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
 using Centurion.Core.Utils.Serialization;
@@ -19,7 +23,6 @@ public sealed class FromScriptCommand(
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
-    VoiceActivityFilterOperator vadOp,
     PipelineOperatorFactory operatorFactory,
     ScriptLoaderOperator scriptLoaderOp,
     TextPreprocessingOperator textCleaningOp,
@@ -69,8 +72,6 @@ public sealed class FromScriptCommand(
                 VocalSeparation = settings.VocalSeparation,
                 VocalSeparationModel = settings.VocalSeparationModel,
                 Device = settings.Device,
-                EnableVadFilter = !settings.DisableVadFilter,
-                VadEnergyThresholdRatio = settings.VadEnergyThresholdRatio,
                 EnableAlignment = settings.EnableAlignment,
                 AlignmentModel = settings.AlignmentModel,
                 AlignmentChunkGapSeconds = settings.AlignmentChunkGapSeconds,
@@ -86,7 +87,7 @@ public sealed class FromScriptCommand(
 
             // from-script DAG：轨道检查→转换→预处理→人声分离→转录→脚本加载→清洗→映射→对齐→质量报告
             var dag = BuildFromScriptDag(
-                subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
+                subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, scriptLoaderOp, textCleaningOp, mapperOp, qualityReportOp, config);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
@@ -134,7 +135,6 @@ public sealed class FromScriptCommand(
         FFmpegConvertOperator ffmpegOp,
         AudioPreprocessOperator audioPreprocessOp,
         VocalSeparationOperator vocalSepOp,
-        VoiceActivityFilterOperator vadOp,
         PipelineOperatorFactory operatorFactory,
         ScriptLoaderOperator scriptLoaderOp,
         TextPreprocessingOperator textCleaningOp,
@@ -147,10 +147,7 @@ public sealed class FromScriptCommand(
             .Add("Track Check", subtitleTrackCheckerOp, description: "Inspect input media tracks and format")
             .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "Resample/transcode to a unified audio")
             .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
-            .Add("Voice Activity Filter", vadOp, dependsOn: ["Audio Preprocess"],
-                when: c => c.Config.EnableVadFilter,
-                description: "VAD filter: aggregate speech, drop instrumental/silence segments")
-            .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess", "Voice Activity Filter"], description: "Demucs vocal separation")
+            .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs vocal separation")
             .Add("Transcribe", operatorFactory.CreateTranscribeOperator(config),
                 dependsOn: ["Vocal Separation"], maxRetries: 1, description: "ASR transcription (auto-retry once on failure)");
 
