@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.5.0</Version>
     <Product>Centurion</Product>
     <Description>A subtitle generation CLI built on a pipeline-operator architecture with on-demand tool/model downloads.</Description>
     <Authors>Centurion Contributors</Authors>
