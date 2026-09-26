@@ -105,6 +105,21 @@ public sealed class FromScriptSettings : GlobalCommandSettings
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 
+    // ----- VAD 过滤 (Voice Activity Filter) -----
+    /// <summary>
+    /// Disable VAD pre-filtering (aggregate speech before vocal separation/transcription).
+    /// </summary>
+    [CommandOption("--no-vad")]
+    [Description("Disable VAD pre-filtering (aggregate speech before separation/transcription)")]
+    public bool DisableVadFilter { get; init; } = false;
+
+    /// <summary>
+    /// VAD energy threshold ratio (window RMS below mean*r is non-speech), default 0.2.
+    /// </summary>
+    [CommandOption("--vad-threshold <RATIO>")]
+    [Description("VAD energy threshold ratio (window RMS below mean*r is non-speech), default 0.2")]
+    public double VadEnergyThresholdRatio { get; init; } = 0.2;
+
     // ----- 推理设备 (Device) -----
     /// <summary>
     /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).

@@ -24,6 +24,15 @@ public class WorkflowState
     /// <summary>Demucs 人声分离后的人声轨路径（转录/说话人分割优先消费）。</summary>
     public string? VocalsPath { get; set; }
 
+    // ---------- VAD（语音活动检测：器乐/静音剔除 + 聚合） ----------
+    /// <summary>VAD 检出的语音段（含聚合位置映射）；VadFilter 算子写入，转写后按映射还原时间轴。</summary>
+    public List<VoiceSegment> VoiceSegments { get; set; } = [];
+    /// <summary>VAD 聚合后的连续语音音频路径；VadFilter 算子写入，人声分离/转录优先消费。</summary>
+    public string? VadAggregatedPath { get; set; }
+    /// <summary>VAD 剔除的器乐/静音总时长（秒，诊断用；进程内，不写入 IR）。</summary>
+    [JsonIgnore]
+    public double VadRemovedSeconds { get; set; }
+
     // ---------- 各阶段句子列表（词级 Speaker/时间戳由下游算子逐步补充） ----------
     /// <summary>刚转录完成的句子（尚无说话人信息）。</summary>
     public List<Sentence> TranscribeSentences { get; set; } = [];

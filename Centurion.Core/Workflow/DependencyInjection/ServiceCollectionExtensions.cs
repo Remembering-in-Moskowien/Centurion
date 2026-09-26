@@ -105,6 +105,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<FFmpegConvertOperator>();
         services.AddTransient<AudioPreprocessOperator>();
         services.AddTransient<VocalSeparationOperator>();
+        services.AddTransient<VoiceActivityFilterOperator>();
         services.AddTransient<TextPreprocessingOperator>();
         services.AddTransient<ScriptLoaderOperator>();
         services.AddTransient<ScriptTimelineMapperOperator>();
