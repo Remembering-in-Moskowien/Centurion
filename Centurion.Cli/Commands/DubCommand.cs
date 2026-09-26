@@ -77,16 +77,10 @@ public sealed class DubCommand(
             workflowContext.State.DubOutputWavPath = wavPath;
 
             // 说话人参考目录是用户输入，保留在临时目录之外
-            var operators = new List<IPipelineOperator>
-            {
-                speakerProfilingOp,
-                ttsSynthesisOp,
-                timeAlignmentOp,
-                audioMixOp,
-                qualityReportOp
-            };
+            // dub DAG：画像 → 合成 → 对齐 → 混音 → 质量报告（pipeline-graph 命令共享同一装配）
+            var dag = BuildDubDag(speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp);
 
-            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
+            await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
 
             var segments = workflowContext.State.DubSegments;
             var dubbed = segments.Count(s => !s.Skipped);
@@ -112,5 +106,26 @@ public sealed class DubCommand(
             FailLogGate.Log(logger, ex, "Dubbing pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 dub DAG（pipeline graph 命令与 dub 命令共享的单一事实源）：
+    /// 说话人画像 → TTS 合成 → 时间对齐 → 混音 → 质量报告。
+    /// </summary>
+    internal static PipelineDag BuildDubDag(
+        SpeakerProfilingOperator speakerProfilingOp,
+        TtsSynthesisOperator ttsSynthesisOp,
+        TimeAlignmentOperator timeAlignmentOp,
+        AudioMixOperator audioMixOp,
+        QualityReportOperator qualityReportOp)
+    {
+        var builder = PipelineDag.CreateBuilder();
+        builder
+            .Add("Speaker Profiling", speakerProfilingOp, description: "说话人画像提取")
+            .Add("TTS Synthesis", ttsSynthesisOp, dependsOn: ["Speaker Profiling"], description: "逐段 TTS 合成（Qwen3-TTS）")
+            .Add("Time Alignment", timeAlignmentOp, dependsOn: ["TTS Synthesis"], description: "合成音频与字幕时间轴对齐")
+            .Add("Audio Mix", audioMixOp, dependsOn: ["Time Alignment"], description: "混音/响度/ducking")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Audio Mix"], description: "质量报告收尾");
+        return builder.Build();
     }
 }

@@ -95,33 +95,13 @@ public sealed class CorrectCommand(
             };
             workflowContext.Config = config;
 
-            var operators = new List<IPipelineOperator>();
-            if (strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both)
-            {
-                operators.Add(scriptLoaderOp);
-                operators.Add(textCorrectorOp);
-            }
-
-            if (needsAudio)
-            {
-                operators.Add(ffmpegOp);
-                operators.Add(audioPreprocessOp);
-                operators.Add(vocalSepOp);
-                var diarizationOperator = operatorFactory.CreateDiarizationOperator(config);
-                if (diarizationOperator is not null)
-                    operators.Add(diarizationOperator);
-                var alignmentOperator = operatorFactory.CreateAlignmentOperator(config);
-                if (alignmentOperator is not null)
-                    operators.Add(alignmentOperator);
-                operators.Add(overlapOp);
-            }
-
-            if (settings.SpellCheck)
-                operators.Add(spellCheckOp);
-
-            operators.Add(reportOp);
-            operators.Add(qualityReportOp);
-            await pipelineExecutor.ExecuteAsync(operators, workflowContext, cancellationToken);
+            // correct DAG：文本分支（脚本加载→文本校正）与音频分支（转换→预处理→人声分离→
+            // 说话人分割→对齐→重叠消解）并行，汇合后拼写检查 → 校正报告 → 质量报告
+            var dag = BuildCorrectDag(
+                scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                operatorFactory, overlapOp, spellCheckOp, reportOp, qualityReportOp,
+                config, strategy, needsAudio, settings.SpellCheck);
+            await pipelineExecutor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
             // 保存校正后的中间文件（时间轴/文本修正全部写入状态）
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "correct", outputPath);
@@ -140,6 +120,83 @@ public sealed class CorrectCommand(
             FailLogGate.Log(logger, ex, "Correction pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 correct DAG（pipeline graph 命令与 correct 命令共享的单一事实源）：
+    /// 文本分支（Script Load → Text Correct）与音频分支（FFmpeg → 预处理 → 人声分离 →
+    /// 说话人分割 → 强制对齐 → 重叠消解）按策略条件接入；两分支汇合后可选拼写检查 →
+    /// 校正报告 → 质量报告。
+    /// </summary>
+    internal static PipelineDag BuildCorrectDag(
+        ScriptLoaderOperator scriptLoaderOp,
+        SubtitleTextCorrectorOperator textCorrectorOp,
+        FFmpegConvertOperator ffmpegOp,
+        AudioPreprocessOperator audioPreprocessOp,
+        VocalSeparationOperator vocalSepOp,
+        PipelineOperatorFactory operatorFactory,
+        OverlapResolutionOperator overlapOp,
+        SpellCheckOperator spellCheckOp,
+        CorrectionReportOperator reportOp,
+        QualityReportOperator qualityReportOp,
+        Centurion.Models.Workflow.WorkflowConfig config,
+        CorrectionStrategy strategy,
+        bool needsAudio,
+        bool runSpellCheck)
+    {
+        var builder = PipelineDag.CreateBuilder();
+        var useText = strategy is CorrectionStrategy.TextOnly or CorrectionStrategy.Both;
+        var join = new List<string>();
+
+        if (useText)
+        {
+            builder
+                .Add("Script Load", scriptLoaderOp, description: "加载参考脚本/台本")
+                .Add("Text Correct", textCorrectorOp, dependsOn: ["Script Load"], description: "按台本校正文本");
+            join.Add("Text Correct");
+        }
+
+        if (needsAudio)
+        {
+            builder
+                .Add("FFmpeg Convert", ffmpegOp, description: "重采样/转码为统一音频")
+                .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "降噪/重采样/响度归一化")
+                .Add("Vocal Separation", vocalSepOp, dependsOn: ["Audio Preprocess"], description: "Demucs 人声分离");
+            var afterAudio = "Vocal Separation";
+
+            var diarizationOp = operatorFactory.CreateDiarizationOperator(config);
+            if (diarizationOp is not null)
+            {
+                builder.Add("Speaker Diarization", diarizationOp,
+                    dependsOn: [afterAudio],
+                    maxRetries: 1,
+                    degradeOnFailure: true,
+                    description: "说话人分割标注（失败降级跳过）");
+                afterAudio = "Speaker Diarization";
+            }
+
+            var alignmentOp = operatorFactory.CreateAlignmentOperator(config);
+            if (alignmentOp is not null)
+            {
+                builder.Add("Force Alignment", alignmentOp,
+                    dependsOn: [afterAudio],
+                    maxRetries: 1,
+                    degradeOnFailure: true,
+                    description: "词级强制对齐（失败降级跳过）");
+                afterAudio = "Force Alignment";
+            }
+
+            builder.Add("Resolve Overlaps", overlapOp, dependsOn: [afterAudio], description: "重叠时间轴消解");
+            join.Add("Resolve Overlaps");
+        }
+
+        builder.Add("Correction Report", reportOp, dependsOn: join.Count > 0 ? join : null, description: "校正报告（文本/时间轴修正明细）");
+        builder.Add("Spell Check", spellCheckOp,
+            dependsOn: ["Correction Report"],
+            when: _ => runSpellCheck,
+            description: "Hunspell 拼写检查（按 --spellcheck 开启）");
+        builder.Add("Quality Report", qualityReportOp, dependsOn: ["Spell Check"], description: "质量报告收尾");
+        return builder.Build();
     }
 
     private static CorrectionStrategy ParseStrategy(string value) => value.ToLowerInvariant() switch

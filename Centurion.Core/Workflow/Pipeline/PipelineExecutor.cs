@@ -194,15 +194,21 @@ public sealed class PipelineExecutor
             }
         }
 
-        // 健康检查（如支持）
+        // 健康检查（如支持）：失败即抛——环境/模型缺失是硬错误（如模型未安装），
+        // 不重试、不降级，直接终止任务并向上传播（命令层报错退出并提示安装）
         try
         {
             if (node.Operator is IHealthCheckableOperator healthy)
                 await healthy.CheckHealthAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Health check failed for node '{Node}'; proceeding to execute.", nodeName);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Health check failed for node '{Node}' ({Message}).", nodeName, ex.Message);
+            throw;
         }
 
         ConsoleServices.Output.WriteLine(ConsoleServices.T("Executing step: {0}", nodeName));

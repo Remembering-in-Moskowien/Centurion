@@ -13,7 +13,7 @@ namespace Centurion.Cli.Commands;
 
 /// <summary>
 /// <c>pipeline graph</c> 命令：渲染指定命令的 DAG 管线拓扑（节点、依赖、条件、重试/降级标注）。
-/// 与 asr / translate 命令共享同一 DAG 装配（BuildAsrDag / BuildTranslateDag），只渲染不执行。
+/// 与 asr / ocr / from-script / translate / dub / correct / convert 命令共享同一 DAG 装配，只渲染不执行。
 /// </summary>
 public sealed class PipelineGraphCommand(
     SubtitleTrackCheckerOperator trackChecker,
@@ -23,6 +23,18 @@ public sealed class PipelineGraphCommand(
     PipelineOperatorFactory operatorFactory,
     TextPreprocessingOperator textCleaningOp,
     QualityReportOperator qualityReportOp,
+    OcrExtractOperator ocrExtractOp,
+    SpeakerProfilingOperator speakerProfilingOp,
+    TtsSynthesisOperator ttsSynthesisOp,
+    TimeAlignmentOperator timeAlignmentOp,
+    AudioMixOperator audioMixOp,
+    ScriptLoaderOperator scriptLoaderOp,
+    SubtitleTextCorrectorOperator textCorrectorOp,
+    OverlapResolutionOperator overlapOp,
+    CorrectionReportOperator correctionReportOp,
+    SpellCheckOperator spellCheckOp,
+    ScriptTimelineMapperOperator mapperOp,
+    Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory,
     ITranslationStrategyFactory strategyFactory,
     IServiceProvider serviceProvider,
     ILogger<PipelineGraphCommand> logger) : AsyncCommand<PipelineGraphSettings>
@@ -38,16 +50,26 @@ public sealed class PipelineGraphCommand(
                 "asr" => SpawnCommand.BuildAsrDag(
                     trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp,
                     operatorFactory, textCleaningOp, qualityReportOp,
-                    new WorkflowConfig
-                    {
-                        // 全开配置：展示完整拓扑（含说话人分割/对齐条件节点）
-                        VocalSeparation = true,
-                        DiarizationBackend = "crispasr",
-                        EnableAlignment = true
-                    }),
+                    FullConfig()),
+                "ocr" => OcrCommand.BuildOcrDag(
+                    ocrExtractOp, operatorFactory, textCleaningOp, qualityReportOp,
+                    FullConfig()),
+                "from-script" => FromScriptCommand.BuildFromScriptDag(
+                    trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                    operatorFactory, scriptLoaderOp, textCleaningOp, mapperOp, qualityReportOp,
+                    FullConfig()),
                 "translate" => BuildTranslateDagForGraph(),
+                "dub" => DubCommand.BuildDubDag(
+                    speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp),
+                "correct" => CorrectCommand.BuildCorrectDag(
+                    scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                    operatorFactory, overlapOp, spellCheckOp, correctionReportOp, qualityReportOp,
+                    FullConfig(), CorrectionStrategy.Both, needsAudio: true, runSpellCheck: true),
+                "convert" => ConvertCommand.BuildConvertDag(
+                    convertOperatorsFactory().ToList(), qualityReportOp),
                 _ => throw new ArgumentException(
-                    $"Unknown pipeline command '{settings.Command}'. Supported: asr, translate.")
+                    $"Unknown pipeline command '{settings.Command}'. " +
+                    "Supported: asr, ocr, from-script, translate, dub, correct, convert.")
             };
 
             var validation = dag.Validate();
@@ -80,6 +102,15 @@ public sealed class PipelineGraphCommand(
             return 1;
         }
     }
+
+    /// <summary>全开配置：展示完整拓扑（含人声分离/说话人分割/对齐条件节点）。</summary>
+    private static WorkflowConfig FullConfig() => new()
+    {
+        VocalSeparation = true,
+        DiarizationBackend = "crispasr",
+        EnableAlignment = true,
+        EnableTextCleaning = true
+    };
 
     /// <summary>translate DAG：以占位配置构建（只渲染，不执行翻译）。</summary>
     private PipelineDag BuildTranslateDagForGraph()

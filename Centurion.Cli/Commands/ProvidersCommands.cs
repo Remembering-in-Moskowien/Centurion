@@ -1,6 +1,7 @@
 using Centurion.Abstractions.Providers;
 using Centurion.Models.Console;
 using Centurion.Models.Providers;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
@@ -10,7 +11,7 @@ public class ProvidersSettings : CommandSettings
 {
 }
 
-/// <summary>providers list：列出全部已注册 Provider 及其能力与可用性。</summary>
+/// <summary>providers list：列出全部已注册 Provider 及其能力与可用性（Spectre 表格 + 成本图表）。</summary>
 public sealed class ProvidersListCommand(
     IProviderRegistry registry) : AsyncCommand<ProvidersSettings>
 {
@@ -21,21 +22,54 @@ public sealed class ProvidersListCommand(
             .GroupBy(p => p.GetType().GetInterfaces().FirstOrDefault(i => i.Name.StartsWith("I") && i.Name.EndsWith("Provider"))?.Name ?? "Other")
             .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
+        var all = new List<(IProvider Provider, bool Available)>();
         foreach (var group in groups)
         {
-            ConsoleServices.Output.WriteLine($"[{group.Key}] {group.Count()} providers");
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .Title($"[bold]{group.Key}[/] ({group.Count()} providers)")
+                .AddColumn(new TableColumn("Provider").LeftAligned())
+                .AddColumn(new TableColumn("Kind").Width(8))
+                .AddColumn(new TableColumn("成本 $/1M tok").RightAligned())
+                .AddColumn(new TableColumn("$/音频分钟").RightAligned())
+                .AddColumn(new TableColumn("延迟").Width(9))
+                .AddColumn(new TableColumn("质量").Width(9))
+                .AddColumn(new TableColumn("状态").Width(12));
+
             foreach (var provider in group.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var c = provider.Capabilities;
                 var available = await provider.IsAvailableAsync(ct);
-                ConsoleServices.Output.WriteLine(
-                    $"  {provider.Name,-16} {c.Kind,-6} cost ${c.CostPer1MTokensUsd:F2}/1M tok" +
-                    $" / ${c.CostPerAudioMinuteUsd:F4}/min  latency {c.Latency,-7} quality {c.Quality,-7} " +
-                    (available ? "available" : "UNAVAILABLE"));
-                if (c.Description.Length > 0)
-                    ConsoleServices.Output.WriteLine($"    {c.Description}");
+                all.Add((provider, available));
+                var status = available ? "[green]● 可用[/]" : "[red]○ 不可用[/]";
+                table.AddRow(
+                    $"[bold]{provider.Name}[/]",
+                    $"{c.Kind}",
+                    $"{c.CostPer1MTokensUsd,10:F2}",
+                    $"{c.CostPerAudioMinuteUsd,10:F4}",
+                    $"{c.Latency}",
+                    $"{c.Quality}",
+                    status);
             }
+
+            AnsiConsole.Write(table);
+            AnsiConsole.WriteLine();
         }
+
+        // 成本对比图：每 1M token 成本（本地为 0，直观展示云/本地成本差）
+        var chart = new BarChart()
+            .Width(64)
+            .Label("成本对比 — $/1M tokens")
+            .CenterLabel();
+        foreach (var (provider, _) in all.OrderByDescending(p => p.Provider.Capabilities.CostPer1MTokensUsd))
+        {
+            chart.AddItem(provider.DisplayName, provider.Capabilities.CostPer1MTokensUsd);
+        }
+        AnsiConsole.Write(chart);
+
+        var availableCount = all.Count(p => p.Available);
+        AnsiConsole.MarkupLine(
+            $"可用 [green]{availableCount}[/]/{all.Count} — 探测: [cyan]Centurion providers test <name>[/]");
         return 0;
     }
 }
@@ -64,19 +98,24 @@ public sealed class ProvidersTestCommand(
         }
 
         var c = provider.Capabilities;
-        ConsoleServices.Output.WriteLine($"provider : {provider.Name} ({provider.DisplayName})");
-        ConsoleServices.Output.WriteLine($"kind     : {c.Kind}");
-        ConsoleServices.Output.WriteLine($"languages: {string.Join(", ", c.SupportedLanguages)}");
-        ConsoleServices.Output.WriteLine($"gpu      : {(c.RequiresGpu ? "required" : "optional")}");
-        ConsoleServices.Output.WriteLine($"latency  : {c.Latency}");
-        ConsoleServices.Output.WriteLine($"quality  : {c.Quality}");
-        ConsoleServices.Output.WriteLine($"cost     : ${c.CostPerAudioMinuteUsd:F4}/audio-min, ${c.CostPer1MTokensUsd:F2}/1M tokens");
-        ConsoleServices.Output.WriteLine($"desc     : {c.Description}");
-
         var available = await provider.IsAvailableAsync(ct);
-        ConsoleServices.Output.WriteLine(available
-            ? "status   : available"
-            : "status   : UNAVAILABLE (missing API key or local service not running)");
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Title($"[bold]{provider.Name}[/] — {provider.DisplayName}")
+            .AddColumn(new TableColumn("属性").Width(12))
+            .AddColumn(new TableColumn("值"));
+        table.AddRow("类型", $"{c.Kind}");
+        table.AddRow("语言", string.Join(", ", c.SupportedLanguages));
+        table.AddRow("GPU", c.RequiresGpu ? "required" : "optional");
+        table.AddRow("延迟", $"{c.Latency}");
+        table.AddRow("质量", $"{c.Quality}");
+        table.AddRow("成本", $"{c.CostPerAudioMinuteUsd:F4} $/音频分钟 · {c.CostPer1MTokensUsd:F2} $/1M tokens");
+        table.AddRow("说明", c.Description);
+        table.AddRow("状态", available
+            ? "[green]● 可用[/]"
+            : "[red]○ 不可用 (missing API key or local service not running)[/]");
+        AnsiConsole.Write(table);
         return available ? 0 : 1;
     }
 }

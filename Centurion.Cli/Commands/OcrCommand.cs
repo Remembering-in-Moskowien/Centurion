@@ -77,17 +77,13 @@ public sealed class OcrCommand(
                 OcrBaseUrl = settings.OcrBaseUrl
             };
             var workflowContext = new SubtitleWorkflowContext(config);
-            var operators = new List<IPipelineOperator>
-            {
-                ocrExtractOp,
-                operatorFactory.CreateSentenceSplitOperator(config),
-                textCleaningOp,
-                qualityReportOp
-            };
+
+            // OCR DAG：抽帧识别 → 分句 → 清洗 → 质量报告（pipeline-graph 命令共享同一装配）
+            var dag = BuildOcrDag(ocrExtractOp, operatorFactory, textCleaningOp, qualityReportOp, config);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("ocr_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
-            await pipelineExecutor.ExecuteAsync(operators, workflowContext, ct);
+            await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "ocr", intermediatePath);
             await store.SaveAsync(outDoc, intermediatePath, ct);
 
@@ -101,5 +97,26 @@ public sealed class OcrCommand(
             FailLogGate.Log(logger, ex, "OCR pipeline execution failed.");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// 组装 OCR DAG（pipeline graph 命令与 ocr 命令共享的单一事实源）：
+    /// 抽帧识别 → 分句 → 文本清洗 → 质量报告。
+    /// </summary>
+    internal static PipelineDag BuildOcrDag(
+        OcrExtractOperator ocrExtractOp,
+        PipelineOperatorFactory operatorFactory,
+        TextPreprocessingOperator textCleaningOp,
+        QualityReportOperator qualityReportOp,
+        Centurion.Models.Workflow.WorkflowConfig config)
+    {
+        var splitOp = operatorFactory.CreateSentenceSplitOperator(config);
+        var builder = PipelineDag.CreateBuilder();
+        builder
+            .Add("OCR Extract", ocrExtractOp, description: "VSF/FFmpeg 抽帧 + RapidOCR/LLM 字幕识别")
+            .Add("Sentence Splitting", splitOp, dependsOn: ["OCR Extract"], description: "分句（合并/切分）")
+            .Add("Text Cleaning", textCleaningOp, dependsOn: ["Sentence Splitting"], description: "标点/数字/缩写规范化")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Text Cleaning"], description: "质量报告收尾");
+        return builder.Build();
     }
 }

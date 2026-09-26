@@ -2,6 +2,7 @@ using Centurion.Core.Capabilities.Managers.Media;
 using Centurion.Models.Console;
 using Centurion.Models.Metadata;
 using Microsoft.Extensions.DependencyInjection;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
@@ -59,7 +60,7 @@ public class ModelsSettings : CommandSettings
 {
 }
 
-/// <summary>models list：列出全部注册模型与本地状态。</summary>
+/// <summary>models list：列出全部注册模型与本地状态（Spectre 表格 + 状态徽章）。</summary>
 public sealed class ModelsListCommand(
     ModelRegistry registry,
     IServiceProvider serviceProvider) : AsyncCommand<ModelsSettings>
@@ -67,23 +68,41 @@ public sealed class ModelsListCommand(
     /// <inheritdoc />
     protected override async Task<int> ExecuteAsync(CommandContext context, ModelsSettings settings, CancellationToken ct)
     {
+        var readyCount = 0;
+        var missingCount = 0;
+
         foreach (var domain in ModelCatalog.Domains(registry))
         {
-            ConsoleServices.Output.WriteLine($"[{domain.Name}] {domain.Models.Count} models");
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .Title($"[bold]{domain.Name}[/] ({domain.Models.Count} models)")
+                .AddColumn(new TableColumn("模型").LeftAligned())
+                .AddColumn(new TableColumn("类型").Width(6))
+                .AddColumn(new TableColumn("状态").Width(10));
+
             foreach (var (name, meta) in domain.Models.OrderBy(m => m.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var state = ModelCatalog.ExistsLocally(ModelCatalog.CreateManager(serviceProvider, domain, name))
-                    ? "ready"
-                    : "missing";
+                var ready = ModelCatalog.ExistsLocally(ModelCatalog.CreateManager(serviceProvider, domain, name));
+                if (ready) readyCount++; else missingCount++;
                 var kind = meta.DownloadType switch
                 {
                     ModelDownloadType.Directory => "dir",
                     ModelDownloadType.OnnxModelDirectory => "onnx",
                     _ => "file"
                 };
-                ConsoleServices.Output.WriteLine($"  {name,-28} {kind,-5} {state}");
+                var state = ready
+                    ? "[green]● ready[/]"
+                    : "[red]○ missing[/]";
+                table.AddRow($"[bold]{name}[/]", kind, state);
             }
+
+            AnsiConsole.Write(table);
+            AnsiConsole.WriteLine();
         }
+
+        AnsiConsole.MarkupLine(
+            $"总计 [green]{readyCount}[/] 就绪 / [red]{missingCount}[/] 缺失" +
+            (missingCount > 0 ? "  — 安装: [cyan]Centurion models install <model>[/]" : ""));
         await Task.CompletedTask;
         return 0;
     }
@@ -122,7 +141,7 @@ public sealed class ModelsInstallCommand(
         var (domain, modelName, _) = hits[0];
         var manager = ModelCatalog.CreateManager(serviceProvider, domain, modelName);
         ConsoleServices.Output.WriteInfo($"Installing model '{domain.Name}/{modelName}' ...");
-        await manager.CheckHealthAsync(ct);
+        await manager.EnsureInstalledAsync(ct);
         ConsoleServices.Output.WriteSuccess($"Installed: {manager.ModelFilePath}");
         return 0;
     }
@@ -153,8 +172,17 @@ public sealed class ModelsVerifyCommand(
         var (domain, modelName, _) = hits[0];
         var manager = ModelCatalog.CreateManager(serviceProvider, domain, modelName);
         var ready = ModelCatalog.ExistsLocally(manager);
-        ConsoleServices.Output.WriteLine($"  {domain.Name}/{modelName}  ->  {manager.ModelFilePath}");
-        ConsoleServices.Output.WriteLine(ready ? "  status: ready" : "  status: missing (run 'Centurion models install <model>')");
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .AddColumn(new TableColumn("属性").Width(12))
+            .AddColumn(new TableColumn("值"));
+        table.AddRow("模型", $"[bold]{domain.Name}/{modelName}[/]");
+        table.AddRow("路径", $"[dim]{manager.ModelFilePath}[/]");
+        table.AddRow("状态", ready ? "[green]● ready[/]" : "[red]○ missing[/]");
+        if (!ready)
+            table.AddRow("安装", "[cyan]Centurion models install " + modelName + "[/]");
+        AnsiConsole.Write(table);
         await Task.CompletedTask;
         return ready ? 0 : 1;
     }
