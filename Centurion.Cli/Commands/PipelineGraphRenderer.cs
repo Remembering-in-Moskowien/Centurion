@@ -96,7 +96,7 @@ internal static class PipelineGraphRenderer
             var node = dag.Find(name)!;
             var label = new StringBuilder(Markup.Escape(node.Name));
             var ann = new List<string>();
-            if (node.When is not null) ann.Add("[yellow]when[/]");
+            if (node.When is not null) ann.Add("[gold]when[/]");
             if (node.MaxRetries > 0) ann.Add($"[dim]retry x{node.MaxRetries}[/]");
             if (node.DegradeOnFailure) ann.Add("[dim]degrade[/]");
             if (node.Timeout is not null) ann.Add($"[dim]timeout {node.Timeout.Value.TotalSeconds:F0}s[/]");

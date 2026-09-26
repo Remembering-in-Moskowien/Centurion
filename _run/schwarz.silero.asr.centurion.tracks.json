@@ -1,0 +1,31 @@
+{
+  "SourceFile": "D:\\Centurion\\_run\\schwarz.mka",
+  "Checked": true,
+  "HasSubtitleTracks": true,
+  "AllTracks": [
+    {
+      "TrackId": 0,
+      "Type": "audio",
+      "Codec": "Vorbis",
+      "Language": null,
+      "Name": null
+    },
+    {
+      "TrackId": 1,
+      "Type": "subtitles",
+      "Codec": "SubStationAlpha",
+      "Language": null,
+      "Name": null
+    }
+  ],
+  "SubtitleTracks": [
+    {
+      "TrackId": 1,
+      "Type": "subtitles",
+      "Codec": "SubStationAlpha",
+      "Language": null,
+      "Name": null
+    }
+  ],
+  "Message": null
+}

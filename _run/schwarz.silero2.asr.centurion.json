@@ -1,0 +1,2837 @@
+{
+  "schemaVersion": "1.0",
+  "generator": {
+    "tool": "centurion",
+    "version": "0.1.0\u002B0f3e36d585432d09897189efb1e255d6ea3627db",
+    "command": "asr",
+    "generatedAt": "2026-09-26T21:37:48.7143299\u002B08:00",
+    "inputFile": "D:\\Centurion\\_run\\schwarz.mka",
+    "outputFile": "D:\\Centurion\\_run\\schwarz.silero2.asr.centurion.json"
+  },
+  "provenance": [
+    {
+      "operator": "audio-convert",
+      "parametersHash": "95e31ef87315cc6d1607a5f33f81de6d4c47da42ceb886e25a109db8dd603820",
+      "appliedAt": "2026-09-26T21:37:48.8502290\u002B08:00"
+    },
+    {
+      "operator": "vocal-separation",
+      "model": "htdemucs",
+      "parametersHash": "95e31ef87315cc6d1607a5f33f81de6d4c47da42ceb886e25a109db8dd603820",
+      "appliedAt": "2026-09-26T21:37:48.8502290\u002B08:00"
+    },
+    {
+      "operator": "transcribe",
+      "model": "qwen3-asr-1.7b",
+      "parametersHash": "95e31ef87315cc6d1607a5f33f81de6d4c47da42ceb886e25a109db8dd603820",
+      "appliedAt": "2026-09-26T21:37:48.8502290\u002B08:00"
+    },
+    {
+      "operator": "split",
+      "parametersHash": "95e31ef87315cc6d1607a5f33f81de6d4c47da42ceb886e25a109db8dd603820",
+      "appliedAt": "2026-09-26T21:37:48.8502290\u002B08:00"
+    }
+  ],
+  "config": {
+    "inputFilePath": "D:\\Centurion\\_run\\schwarz.mka",
+    "commandName": "asr",
+    "outputFilePath": "D:\\Centurion\\_run\\schwarz.silero2.asr.centurion.json",
+    "device": "Auto",
+    "correctStrategy": "Both",
+    "maxDriftMs": 1500,
+    "fuzzyThreshold": 0.72,
+    "hunspellDictionary": "en_US",
+    "mapperStrategy": "rule",
+    "coverageThreshold": 0.92,
+    "maxCps": 5,
+    "maxCharsPerLine": 18,
+    "fillGapWithEllipsis": true,
+    "audioPreprocess": {
+      "enableResampling": true,
+      "enableDownmixing": true,
+      "enableHighPass": true,
+      "enableLoudnessNormalization": true,
+      "enableNoiseReduction": false,
+      "snrThresholdDb": 15,
+      "noiseReductionBackend": "BuiltInFfmpeg"
+    },
+    "transcriberEngine": "crispasr",
+    "transcriberModel": "qwen3-asr-1.7b",
+    "asrProvider": "crispasr",
+    "language": "de",
+    "splitStrategy": "rule",
+    "maxSentenceLength": 80,
+    "targetSentenceLength": 50,
+    "spreadRange": 10,
+    "chunkGranularity": 0.5,
+    "mergeGapSeconds": 1.5,
+    "enablePunctuationRewrite": true,
+    "enableVadFilter": true,
+    "vadWindowSeconds": 0.5,
+    "vadMergeGapSeconds": 1,
+    "vadMinSpeechSeconds": 0.3,
+    "vadEnergyThresholdRatio": 0.2,
+    "vadAbsoluteFloorDb": -50,
+    "vadPadSeconds": 0.1,
+    "vocalSeparation": true,
+    "vocalSeparationModel": "htdemucs",
+    "ocrIntervalSeconds": 2,
+    "ocrBackend": "zhipu",
+    "diarizationBackend": "none",
+    "diarizationMethod": "foxnose",
+    "diarizationModel": "pyannote-seg-3.0",
+    "numSpeakers": 0,
+    "diarizationMinSegmentSeconds": 0.5,
+    "karaokeMode": false,
+    "showSpeakerLabels": false,
+    "cacheDirectory": "./cache",
+    "enableAlignment": false,
+    "alignmentModel": "qwen3-forced-aligner-0.6b-f16",
+    "alignmentChunkGapSeconds": 2,
+    "alignmentMaxChunkSeconds": 120,
+    "enableTextCleaning": true,
+    "removePunctuation": false,
+    "expandNumbers": true,
+    "expandAbbreviations": false,
+    "targetLanguage": "",
+    "translationStrategy": "llm",
+    "bilingual": false,
+    "ttsEngine": "llama",
+    "ttsModel": "1.7b-base-q4",
+    "ttsLanguage": "zh",
+    "dubStrictTiming": true,
+    "dubLoudnessTarget": -16,
+    "ttsParallelism": 2,
+    "dubMaxChunkSeconds": 15,
+    "dubDucking": true
+  },
+  "state": {
+    "pipelineTempDirectory": "D:\\Centurion\\Centurion.Cli\\bin\\Release\\net10.0\\temp\\pipeline_6f98377ca9424cd0a7f53c566183522f",
+    "convertedAudioPath": "D:\\Centurion\\Centurion.Cli\\bin\\Release\\net10.0\\temp\\pipeline_6f98377ca9424cd0a7f53c566183522f\\schwarz_16k.wav",
+    "preprocessedAudioPath": "D:\\Centurion\\Centurion.Cli\\bin\\Release\\net10.0\\temp\\pipeline_6f98377ca9424cd0a7f53c566183522f\\preprocessed_6197b46a3b4e4da99b71db5fb29ab720.wav",
+    "vocalsPath": "D:\\Centurion\\Centurion.Cli\\bin\\Release\\net10.0\\temp\\pipeline_6f98377ca9424cd0a7f53c566183522f\\vocals_236e4d3e47d143288e25a202027e1304.wav",
+    "voiceSegments": [],
+    "transcribeSentences": [
+      {
+        "text": ".",
+        "start": 0,
+        "end": 29600,
+        "skipRender": false,
+        "words": [
+          {
+            "text": ".",
+            "start": 0,
+            "end": 29600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "soviel.",
+        "start": 45360,
+        "end": 46000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "so",
+            "start": 45360,
+            "end": 45600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel.",
+            "start": 45920,
+            "end": 46000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "JetztsindsiewohlimSchlafe,undmeinMundkannmirnichtmehr.",
+        "start": 57000,
+        "end": 76920,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt",
+            "start": 57000,
+            "end": 57240,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "sind",
+            "start": 62120,
+            "end": 62120,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "sie",
+            "start": 62120,
+            "end": 62360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wohl",
+            "start": 67800,
+            "end": 68200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "im",
+            "start": 68520,
+            "end": 68840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Schlafe,",
+            "start": 69080,
+            "end": 69320,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "und",
+            "start": 69800,
+            "end": 69960,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mein",
+            "start": 70200,
+            "end": 71720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Mund",
+            "start": 73240,
+            "end": 73560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kann",
+            "start": 73960,
+            "end": 74600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir",
+            "start": 74920,
+            "end": 74920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 74920,
+            "end": 75560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 76200,
+            "end": 76920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Wirhabennichtmehr.",
+        "start": 77640,
+        "end": 80840,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wir",
+            "start": 77640,
+            "end": 77720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "haben",
+            "start": 77800,
+            "end": 79400,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 79400,
+            "end": 79480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 80840,
+            "end": 80840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "AufderLeinwandschwingenwirseit.",
+        "start": 83300,
+        "end": 90180,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Auf",
+            "start": 83300,
+            "end": 83940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "der",
+            "start": 84180,
+            "end": 84500,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leinwand",
+            "start": 84580,
+            "end": 84660,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schwingen",
+            "start": 84740,
+            "end": 88260,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wir",
+            "start": 88420,
+            "end": 88580,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seit.",
+            "start": 89380,
+            "end": 90180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "WenndieWolkenschweifengehen.",
+        "start": 132380,
+        "end": 135980,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wenn",
+            "start": 132380,
+            "end": 132700,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "die",
+            "start": 133100,
+            "end": 133420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Wolken",
+            "start": 133500,
+            "end": 134060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schweifen",
+            "start": 134700,
+            "end": 135340,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "gehen.",
+            "start": 135980,
+            "end": 135980,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "GanzeWeltistvielKinderspiel.",
+        "start": 138000,
+        "end": 146568,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganze",
+            "start": 138000,
+            "end": 139530,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Welt",
+            "start": 139530,
+            "end": 140754,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ist",
+            "start": 140754,
+            "end": 141672,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 141672,
+            "end": 142896,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Kinderspiel.",
+            "start": 142896,
+            "end": 146568,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "GanzesLebenstehthintermir.",
+        "start": 146568,
+        "end": 154524,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 146568,
+            "end": 148404,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 148404,
+            "end": 149934,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 149934,
+            "end": 151464,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 151464,
+            "end": 153300,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 153300,
+            "end": 154524,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "GanzesLebenstehthintermir.",
+        "start": 154524,
+        "end": 162480,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 154524,
+            "end": 156360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 156360,
+            "end": 157890,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 157890,
+            "end": 159420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 159420,
+            "end": 161256,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 161256,
+            "end": 162480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Weilichnichtvielkenne,nein.",
+        "start": 165160,
+        "end": 177000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Weil",
+            "start": 165160,
+            "end": 166914,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ich",
+            "start": 166914,
+            "end": 168229,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 168229,
+            "end": 170422,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 170422,
+            "end": 172176,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kenne,",
+            "start": 172176,
+            "end": 174807,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nein.",
+            "start": 174807,
+            "end": 177000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Jetzt,wennSiewollen,schlafe.",
+        "start": 220300,
+        "end": 222940,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt,",
+            "start": 220300,
+            "end": 220865,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wenn",
+            "start": 220865,
+            "end": 221242,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sie",
+            "start": 221242,
+            "end": 221525,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wollen,",
+            "start": 221525,
+            "end": 222185,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schlafe.",
+            "start": 222185,
+            "end": 222940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Gamescan\u0027tfindawaytobesaved.",
+        "start": 223000,
+        "end": 228852,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Games",
+            "start": 223000,
+            "end": 224045,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "can\u0027t",
+            "start": 224045,
+            "end": 225090,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "find",
+            "start": 225090,
+            "end": 225926,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "a",
+            "start": 225926,
+            "end": 226135,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "way",
+            "start": 226135,
+            "end": 226762,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 226762,
+            "end": 227180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "be",
+            "start": 227180,
+            "end": 227598,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "saved.",
+            "start": 227598,
+            "end": 228852,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Theirheartsdon\u0027tseemtocare.",
+        "start": 228852,
+        "end": 234495,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Their",
+            "start": 228852,
+            "end": 229897,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hearts",
+            "start": 229897,
+            "end": 231151,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "don\u0027t",
+            "start": 231151,
+            "end": 232196,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seem",
+            "start": 232196,
+            "end": 233032,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 233032,
+            "end": 233450,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "care.",
+            "start": 233450,
+            "end": 234495,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Whatdrivestheirhiddendesire?",
+        "start": 234495,
+        "end": 240347,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 234495,
+            "end": 235331,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 235331,
+            "end": 236585,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 236585,
+            "end": 237630,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 237630,
+            "end": 238884,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 238884,
+            "end": 240347,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Whatdrivestheirhiddendesire?",
+        "start": 240347,
+        "end": 246200,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 240347,
+            "end": 241183,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 241183,
+            "end": 242437,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 242437,
+            "end": 243482,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 243482,
+            "end": 244736,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 244736,
+            "end": 246200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "UnsereVision,klingendinSirene.",
+        "start": 252500,
+        "end": 264988,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 252500,
+            "end": 254997,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 254997,
+            "end": 257911,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "klingend",
+            "start": 257911,
+            "end": 261241,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 261241,
+            "end": 262074,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 262074,
+            "end": 264988,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "UnsereVision,heilendinSirene.",
+        "start": 264988,
+        "end": 277060,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 264988,
+            "end": 267485,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 267485,
+            "end": 270399,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "heilend",
+            "start": 270399,
+            "end": 273313,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 273313,
+            "end": 274146,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 274146,
+            "end": 277060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Butthevoiceswillcomeandguide.",
+        "start": 278600,
+        "end": 285000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "But",
+            "start": 278600,
+            "end": 279262,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "the",
+            "start": 279262,
+            "end": 279924,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "voices",
+            "start": 279924,
+            "end": 281248,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "will",
+            "start": 281248,
+            "end": 282131,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "come",
+            "start": 282131,
+            "end": 283013,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "and",
+            "start": 283013,
+            "end": 283675,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "guide.",
+            "start": 283675,
+            "end": 285000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      }
+    ],
+    "subtitleSentences": [],
+    "correctedSentences": [],
+    "splitSentences": [
+      {
+        "text": ".",
+        "cleanedText": ".",
+        "start": 0,
+        "end": 29600,
+        "skipRender": false,
+        "words": [
+          {
+            "text": ".",
+            "start": 0,
+            "end": 29600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "so viel.",
+        "cleanedText": "so viel.",
+        "start": 45360,
+        "end": 46000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "so",
+            "start": 45360,
+            "end": 45600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel.",
+            "start": 45920,
+            "end": 46000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Jetzt",
+        "cleanedText": "jetzt",
+        "start": 57000,
+        "end": 57240,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt",
+            "start": 57000,
+            "end": 57240,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "sind sie",
+        "cleanedText": "sind sie",
+        "start": 62120,
+        "end": 62360,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "sind",
+            "start": 62120,
+            "end": 62120,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "sie",
+            "start": 62120,
+            "end": 62360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "wohl im Schlafe,",
+        "cleanedText": "wohl im schlafe,",
+        "start": 67800,
+        "end": 69320,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "wohl",
+            "start": 67800,
+            "end": 68200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "im",
+            "start": 68520,
+            "end": 68840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Schlafe,",
+            "start": 69080,
+            "end": 69320,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "und mein",
+        "cleanedText": "und mein",
+        "start": 69800,
+        "end": 71720,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "und",
+            "start": 69800,
+            "end": 69960,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mein",
+            "start": 70200,
+            "end": 71720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Mund kann mir nicht mehr.",
+        "cleanedText": "mund kann mir nicht mehr.",
+        "start": 73240,
+        "end": 76920,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Mund",
+            "start": 73240,
+            "end": 73560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kann",
+            "start": 73960,
+            "end": 74600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir",
+            "start": 74920,
+            "end": 74920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 74920,
+            "end": 75560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 76200,
+            "end": 76920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Wir haben nicht mehr.",
+        "cleanedText": "wir haben nicht mehr.",
+        "start": 77640,
+        "end": 80840,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wir",
+            "start": 77640,
+            "end": 77720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "haben",
+            "start": 77800,
+            "end": 79400,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 79400,
+            "end": 79480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 80840,
+            "end": 80840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Auf der Leinwand schwingen wir seit.",
+        "cleanedText": "auf der leinwand schwingen wir seit.",
+        "start": 83300,
+        "end": 90180,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Auf",
+            "start": 83300,
+            "end": 83940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "der",
+            "start": 84180,
+            "end": 84500,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leinwand",
+            "start": 84580,
+            "end": 84660,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schwingen",
+            "start": 84740,
+            "end": 88260,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wir",
+            "start": 88420,
+            "end": 88580,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seit.",
+            "start": 89380,
+            "end": 90180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Wenn die Wolken schweifen gehen.",
+        "cleanedText": "wenn die wolken schweifen gehen.",
+        "start": 132380,
+        "end": 135980,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wenn",
+            "start": 132380,
+            "end": 132700,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "die",
+            "start": 133100,
+            "end": 133420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Wolken",
+            "start": 133500,
+            "end": 134060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schweifen",
+            "start": 134700,
+            "end": 135340,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "gehen.",
+            "start": 135980,
+            "end": 135980,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganze Welt ist viel Kinderspiel.",
+        "cleanedText": "ganze welt ist viel kinderspiel.",
+        "start": 138000,
+        "end": 146568,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganze",
+            "start": 138000,
+            "end": 139530,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Welt",
+            "start": 139530,
+            "end": 140754,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ist",
+            "start": 140754,
+            "end": 141672,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 141672,
+            "end": 142896,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Kinderspiel.",
+            "start": 142896,
+            "end": 146568,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganzes Leben steht hinter mir.",
+        "cleanedText": "ganzes leben steht hinter mir.",
+        "start": 146568,
+        "end": 154524,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 146568,
+            "end": 148404,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 148404,
+            "end": 149934,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 149934,
+            "end": 151464,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 151464,
+            "end": 153300,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 153300,
+            "end": 154524,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganzes Leben steht hinter mir.",
+        "cleanedText": "ganzes leben steht hinter mir.",
+        "start": 154524,
+        "end": 162480,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 154524,
+            "end": 156360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 156360,
+            "end": 157890,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 157890,
+            "end": 159420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 159420,
+            "end": 161256,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 161256,
+            "end": 162480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Weil ich nicht viel kenne,",
+        "cleanedText": "weil ich nicht viel kenne,",
+        "start": 165160,
+        "end": 174807,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Weil",
+            "start": 165160,
+            "end": 166914,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ich",
+            "start": 166914,
+            "end": 168229,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 168229,
+            "end": 170422,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 170422,
+            "end": 172176,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kenne,",
+            "start": 172176,
+            "end": 174807,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "nein.",
+        "cleanedText": "nein.",
+        "start": 174807,
+        "end": 177000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "nein.",
+            "start": 174807,
+            "end": 177000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Jetzt,",
+        "cleanedText": "jetzt,",
+        "start": 220300,
+        "end": 220865,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt,",
+            "start": 220300,
+            "end": 220865,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "wenn Sie wollen,",
+        "cleanedText": "wenn sie wollen,",
+        "start": 220865,
+        "end": 222185,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "wenn",
+            "start": 220865,
+            "end": 221242,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sie",
+            "start": 221242,
+            "end": 221525,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wollen,",
+            "start": 221525,
+            "end": 222185,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "schlafe.",
+        "cleanedText": "schlafe.",
+        "start": 222185,
+        "end": 222940,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "schlafe.",
+            "start": 222185,
+            "end": 222940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Games can\u0027t find a way to be saved.",
+        "cleanedText": "games can\u0027t find a way to be saved.",
+        "start": 223000,
+        "end": 228852,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Games",
+            "start": 223000,
+            "end": 224045,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "can\u0027t",
+            "start": 224045,
+            "end": 225090,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "find",
+            "start": 225090,
+            "end": 225926,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "a",
+            "start": 225926,
+            "end": 226135,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "way",
+            "start": 226135,
+            "end": 226762,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 226762,
+            "end": 227180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "be",
+            "start": 227180,
+            "end": 227598,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "saved.",
+            "start": 227598,
+            "end": 228852,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Their hearts don\u0027t seem to care.",
+        "cleanedText": "their hearts don\u0027t seem to care.",
+        "start": 228852,
+        "end": 234495,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Their",
+            "start": 228852,
+            "end": 229897,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hearts",
+            "start": 229897,
+            "end": 231151,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "don\u0027t",
+            "start": 231151,
+            "end": 232196,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seem",
+            "start": 232196,
+            "end": 233032,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 233032,
+            "end": 233450,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "care.",
+            "start": 233450,
+            "end": 234495,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "What drives their hidden desire?",
+        "cleanedText": "what drives their hidden desire?",
+        "start": 234495,
+        "end": 240347,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 234495,
+            "end": 235331,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 235331,
+            "end": 236585,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 236585,
+            "end": 237630,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 237630,
+            "end": 238884,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 238884,
+            "end": 240347,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "What drives their hidden desire?",
+        "cleanedText": "what drives their hidden desire?",
+        "start": 240347,
+        "end": 246200,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 240347,
+            "end": 241183,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 241183,
+            "end": 242437,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 242437,
+            "end": 243482,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 243482,
+            "end": 244736,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 244736,
+            "end": 246200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Unsere Vision,",
+        "cleanedText": "unsere vision,",
+        "start": 252500,
+        "end": 257911,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 252500,
+            "end": 254997,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 254997,
+            "end": 257911,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "klingend in Sirene.",
+        "cleanedText": "klingend in sirene.",
+        "start": 257911,
+        "end": 264988,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "klingend",
+            "start": 257911,
+            "end": 261241,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 261241,
+            "end": 262074,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 262074,
+            "end": 264988,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Unsere Vision,",
+        "cleanedText": "unsere vision,",
+        "start": 264988,
+        "end": 270399,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 264988,
+            "end": 267485,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 267485,
+            "end": 270399,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "heilend in Sirene.",
+        "cleanedText": "heilend in sirene.",
+        "start": 270399,
+        "end": 277060,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "heilend",
+            "start": 270399,
+            "end": 273313,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 273313,
+            "end": 274146,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 274146,
+            "end": 277060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "But the voices will come and guide.",
+        "cleanedText": "but the voices will come and guide.",
+        "start": 278600,
+        "end": 285000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "But",
+            "start": 278600,
+            "end": 279262,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "the",
+            "start": 279262,
+            "end": 279924,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "voices",
+            "start": 279924,
+            "end": 281248,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "will",
+            "start": 281248,
+            "end": 282131,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "come",
+            "start": 282131,
+            "end": 283013,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "and",
+            "start": 283013,
+            "end": 283675,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "guide.",
+            "start": 283675,
+            "end": 285000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      }
+    ],
+    "diarizedSentences": [],
+    "alignedSentences": [],
+    "scriptSentences": [],
+    "currentSentences": [
+      {
+        "text": ".",
+        "cleanedText": ".",
+        "start": 0,
+        "end": 29600,
+        "skipRender": false,
+        "words": [
+          {
+            "text": ".",
+            "start": 0,
+            "end": 29600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "so viel.",
+        "cleanedText": "so viel.",
+        "start": 45360,
+        "end": 46000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "so",
+            "start": 45360,
+            "end": 45600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel.",
+            "start": 45920,
+            "end": 46000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Jetzt",
+        "cleanedText": "jetzt",
+        "start": 57000,
+        "end": 57240,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt",
+            "start": 57000,
+            "end": 57240,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "sind sie",
+        "cleanedText": "sind sie",
+        "start": 62120,
+        "end": 62360,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "sind",
+            "start": 62120,
+            "end": 62120,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "sie",
+            "start": 62120,
+            "end": 62360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "wohl im Schlafe,",
+        "cleanedText": "wohl im schlafe,",
+        "start": 67800,
+        "end": 69320,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "wohl",
+            "start": 67800,
+            "end": 68200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "im",
+            "start": 68520,
+            "end": 68840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Schlafe,",
+            "start": 69080,
+            "end": 69320,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "und mein",
+        "cleanedText": "und mein",
+        "start": 69800,
+        "end": 71720,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "und",
+            "start": 69800,
+            "end": 69960,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mein",
+            "start": 70200,
+            "end": 71720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Mund kann mir nicht mehr.",
+        "cleanedText": "mund kann mir nicht mehr.",
+        "start": 73240,
+        "end": 76920,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Mund",
+            "start": 73240,
+            "end": 73560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kann",
+            "start": 73960,
+            "end": 74600,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir",
+            "start": 74920,
+            "end": 74920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 74920,
+            "end": 75560,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 76200,
+            "end": 76920,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Wir haben nicht mehr.",
+        "cleanedText": "wir haben nicht mehr.",
+        "start": 77640,
+        "end": 80840,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wir",
+            "start": 77640,
+            "end": 77720,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "haben",
+            "start": 77800,
+            "end": 79400,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 79400,
+            "end": 79480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mehr.",
+            "start": 80840,
+            "end": 80840,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Auf der Leinwand schwingen wir seit.",
+        "cleanedText": "auf der leinwand schwingen wir seit.",
+        "start": 83300,
+        "end": 90180,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Auf",
+            "start": 83300,
+            "end": 83940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "der",
+            "start": 84180,
+            "end": 84500,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leinwand",
+            "start": 84580,
+            "end": 84660,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schwingen",
+            "start": 84740,
+            "end": 88260,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wir",
+            "start": 88420,
+            "end": 88580,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seit.",
+            "start": 89380,
+            "end": 90180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Wenn die Wolken schweifen gehen.",
+        "cleanedText": "wenn die wolken schweifen gehen.",
+        "start": 132380,
+        "end": 135980,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Wenn",
+            "start": 132380,
+            "end": 132700,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "die",
+            "start": 133100,
+            "end": 133420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Wolken",
+            "start": 133500,
+            "end": 134060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "schweifen",
+            "start": 134700,
+            "end": 135340,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "gehen.",
+            "start": 135980,
+            "end": 135980,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganze Welt ist viel Kinderspiel.",
+        "cleanedText": "ganze welt ist viel kinderspiel.",
+        "start": 138000,
+        "end": 146568,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganze",
+            "start": 138000,
+            "end": 139530,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Welt",
+            "start": 139530,
+            "end": 140754,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ist",
+            "start": 140754,
+            "end": 141672,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 141672,
+            "end": 142896,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Kinderspiel.",
+            "start": 142896,
+            "end": 146568,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganzes Leben steht hinter mir.",
+        "cleanedText": "ganzes leben steht hinter mir.",
+        "start": 146568,
+        "end": 154524,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 146568,
+            "end": 148404,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 148404,
+            "end": 149934,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 149934,
+            "end": 151464,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 151464,
+            "end": 153300,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 153300,
+            "end": 154524,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Ganzes Leben steht hinter mir.",
+        "cleanedText": "ganzes leben steht hinter mir.",
+        "start": 154524,
+        "end": 162480,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Ganzes",
+            "start": 154524,
+            "end": 156360,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Leben",
+            "start": 156360,
+            "end": 157890,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "steht",
+            "start": 157890,
+            "end": 159420,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hinter",
+            "start": 159420,
+            "end": 161256,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "mir.",
+            "start": 161256,
+            "end": 162480,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Weil ich nicht viel kenne,",
+        "cleanedText": "weil ich nicht viel kenne,",
+        "start": 165160,
+        "end": 174807,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Weil",
+            "start": 165160,
+            "end": 166914,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "ich",
+            "start": 166914,
+            "end": 168229,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "nicht",
+            "start": 168229,
+            "end": 170422,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "viel",
+            "start": 170422,
+            "end": 172176,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "kenne,",
+            "start": 172176,
+            "end": 174807,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "nein.",
+        "cleanedText": "nein.",
+        "start": 174807,
+        "end": 177000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "nein.",
+            "start": 174807,
+            "end": 177000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Jetzt,",
+        "cleanedText": "jetzt,",
+        "start": 220300,
+        "end": 220865,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Jetzt,",
+            "start": 220300,
+            "end": 220865,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "wenn Sie wollen,",
+        "cleanedText": "wenn sie wollen,",
+        "start": 220865,
+        "end": 222185,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "wenn",
+            "start": 220865,
+            "end": 221242,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sie",
+            "start": 221242,
+            "end": 221525,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "wollen,",
+            "start": 221525,
+            "end": 222185,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "schlafe.",
+        "cleanedText": "schlafe.",
+        "start": 222185,
+        "end": 222940,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "schlafe.",
+            "start": 222185,
+            "end": 222940,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Games can\u0027t find a way to be saved.",
+        "cleanedText": "games can\u0027t find a way to be saved.",
+        "start": 223000,
+        "end": 228852,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Games",
+            "start": 223000,
+            "end": 224045,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "can\u0027t",
+            "start": 224045,
+            "end": 225090,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "find",
+            "start": 225090,
+            "end": 225926,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "a",
+            "start": 225926,
+            "end": 226135,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "way",
+            "start": 226135,
+            "end": 226762,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 226762,
+            "end": 227180,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "be",
+            "start": 227180,
+            "end": 227598,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "saved.",
+            "start": 227598,
+            "end": 228852,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Their hearts don\u0027t seem to care.",
+        "cleanedText": "their hearts don\u0027t seem to care.",
+        "start": 228852,
+        "end": 234495,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Their",
+            "start": 228852,
+            "end": 229897,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hearts",
+            "start": 229897,
+            "end": 231151,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "don\u0027t",
+            "start": 231151,
+            "end": 232196,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "seem",
+            "start": 232196,
+            "end": 233032,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 233032,
+            "end": 233450,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "care.",
+            "start": 233450,
+            "end": 234495,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "What drives their hidden desire?",
+        "cleanedText": "what drives their hidden desire?",
+        "start": 234495,
+        "end": 240347,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 234495,
+            "end": 235331,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 235331,
+            "end": 236585,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 236585,
+            "end": 237630,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 237630,
+            "end": 238884,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 238884,
+            "end": 240347,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "What drives their hidden desire?",
+        "cleanedText": "what drives their hidden desire?",
+        "start": 240347,
+        "end": 246200,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "What",
+            "start": 240347,
+            "end": 241183,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "drives",
+            "start": 241183,
+            "end": 242437,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "their",
+            "start": 242437,
+            "end": 243482,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "hidden",
+            "start": 243482,
+            "end": 244736,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "desire?",
+            "start": 244736,
+            "end": 246200,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Unsere Vision,",
+        "cleanedText": "unsere vision,",
+        "start": 252500,
+        "end": 257911,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 252500,
+            "end": 254997,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 254997,
+            "end": 257911,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "klingend in Sirene.",
+        "cleanedText": "klingend in sirene.",
+        "start": 257911,
+        "end": 264988,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "klingend",
+            "start": 257911,
+            "end": 261241,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 261241,
+            "end": 262074,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 262074,
+            "end": 264988,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "Unsere Vision,",
+        "cleanedText": "unsere vision,",
+        "start": 264988,
+        "end": 270399,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Unsere",
+            "start": 264988,
+            "end": 267485,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Vision,",
+            "start": 267485,
+            "end": 270399,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "heilend in Sirene.",
+        "cleanedText": "heilend in sirene.",
+        "start": 270399,
+        "end": 277060,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "heilend",
+            "start": 270399,
+            "end": 273313,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "in",
+            "start": 273313,
+            "end": 274146,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Sirene.",
+            "start": 274146,
+            "end": 277060,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      },
+      {
+        "text": "But the voices will come and guide.",
+        "cleanedText": "but the voices will come and guide.",
+        "start": 278600,
+        "end": 285000,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "But",
+            "start": 278600,
+            "end": 279262,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "the",
+            "start": 279262,
+            "end": 279924,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "voices",
+            "start": 279924,
+            "end": 281248,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "will",
+            "start": 281248,
+            "end": 282131,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "come",
+            "start": 282131,
+            "end": 283013,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "and",
+            "start": 283013,
+            "end": 283675,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "guide.",
+            "start": 283675,
+            "end": 285000,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      }
+    ],
+    "mapperCoverage": 0,
+    "isAudioConverted": true,
+    "isVocalsSeparated": true,
+    "isTranscribed": true,
+    "isSplit": true,
+    "isDiarized": false,
+    "isAligned": false,
+    "isTranslated": false,
+    "dubSegments": [],
+    "dubSpeakerReferences": {},
+    "styles": [],
+    "errors": [],
+    "warnings": [],
+    "report": {
+      "totalSentences": 0,
+      "textCorrected": 0,
+      "timelineShifted": 0,
+      "unmatched": 0,
+      "averageDriftMs": 0,
+      "maxDriftMs": 0,
+      "textCoverage": 0,
+      "elapsed": "00:00:00"
+    }
+  }
+}

@@ -6,9 +6,9 @@ namespace Centurion.Cli.Console;
 
 /// <summary>
 /// Simple console formatter that stays consistent with the console log file:
-/// emits `HH:mm:ss level: message` (no category), byte-for-byte matching
+/// emits `HH:mm:ss LEVEL: message` (no category), byte-for-byte matching
 /// FileLoggerProvider's file line format; colors follow level/semantics only
-/// ([SUCCESS] prefix green, warnings yellow, errors/critical red, otherwise white),
+/// (WARN badge gold-tone, ERR/CRIT red, [SUCCESS] prefix green, otherwise white),
 /// and colors are dropped automatically when output is redirected. Every console
 /// line is identical to its counterpart in the log file.
 /// </summary>
@@ -36,8 +36,8 @@ public sealed class PlainConsoleFormatter : ConsoleFormatter
         {
             LogLevel.Trace or LogLevel.Debug => "dbug",
             LogLevel.Information => "info",
-            LogLevel.Warning => "warn",
-            LogLevel.Error => "fail",
+            LogLevel.Warning => "WARN",
+            LogLevel.Error => "ERR",
             LogLevel.Critical => "crit",
             _ => "none"
         };
