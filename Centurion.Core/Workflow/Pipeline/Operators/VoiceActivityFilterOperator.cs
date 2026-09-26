@@ -78,6 +78,13 @@ public sealed class VoiceActivityFilterOperator(
             {
                 using var silero = new SileroVadDetector(modelPath);
                 segments = silero.Detect(samples, sampleRate, options);
+                if (silero.SpeechProbabilities is { Length: > 0 } probs)
+                {
+                    var sorted = probs.OrderBy(x => x).ToArray();
+                    LogInfo($"Silero VAD probabilities: min={sorted[0]:F3} p50={sorted[sorted.Length / 2]:F3} " +
+                            $"p90={sorted[(int)(sorted.Length * 0.9)]:F3} max={sorted[^1]:F3} frames={probs.Length} " +
+                            $"(>0.5×{probs.Count(x => x > 0.5f)}, >0.3×{probs.Count(x => x > 0.3f)}, >0.2×{probs.Count(x => x > 0.2f)})");
+                }
                 LogInfo($"Silero VAD: {segments.Count} speech segment(s) detected.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

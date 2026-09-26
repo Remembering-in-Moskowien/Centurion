@@ -10,7 +10,7 @@ namespace Centurion.Cli.Console;
 /// Every output class goes to both the console (render layer) and ILogger (log layer,
 /// and hence the logs file): info-class output renders as white/green lines and
 /// forwards info logs (console side filters by category to avoid duplicate display);
-/// warnings and errors go through the log channel only, rendered as yellow/red lines
+/// warnings and errors go through the log channel only, rendered as gold/red lines
 /// by <see cref="PlainConsoleFormatter"/> for byte-identical file-log parity.
 /// </para>
 /// </summary>
@@ -65,7 +65,7 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
 
     /// <summary>
     /// Outputs a warning message: rendered directly to the console with the custom
-    /// warning color (yellow bold) plus a log-style timestamp, and recorded as a
+    /// warning color (gold bold) plus a log-style timestamp, and recorded as a
     /// plain-text warning log (the console log provider filters this category).
     /// </summary>
     /// <param name="message">The warning message text.</param>

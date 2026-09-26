@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>Centurion 质量报告</title>
+<style>
+  body { font-family: system-ui, "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #1f2328; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: #6b7280; font-size: 13px; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .badge.pass { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .badge.fail { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 18px; flex: 1 1 200px; min-width: 180px; }
+  .card h2 { font-size: 13px; color: #6b7280; margin: 0 0 8px; font-weight: 600; }
+  .card .big { font-size: 22px; font-weight: 700; }
+  .card .sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 24px; margin-bottom: 16px; }
+  h2.sec { font-size: 16px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f1f3; vertical-align: top; }
+  th { color: #6b7280; font-weight: 600; background: #fafbfc; }
+  tr.issue-error { background: #fff7f7; }
+  tr.issue-warning { background: #fffdf5; }
+  .type { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .type.CpsTooHigh, .type.Overlap, .type.ZeroDuration { background: #fef2f2; color: #b91c1c; }
+  .type.LineTooLong, .type.TooShort, .type.TooLong, .type.LowConfidence { background: #fffbeb; color: #b45309; }
+  .type.GlossaryMiss, .type.LengthDeviation { background: #eff6ff; color: #1d4ed8; }
+  .fix { color: #047857; }
+  .mono { font-family: Consolas, monospace; font-size: 12px; }
+  .warn { color: #b45309; }
+  .err { color: #b91c1c; }
+  .rowlink { color: #1d4ed8; text-decoration: none; }
+  .rowlink:hover { text-decoration: underline; }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 13px; }
+  .kv div { display: flex; justify-content: space-between; border-bottom: 1px dashed #f0f1f3; padding: 4px 0; }
+  .kv dt { color: #6b7280; } .kv dd { margin: 0; font-weight: 600; }
+</style>
+</head>
+<body><div class="wrap">
+<header>
+<h1>Centurion 质量报告</h1>
+<div class="meta">命令 <b>asr</b> · D:\Centurion\_run\schwarz.mka → D:\Centurion\_run\schwarz.silero2.asr.centurion.json · 生成于 2026-09-26 21:37:48 · 耗时 273.4s</div>
+<div style="margin-top:10px;"><span class="badge pass">PASS 阈值全部通过</span>
+</div></header>
+<section><h2 class="sec">规模与覆盖</h2><div class="cards">
+<div class="card"><h2>句子</h2><div class="big">27</div><div class="sub">98 词 / 473 字符</div></div>
+<div class="card"><h2>时长</h2><div class="big">285.0s</div><div class="sub">平均语速 1.7 字符/s</div></div>
+<div class="card"><h2>说话人</h2><div class="big">1</div><div class="sub">未分割</div></div>
+<div class="card"><h2>阶段</h2><div class="big">转录 &#183; 分句</div><div class="sub">映射覆盖率 0.0%</div></div>
+</div></section>
+<section><h2 class="sec">时序与可读性</h2><div class="cards">
+<div class="card"><h2>平均语速</h2><div class="big">6.55 CPS</div><div class="sub">超限行 10</div></div>
+<div class="card"><h2>最大语速</h2><div class="big">29.17 CPS</div><div class="sub">阈值 5.0</div></div>
+<div class="card"><h2>超行宽行数</h2><div class="big">12</div><div class="sub">阈值 18 字符/行</div></div>
+<div class="card"><h2>过短/过长</h2><div class="big">2 / 6</div><div class="sub">300ms–7000ms</div></div>
+<div class="card"><h2>重叠</h2><div class="big">0 处</div><div class="sub">0.00s 总量 &#183; 平均间隙 5.40s</div></div>
+</div></section>
+<section><h2 class="sec">行级问题</h2>
+<table><thead><tr><th style="width:70px;">行号</th><th>类型</th><th style="width:150px;">时间轴</th><th>文本</th><th>问题 / 建议修复</th></tr></thead><tbody>
+<tr id="line-1" class="issue-warning">
+<td><a class="rowlink" href="#line-1">#1</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">0 → 29600 ms</td>
+<td>.</td>
+<td>Duration 29.6s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-2" class="issue-error">
+<td><a class="rowlink" href="#line-2">#2</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">45360 → 46000 ms</td>
+<td>so viel.</td>
+<td>CPS 10.9 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-3" class="issue-error">
+<td><a class="rowlink" href="#line-3">#3</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">57000 → 57240 ms</td>
+<td>Jetzt</td>
+<td>CPS 20.8 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-3" class="issue-warning">
+<td><a class="rowlink" href="#line-3">#3</a></td>
+<td><span class="type TooShort">TooShort</span></td>
+<td class="mono">57000 → 57240 ms</td>
+<td>Jetzt</td>
+<td>Duration 240ms is below minimum 300ms.<br/><span class="fix">修复：Merge with an adjacent sentence (quality --fix merges short lines).</span></td>
+</tr>
+<tr id="line-4" class="issue-error">
+<td><a class="rowlink" href="#line-4">#4</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">62120 → 62360 ms</td>
+<td>sind sie</td>
+<td>CPS 29.2 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-4" class="issue-warning">
+<td><a class="rowlink" href="#line-4">#4</a></td>
+<td><span class="type TooShort">TooShort</span></td>
+<td class="mono">62120 → 62360 ms</td>
+<td>sind sie</td>
+<td>Duration 240ms is below minimum 300ms.<br/><span class="fix">修复：Merge with an adjacent sentence (quality --fix merges short lines).</span></td>
+</tr>
+<tr id="line-5" class="issue-error">
+<td><a class="rowlink" href="#line-5">#5</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">67800 → 69320 ms</td>
+<td>wohl im Schlafe,</td>
+<td>CPS 9.2 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-7" class="issue-error">
+<td><a class="rowlink" href="#line-7">#7</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">73240 → 76920 ms</td>
+<td>Mund kann mir nicht mehr.</td>
+<td>CPS 5.7 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-7" class="issue-warning">
+<td><a class="rowlink" href="#line-7">#7</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">73240 → 76920 ms</td>
+<td>Mund kann mir nicht mehr.</td>
+<td>21 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-8" class="issue-error">
+<td><a class="rowlink" href="#line-8">#8</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">77640 → 80840 ms</td>
+<td>Wir haben nicht mehr.</td>
+<td>CPS 5.6 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-9" class="issue-warning">
+<td><a class="rowlink" href="#line-9">#9</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">83300 → 90180 ms</td>
+<td>Auf der Leinwand schwingen wir seit.</td>
+<td>31 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-10" class="issue-error">
+<td><a class="rowlink" href="#line-10">#10</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">132380 → 135980 ms</td>
+<td>Wenn die Wolken schweifen gehen.</td>
+<td>CPS 7.8 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-10" class="issue-warning">
+<td><a class="rowlink" href="#line-10">#10</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">132380 → 135980 ms</td>
+<td>Wenn die Wolken schweifen gehen.</td>
+<td>28 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-11" class="issue-warning">
+<td><a class="rowlink" href="#line-11">#11</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">138000 → 146568 ms</td>
+<td>Ganze Welt ist viel Kinderspiel.</td>
+<td>28 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-11" class="issue-warning">
+<td><a class="rowlink" href="#line-11">#11</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">138000 → 146568 ms</td>
+<td>Ganze Welt ist viel Kinderspiel.</td>
+<td>Duration 8.6s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-12" class="issue-warning">
+<td><a class="rowlink" href="#line-12">#12</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">146568 → 154524 ms</td>
+<td>Ganzes Leben steht hinter mir.</td>
+<td>26 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-12" class="issue-warning">
+<td><a class="rowlink" href="#line-12">#12</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">146568 → 154524 ms</td>
+<td>Ganzes Leben steht hinter mir.</td>
+<td>Duration 8.0s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-13" class="issue-warning">
+<td><a class="rowlink" href="#line-13">#13</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">154524 → 162480 ms</td>
+<td>Ganzes Leben steht hinter mir.</td>
+<td>26 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-13" class="issue-warning">
+<td><a class="rowlink" href="#line-13">#13</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">154524 → 162480 ms</td>
+<td>Ganzes Leben steht hinter mir.</td>
+<td>Duration 8.0s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-14" class="issue-warning">
+<td><a class="rowlink" href="#line-14">#14</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">165160 → 174807 ms</td>
+<td>Weil ich nicht viel kenne,</td>
+<td>22 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-14" class="issue-warning">
+<td><a class="rowlink" href="#line-14">#14</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">165160 → 174807 ms</td>
+<td>Weil ich nicht viel kenne,</td>
+<td>Duration 9.6s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-16" class="issue-error">
+<td><a class="rowlink" href="#line-16">#16</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">220300 → 220865 ms</td>
+<td>Jetzt,</td>
+<td>CPS 10.6 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-17" class="issue-error">
+<td><a class="rowlink" href="#line-17">#17</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">220865 → 222185 ms</td>
+<td>wenn Sie wollen,</td>
+<td>CPS 10.6 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-18" class="issue-error">
+<td><a class="rowlink" href="#line-18">#18</a></td>
+<td><span class="type CpsTooHigh">CpsTooHigh</span></td>
+<td class="mono">222185 → 222940 ms</td>
+<td>schlafe.</td>
+<td>CPS 10.6 exceeds limit 5.0.<br/><span class="fix">修复：Split the sentence or extend its duration (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-19" class="issue-warning">
+<td><a class="rowlink" href="#line-19">#19</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">223000 → 228852 ms</td>
+<td>Games can&#39;t find a way to be saved.</td>
+<td>28 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-20" class="issue-warning">
+<td><a class="rowlink" href="#line-20">#20</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">228852 → 234495 ms</td>
+<td>Their hearts don&#39;t seem to care.</td>
+<td>27 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-21" class="issue-warning">
+<td><a class="rowlink" href="#line-21">#21</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">234495 → 240347 ms</td>
+<td>What drives their hidden desire?</td>
+<td>28 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-22" class="issue-warning">
+<td><a class="rowlink" href="#line-22">#22</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">240347 → 246200 ms</td>
+<td>What drives their hidden desire?</td>
+<td>28 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+<tr id="line-24" class="issue-warning">
+<td><a class="rowlink" href="#line-24">#24</a></td>
+<td><span class="type TooLong">TooLong</span></td>
+<td class="mono">257911 → 264988 ms</td>
+<td>klingend in Sirene.</td>
+<td>Duration 7.1s exceeds maximum 7.0s.<br/><span class="fix">修复：Split into shorter lines (quality --fix splits long lines).</span></td>
+</tr>
+<tr id="line-27" class="issue-warning">
+<td><a class="rowlink" href="#line-27">#27</a></td>
+<td><span class="type LineTooLong">LineTooLong</span></td>
+<td class="mono">278600 → 285000 ms</td>
+<td>But the voices will come and guide.</td>
+<td>29 characters exceed per-line limit 18.<br/><span class="fix">修复：Insert a line break or split the sentence (quality --fix inserts CJK line breaks).</span></td>
+</tr>
+</tbody></table>
+</section>
+<section><h2 class="sec">警告</h2><ul><li class="warn">ASR model did not provide per-sentence confidence; LowConfidence analysis is skipped.</li></ul></section>
+</div></body></html>

@@ -93,8 +93,8 @@ public sealed class FileLoggerProvider : ILoggerProvider
             {
                 LogLevel.Trace or LogLevel.Debug => "dbug",
                 LogLevel.Information => "info",
-                LogLevel.Warning => "warn",
-                LogLevel.Error => "fail",
+                LogLevel.Warning => "WARN",
+                LogLevel.Error => "ERR",
                 LogLevel.Critical => "crit",
                 _ => "none"
             };

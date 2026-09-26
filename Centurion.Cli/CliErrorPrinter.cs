@@ -8,7 +8,7 @@ namespace Centurion.Cli;
 
 /// <summary>
 /// Unified error output: logs a red failure line (matching file logs) and appends
-/// actionable fix suggestions (yellow hint lines) so new users can self-service.
+/// actionable fix suggestions (gold hint lines) so new users can self-service.
 /// </summary>
 public static class CliErrorPrinter
 {

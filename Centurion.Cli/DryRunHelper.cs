@@ -84,7 +84,7 @@ public static class DryRunHelper
             return ExitCodes.Success;
         }
 
-        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]{CliSymbols.Play} {ConsoleServices.T("Dry-run")}[/] {ConsoleServices.T("command")} [bold]{config.CommandName}[/] {CliSymbols.MidDot} profile=[yellow]{profileName}[/]");
+        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]{CliSymbols.Play} {ConsoleServices.T("Dry-run")}[/] {ConsoleServices.T("command")} [bold]{config.CommandName}[/] {CliSymbols.MidDot} profile=[gold]{profileName}[/]");
         AnsiConsole.Write(PipelineGraphRenderer.RenderTree(dag));
 
         if (models.Count > 0)

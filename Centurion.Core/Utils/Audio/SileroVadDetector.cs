@@ -17,7 +17,11 @@ public sealed class SileroVadDetector : IDisposable
     private const double FrameSeconds = 0.032;
 
     private readonly InferenceSession _session;
+    private readonly bool _inputHasBatchDim;
     private bool _disposed;
+
+    /// <summary>最近一次检测的逐帧语音概率（诊断用；检测前为 null）。</summary>
+    public float[]? SpeechProbabilities { get; private set; }
 
     /// <summary>
     /// 创建检测器。
@@ -30,6 +34,8 @@ public sealed class SileroVadDetector : IDisposable
         {
             EnableMemoryPattern = false
         });
+        // v4 接口 input[1,512]（rank 2）；v5 接口 input[1,1,512]（rank 3）——按模型实际形状适配
+        _inputHasBatchDim = _session.InputMetadata["input"].Dimensions.Length == 3;
     }
 
     /// <summary>
@@ -53,24 +59,41 @@ public sealed class SileroVadDetector : IDisposable
         var input = new float[FrameSize];
         var state = new float[2 * StateSize];
         var sr = new long[] { 16000 };
+        var probs = new float[frameCount];
         var speech = new bool[frameCount];
 
         for (var i = 0; i < frameCount; i++)
         {
             Array.Copy(samples, i * FrameSize, input, 0, FrameSize);
-            using var results = _session.Run(new[]
+            var inputTensor = _inputHasBatchDim
+                ? new DenseTensor<float>(input, new[] { 1, 1, FrameSize })
+                : new DenseTensor<float>(input, new[] { 1, FrameSize });
+            var prob = 0f;
+            float[]? stateN = null;
+            using (var results = _session.Run(new[]
             {
-                NamedOnnxValue.CreateFromTensor("input",
-                    new DenseTensor<float>(input, new[] { 1, 1, FrameSize })),
+                NamedOnnxValue.CreateFromTensor("input", inputTensor),
                 NamedOnnxValue.CreateFromTensor("state",
                     new DenseTensor<float>(state, new[] { 2, 1, StateSize })),
                 NamedOnnxValue.CreateFromTensor("sr",
                     new DenseTensor<long>(sr, new[] { 1 }))
-            });
-            var prob = results[0].AsTensor<float>()[0];
+            }))
+            {
+                // v4/v5 输出顺序因模型而异（stateN/output 或 output/stateN）——按名称取，顺序无关
+                foreach (var r in results)
+                {
+                    if (r.Name is "output" or "prob")
+                        prob = r.AsTensor<float>()[0];
+                    else if (r.Name == "stateN")
+                        stateN = r.AsTensor<float>().ToArray();
+                }
+            }
+            probs[i] = prob;
             speech[i] = prob >= 0.5f;
-            results[1].AsTensor<float>().ToArray().CopyTo(state, 0);
+            if (stateN is not null)
+                stateN.CopyTo(state, 0);
         }
+        SpeechProbabilities = probs;
 
         // 2) 帧 → 段（合并间隙 / 最短时长，与能量 VAD 同一语义）
         var gapFrames = (int)Math.Max(0, Math.Round(options.MergeGapSeconds / FrameSeconds));
