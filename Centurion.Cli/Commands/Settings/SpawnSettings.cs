@@ -145,6 +145,23 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 
+    // ----- VAD 过滤 (Voice Activity Filter) -----
+    /// <summary>
+    /// Disable VAD pre-filtering: speech segments are aggregated (instrumental/silence dropped)
+    /// before vocal separation/transcription, then timestamps are mapped back to the source timeline.
+    /// </summary>
+    [CommandOption("--no-vad")]
+    [Description("Disable VAD pre-filtering (aggregate speech before separation/transcription)")]
+    public bool DisableVadFilter { get; init; } = false;
+
+    /// <summary>
+    /// VAD energy threshold ratio: a window whose RMS is below the global mean times this ratio
+    /// is treated as non-speech (instrumental/silence). Default 0.2; raise it to filter more.
+    /// </summary>
+    [CommandOption("--vad-threshold <RATIO>")]
+    [Description("VAD energy threshold ratio (window RMS < mean*r is non-speech), default 0.2")]
+    public double VadEnergyThresholdRatio { get; init; } = 0.2;
+
     // ----- 推理设备 (Device) -----
     /// <summary>
     /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).

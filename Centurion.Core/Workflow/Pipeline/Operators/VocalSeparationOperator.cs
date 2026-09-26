@@ -64,8 +64,9 @@ public sealed class VocalSeparationOperator(
             return;
         }
 
-        // 3. 输入音频（优先预处理后的音频）
-        var inputPath = context.State.PreprocessedAudioPath
+        // 3. 输入音频（优先 VAD 聚合后的语音音频，再退到预处理后的音频）
+        var inputPath = context.State.VadAggregatedPath
+            ?? context.State.PreprocessedAudioPath
             ?? context.State.ConvertedAudioPath
             ?? config.InputFilePath;
         if (!File.Exists(inputPath))

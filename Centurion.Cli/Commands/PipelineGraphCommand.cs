@@ -25,6 +25,7 @@ public sealed class PipelineGraphCommand(
     FFmpegConvertOperator ffmpegOp,
     AudioPreprocessOperator audioPreprocessOp,
     VocalSeparationOperator vocalSepOp,
+    VoiceActivityFilterOperator vadOp,
     PipelineOperatorFactory operatorFactory,
     TextPreprocessingOperator textCleaningOp,
     QualityReportOperator qualityReportOp,
@@ -53,21 +54,21 @@ public sealed class PipelineGraphCommand(
             var dag = commandName switch
             {
                 "asr" => SpawnCommand.BuildAsrDag(
-                    trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                    trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
                     operatorFactory, textCleaningOp, qualityReportOp,
                     FullConfig()),
                 "ocr" => OcrCommand.BuildOcrDag(
                     ocrExtractOp, operatorFactory, textCleaningOp, qualityReportOp,
                     FullConfig()),
                 "from-script" => FromScriptCommand.BuildFromScriptDag(
-                    trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                    trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
                     operatorFactory, scriptLoaderOp, textCleaningOp, mapperOp, qualityReportOp,
                     FullConfig()),
                 "translate" => BuildTranslateDagForGraph(),
                 "dub" => DubCommand.BuildDubDag(
                     speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp),
                 "correct" => CorrectCommand.BuildCorrectDag(
-                    scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
+                    scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp, vadOp,
                     operatorFactory, overlapOp, spellCheckOp, correctionReportOp, qualityReportOp,
                     FullConfig(), CorrectionStrategy.Both, needsAudio: true, runSpellCheck: true),
                 "convert" => ConvertCommand.BuildConvertDag(

@@ -57,14 +57,57 @@ public class TranscribeOperator(
         };
         context.State.ProviderUsages.Add(usage);
 
+        var words = providerResult.Value;
+        // VAD 聚合轴 → 源时间轴还原（词在聚合语音轴上，按段映射回原曲时间）
+        if (context.State.VoiceSegments is { Count: > 0 } segMap)
+            words = MapWordsToSource(words, segMap);
+
         if (context.State.TranscribeSentences.Count == 0)
-            context.State.TranscribeSentences = GroupIntoSentences(DeduplicateWordRepeats(providerResult.Value));
+            context.State.TranscribeSentences = GroupIntoSentences(DeduplicateWordRepeats(words));
         context.State.CurrentSentences = [.. context.State.TranscribeSentences];
         context.State.IsTranscribed = true;
 
         OnProgress(100, "Transcription completed.");
         LogInfo($"Transcribed {context.State.TranscribeSentences.Count} sentences " +
                 $"via {usage.ProviderName} (est. ${usage.EstimatedCostUsd:F4}).");
+    }
+
+    /// <summary>
+    /// 把聚合轴上的词时间戳还原回源音频时间轴。
+    /// VAD 聚合把语音段拼接（段间含静音缓冲），词在聚合轴上的位置需按段映射：
+    /// 源时间 = 段源起点 + (聚合时间 - 段聚合起点)。词按聚合轴升序，用游标线性定位。
+    /// </summary>
+    /// <param name="words">聚合轴上的转录词流（provider 原始输出）。</param>
+    /// <param name="map">VAD 语音段映射（含 <see cref="VoiceSegment.AggStartMs"/>）。</param>
+    /// <returns>还原到源时间轴的词流。</returns>
+    internal static List<Word> MapWordsToSource(IReadOnlyList<Word> words, IReadOnlyList<VoiceSegment> map)
+    {
+        if (map.Count == 0)
+            return [.. words];
+
+        var result = new List<Word>(words.Count);
+        var segIndex = 0;
+        foreach (var w in words)
+        {
+            while (segIndex < map.Count - 1 && w.Start >= map[segIndex + 1].AggStartMs)
+                segIndex++;
+            if (segIndex >= map.Count)
+                segIndex = map.Count - 1;
+
+            var seg = map[segIndex];
+            var offset = Math.Max(0, w.Start - seg.AggStartMs);
+            result.Add(new Word
+            {
+                Text = w.Text,
+                Start = seg.StartMs + offset,
+                End = seg.StartMs + offset + (w.End - w.Start),
+                Speaker = w.Speaker,
+                PosTag = w.PosTag,
+                Confidence = w.Confidence,
+                Status = w.Status
+            });
+        }
+        return result;
     }
 
     /// <summary>

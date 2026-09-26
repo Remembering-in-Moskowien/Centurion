@@ -1,0 +1,69 @@
+<html style="margin:0;padding:0;">
+<title>黑色火焰 ASR 诊断：人声分离完整、ASR 长音频丢段</title>
+<div style="font-family:'Segoe UI','Microsoft YaHei',sans-serif;max-width:1080px;margin:16px auto;padding:0 16px;">
+<div style="background:#f6f8fa;border:1px solid #d8dee4;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+<b style="font-size:15px;">TFR - Schwarz Flammen（4:45，前奏+尾声完整）</b><br>
+<span style="font-size:13px;color:#57606a;">人声分离（htdemucs）输出 vocals 305.4s 完整无截断——VAD 检出开头 1.2s 起的全部语音段，<b style="color:#1a7f37;">分离层没有丢语音</b>。真正的失效在 ASR 长音频一次性转写：尾部 20s 尾声未转写、两处中段语音漏输出、前奏被转成 "."。</span>
+</div>
+<svg viewBox="0 0 1080 400" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <!-- 时间轴 -->
+  <line x1="80" y1="52" x2="1040" y2="52" stroke="#8b949e" stroke-width="2"/>
+  <text x="80" y="46" font-size="11" fill="#57606a">0s</text>
+  <text x="300" y="46" font-size="11" fill="#57606a">60s</text>
+  <text x="520" y="46" font-size="11" fill="#57606a">120s</text>
+  <text x="740" y="46" font-size="11" fill="#57606a">180s</text>
+  <text x="960" y="46" font-size="11" fill="#57606a">240s</text>
+  <text x="1040" y="46" font-size="11" fill="#57606a">305s</text>
+  <!-- 刻度 -->
+  <line x1="80" y1="52" x2="80" y2="56" stroke="#8b949e"/><line x1="1040" y1="52" x2="1040" y2="56" stroke="#8b949e"/>
+  <line x1="300" y1="52" x2="300" y2="56" stroke="#8b949e"/><line x1="520" y1="52" x2="520" y2="56" stroke="#8b949e"/>
+  <line x1="740" y1="52" x2="740" y2="56" stroke="#8b949e"/><line x1="960" y1="52" x2="960" y2="56" stroke="#8b949e"/>
+
+  <!-- 泳道 1: VAD 语音段（人声轨） -->
+  <text x="14" y="92" font-size="12" fill="#24292f">人声轨 VAD 语音段</text>
+  <rect x="80" y="78" width="42" height="26" fill="#22a06b" opacity="0.85" rx="3"/>
+  <rect x="80" y="104" width="0" height="0"/>
+  <rect x="294" y="78" width="95" height="26" fill="#22a06b" opacity="0.85" rx="3"/>
+  <rect x="500" y="78" width="223" height="26" fill="#22a06b" opacity="0.85" rx="3"/>
+  <rect x="782" y="78" width="228" height="26" fill="#22a06b" opacity="0.85" rx="3"/>
+  <text x="100" y="95" font-size="10" fill="#ffffff">前奏 1.2-13s</text>
+  <text x="304" y="95" font-size="10" fill="#ffffff">68-98s</text>
+  <text x="540" y="95" font-size="10" fill="#ffffff">133-204s</text>
+  <text x="820" y="95" font-size="10" fill="#ffffff">223-295s（含尾声前）</text>
+
+  <!-- 泳道 2: ASR 转录输出 -->
+  <text x="14" y="152" font-size="12" fill="#24292f">ASR 转录输出</text>
+  <rect x="80" y="138" width="93" height="26" fill="#1f6feb" opacity="0.7" rx="3"/>
+  <rect x="173" y="138" width="2" height="26" fill="none"/>
+  <rect x="223" y="138" width="3" height="26" fill="#1f6feb" opacity="0.7" rx="1"/>
+  <rect x="260" y="138" width="105" height="26" fill="#1f6feb" opacity="0.7" rx="3"/>
+  <rect x="497" y="138" width="140" height="26" fill="#1f6feb" opacity="0.7" rx="3"/>
+  <rect x="774" y="138" width="204" height="26" fill="#1f6feb" opacity="0.7" rx="3"/>
+  <text x="88" y="155" font-size="10" fill="#ffffff">0-29.6s "."</text>
+  <text x="268" y="155" font-size="10" fill="#ffffff">57-90s</text>
+  <text x="505" y="155" font-size="10" fill="#ffffff">132-177s</text>
+  <text x="782" y="155" font-size="10" fill="#ffffff">220-285s（截断）</text>
+
+  <!-- 泳道 3: 问题段 -->
+  <text x="14" y="212" font-size="12" fill="#24292f">问题段</text>
+  <rect x="80" y="198" width="93" height="26" fill="#d1242f" opacity="0.8" rx="3"/>
+  <rect x="368" y="198" width="22" height="26" fill="#d1242f" opacity="0.8" rx="3"/>
+  <rect x="672" y="198" width="53" height="26" fill="#d1242f" opacity="0.8" rx="3"/>
+  <rect x="978" y="198" width="62" height="26" fill="#d1242f" opacity="0.8" rx="3"/>
+  <text x="88" y="215" font-size="10" fill="#ffffff">前奏→"."</text>
+  <text x="371" y="215" font-size="10" fill="#ffffff">91-98s</text>
+  <text x="676" y="215" font-size="10" fill="#ffffff">187-204s</text>
+  <text x="985" y="215" font-size="10" fill="#ffffff">285-305s</text>
+
+  <!-- 前奏/尾声标注 -->
+  <line x1="80" y1="240" x2="222" y2="240" stroke="#d29922" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="80" y="260" font-size="12" fill="#d29922">前奏（约 0-45s 器乐/氛围）：ASR 转成 "."，无歌词——可接受，但可后续用 VAD 过滤</text>
+  <line x1="978" y1="268" x2="1040" y2="268" stroke="#d29922" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="80" y="288" font-size="12" fill="#d29922">尾声（约 285-305s）：ASR 只转写 285s，尾部 20s 未进转写——CrispASR 长音频截断</text>
+  <text x="80" y="316" font-size="12" fill="#d1242f">91-98s / 187-204s：VAD 有语音（德语低语段），ASR 无对应输出——长音频一次性转写的漏段</text>
+  <text x="80" y="342" font-size="13" fill="#1a7f37">已修复：字幕每句前多一个词 = 分句逻辑首词双加（GroupIntoSentences），本次已根除</text>
+  <text x="80" y="364" font-size="12" fill="#57606a">剩余建议：ASR 分段转写（chunking）解决截断/漏段——见本次交付说明</text>
+</svg>
+<div style="font-size:12px;color:#57606a;margin-top:8px;">图例：<span style="color:#22a06b;">■</span> 分离后 vocals 中的语音段（VAD）　<span style="color:#1f6feb;">■</span> ASR 实际输出　<span style="color:#d1242f;">■</span> 语音存在但 ASR 未转写</div>
+</div>
+</html>
