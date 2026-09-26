@@ -136,8 +136,9 @@ services.AddLogging(logging =>
     logging.SetMinimumLevel(globalJson || !verbose ? LogLevel.Warning : LogLevel.Information);
     // 文件日志记录全部级别（含 info），控制台仍按全局级别过滤
     logging.AddFilter<Centurion.Core.Capabilities.Logging.FileLoggerProvider>(level => level >= LogLevel.Trace);
-    // 控制台侧：SpectreConsoleOutput 的信息行已由渲染层直接输出，屏蔽其 info 避免重复显示
-    logging.AddFilter<ConsoleLoggerProvider>("Centurion.Cli.Console.SpectreConsoleOutput", level => level >= LogLevel.Warning);
+    // 控制台侧：SpectreConsoleOutput 的 info/error/warning 均由渲染层直接输出（自定义颜色），
+    // 屏蔽其日志通道避免重复显示；Critical 仍由日志格式化器渲染兜底
+    logging.AddFilter<ConsoleLoggerProvider>("Centurion.Cli.Console.SpectreConsoleOutput", level => level >= LogLevel.Critical);
     // 控制台与文件日志使用同一格式（HH:mm:ss level: message）；颜色仅按级别渲染
     logging.AddConsole(options =>
     {

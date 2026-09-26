@@ -44,10 +44,11 @@ public sealed class PlainConsoleFormatter : ConsoleFormatter
 
         var color = logEntry.LogLevel switch
         {
-            LogLevel.Warning => System.ConsoleColor.Yellow,
-            LogLevel.Error or LogLevel.Critical => System.ConsoleColor.Red,
-            _ when message.StartsWith(SuccessPrefix, StringComparison.Ordinal) => System.ConsoleColor.Green,
-            _ => System.ConsoleColor.White
+            LogLevel.Warning => Centurion.Models.Console.CliPalette.WarningColor,
+            LogLevel.Error => Centurion.Models.Console.CliPalette.ErrorColor,
+            LogLevel.Critical => Centurion.Models.Console.CliPalette.CriticalColor,
+            _ when message.StartsWith(SuccessPrefix, StringComparison.Ordinal) => Centurion.Models.Console.CliPalette.SuccessColor,
+            _ => Centurion.Models.Console.CliPalette.InfoColor
         };
 
         var line = $"{DateTime.Now:HH:mm:ss} {levelText}: {message}";

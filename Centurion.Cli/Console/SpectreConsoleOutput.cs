@@ -51,16 +51,30 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     }
 
     /// <summary>
-    /// Outputs an error message (red, rendered via the log channel, byte-identical to the file log).
+    /// Outputs an error message: rendered directly to the console with the custom
+    /// error color (red bold) plus a log-style timestamp, and recorded as a plain-text
+    /// error log (the console log provider filters this category to avoid a duplicate line).
     /// </summary>
     /// <param name="message">The error message text.</param>
-    public void WriteError(string message) => _logger.LogError(message);
+    public void WriteError(string message)
+    {
+        if (!SuppressHumanLines)
+            AnsiConsole.MarkupLine($"{DateTime.Now:HH:mm:ss} [{CliPalette.Error}]ERR[/]: {message.EscapeMarkup()}");
+        _logger.LogError(message);
+    }
 
     /// <summary>
-    /// Outputs a warning message (yellow, rendered via the log channel, byte-identical to the file log).
+    /// Outputs a warning message: rendered directly to the console with the custom
+    /// warning color (yellow bold) plus a log-style timestamp, and recorded as a
+    /// plain-text warning log (the console log provider filters this category).
     /// </summary>
     /// <param name="message">The warning message text.</param>
-    public void WriteWarning(string message) => _logger.LogWarning(message);
+    public void WriteWarning(string message)
+    {
+        if (!SuppressHumanLines)
+            AnsiConsole.MarkupLine($"{DateTime.Now:HH:mm:ss} [{CliPalette.Warning}]WARN[/]: {message.EscapeMarkup()}");
+        _logger.LogWarning(message);
+    }
 
     /// <summary>
     /// Writes a success message to the console in green (✔ badge + log-style prefix)
