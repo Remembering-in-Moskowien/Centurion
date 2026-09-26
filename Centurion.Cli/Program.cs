@@ -15,6 +15,8 @@ using Spectre.Console.Cli;
 ConsoleServices.Progress = new DotnetStyleProgressReporter();
 ConsoleServices.Confirm = new SpectreConfirmPrompt();
 
+// 系统 UI 语言快照：进程启动时 .NET 已按 OS 首选项初始化，先保存再统一强制 Invariant
+var systemUiLang = CultureInfo.CurrentUICulture.Name;
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
@@ -59,7 +61,7 @@ if (!globalJson)
 {
     AnsiConsole.Write(new FigletText("Centurion").Centered().Color(Color.Aqua));
     var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "dev";
-    AnsiConsole.Write(new Markup($"[dim]v{version} · 字幕工作流 CLI[/]").Centered());
+    AnsiConsole.Write(new Markup($"[dim]v{version} · {ConsoleServices.T("Subtitle Workflow CLI")}[/]").Centered());
     AnsiConsole.Write(new Rule().RuleStyle("grey"));
 }
 
@@ -76,6 +78,9 @@ var filteredArgs = args
 
 if (lang is null && !string.IsNullOrWhiteSpace(appConfig.Language))
     lang = appConfig.Language;
+// 自动检测环境语言首选项：系统 UI 为中文时默认中文，其余语言默认英文（英文优先）
+if (lang is null && systemUiLang.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+    lang = "zh-CN";
 
 if (!string.IsNullOrWhiteSpace(lang))
 {
@@ -157,55 +162,55 @@ app.Configure(config =>
     config.SetApplicationName("Centurion");
     // ─── 新手指引 ───
     config.AddCommand<InitCommand>("init")
-        .WithDescription("交互式向导：生成 centurion.config.json 与推荐命令链（转写→翻译→出字幕）");
+        .WithDescription(ConsoleServices.T("Interactive wizard: generates centurion.config.json and a recommended command chain (transcribe → translate → subtitles)"));
     // ─── 核心字幕管线（统一走 DAG，pipeline-graph 可查看拓扑） ───
     config.AddCommand<SpawnCommand>("asr")
-        .WithDescription("自动字幕生成：音视频 → 转录/说话人分割/分句/对齐 → Centurion 中间文件");
+        .WithDescription(ConsoleServices.T("Auto subtitle generation: media → transcribe/diarize/split/align → Centurion intermediate file"));
     config.AddCommand<OcrCommand>("ocr")
-        .WithDescription("视频/图片字幕识别：抽帧 OCR（RapidOCR/LLM）→ 分句/清洗 → 中间文件");
+        .WithDescription(ConsoleServices.T("Video/image subtitle OCR: frame OCR (RapidOCR/LLM) → split/clean → intermediate file"));
     config.AddCommand<FromScriptCommand>("from-script")
-        .WithDescription("脚本对齐：按台本对媒体转录并映射时间轴 → 中间文件");
+        .WithDescription(ConsoleServices.T("Script alignment: transcribe media against the given script and map the timeline → intermediate file"));
     config.AddCommand<CorrectCommand>("correct")
-        .WithDescription("字幕校正：按参考脚本/音频时间轴校正文本与时间线（timeline-only/text-only/both）");
+        .WithDescription(ConsoleServices.T("Subtitle correction: fix text and timeline against reference script/audio (timeline-only/text-only/both)"));
     config.AddCommand<TranslateCommand>("translate")
-        .WithDescription("字幕翻译：LLM 策略 + 术语表/目标台本 1:1 对齐，支持双语输出");
+        .WithDescription(ConsoleServices.T("Subtitle translation: LLM strategy + glossary/target script 1:1 alignment, bilingual output"));
     config.AddCommand<DubCommand>("dub")
-        .WithDescription("媒体译制：说话人画像 → TTS 合成 → 时间对齐 → 混音 → 译制 wav");
+        .WithDescription(ConsoleServices.T("Media dubbing: speaker profiling → TTS → time alignment → mixing → dubbed wav"));
     config.AddCommand<ConvertCommand>("convert")
-        .WithDescription("字幕转换：解析 ASS/SRT/TXT 字幕 → Centurion 中间文件");
+        .WithDescription(ConsoleServices.T("Subtitle conversion: parse ASS/SRT/TXT subtitles → Centurion intermediate file"));
     config.AddCommand<BuildCommand>("build")
-        .WithDescription("字幕构建：中间文件 → ASS/SRT/TXT 字幕");
+        .WithDescription(ConsoleServices.T("Subtitle build: intermediate file → ASS/SRT/TXT subtitles"));
     // ─── 质量与工具 ───
     config.AddCommand<QualityCommand>("quality")
-        .WithDescription("质量报告：输出 .quality.json/.html，--fix 自动修复，--fail-on CI 阈值门禁");
+        .WithDescription(ConsoleServices.T("Quality report: .quality.json/.html, --fix auto-repair, --fail-on CI thresholds"));
     config.AddCommand<PipelineGraphCommand>("pipeline-graph")
-        .WithDescription("管线 DAG 可视化：渲染指定命令的拓扑（不执行，-c 选命令）");
+        .WithDescription(ConsoleServices.T("Pipeline DAG visualization: render a command's topology (no execution, -c selects)"));
     config.AddCommand<ValidateCommand>("validate")
-        .WithDescription("校验 Centurion 中间文件是否符合 IR Schema");
+        .WithDescription(ConsoleServices.T("Validate Centurion intermediate files against the IR schema"));
     config.AddCommand<MigrateCommand>("migrate")
-        .WithDescription("IR Schema 迁移：把旧版本中间文件升级到指定版本（--to）");
+        .WithDescription(ConsoleServices.T("IR schema migration: upgrade older intermediate files to a target version (--to)"));
     config.AddCommand<UpdateCommand>("update")
-        .WithDescription("自更新：从 GitHub Releases 检查/下载/应用新版本");
+        .WithDescription(ConsoleServices.T("Self-update: check/download/apply new releases from GitHub Releases"));
     // ─── 模型注册表管理 + Provider 选型/探测 ───
     config.AddBranch("models", models =>
     {
-        models.SetDescription("模型注册表管理：列出/安装/校验/移除本地模型（whisper/qwen3/diarization/bert/tts）");
+        models.SetDescription(ConsoleServices.T("Model registry management: list/install/verify/remove local models (whisper/qwen3/diarization/bert/tts)"));
         models.AddCommand<ModelsListCommand>("list")
-            .WithDescription("列出全部注册模型与本地就绪状态（表格 + 徽章）");
+            .WithDescription(ConsoleServices.T("List all registered models and local readiness (table + badges)"));
         models.AddCommand<ModelsInstallCommand>("install")
-            .WithDescription("下载安装指定模型（缺失时运行会提示此命令）");
+            .WithDescription(ConsoleServices.T("Download and install the given model (suggested when a run fails on missing models)"));
         models.AddCommand<ModelsVerifyCommand>("verify")
-            .WithDescription("校验模型本地文件是否就绪（缺失返回退出码 1）");
+            .WithDescription(ConsoleServices.T("Verify local model files are ready (exit code 1 when missing)"));
         models.AddCommand<ModelsRemoveCommand>("remove")
-            .WithDescription("删除模型本地文件/目录（需确认）");
+            .WithDescription(ConsoleServices.T("Remove local model files/directories (requires confirmation)"));
     });
     config.AddBranch("providers", providers =>
     {
-        providers.SetDescription("Provider 检查：列出/探测本地与云推理提供方（成本/延迟/质量）");
+        providers.SetDescription(ConsoleServices.T("Provider inspection: list/probe local & cloud inference providers (cost/latency/quality)"));
         providers.AddCommand<ProvidersListCommand>("list")
-            .WithDescription("列出全部 Provider 及其能力与可用性（表格 + 成本图表）");
+            .WithDescription(ConsoleServices.T("List all providers with capabilities and availability (table + cost chart)"));
         providers.AddCommand<ProvidersTestCommand>("test")
-            .WithDescription("探测指定 Provider 的可用性并显示能力声明");
+            .WithDescription(ConsoleServices.T("Probe a provider's availability and show its capability declaration"));
     });
 });
 
@@ -226,8 +231,8 @@ catch (Exception ex)
     // 经日志通道输出，控制台（红）与日志文件（crit）逐字一致
     rootLogger.LogCritical("{Fatal}", ConsoleServices.T("Fatal: {0}", ex.Message));
     AnsiConsole.Write(new Panel(
-            new Markup($"[bold red]✖ {ex.Message.EscapeMarkup()}[/]\n[dim]{ex.GetType().Name} — 完整堆栈见 logs 目录，或加 --verbose 重试[/]"))
-        .Header("错误", Justify.Center)
+            new Markup($"[bold red]✖ {ex.Message.EscapeMarkup()}[/]\n[dim]{ex.GetType().Name} — {ConsoleServices.T("full stack trace in logs directory, or retry with --verbose")}[/]"))
+        .Header(ConsoleServices.T("Error"), Justify.Center)
         .Border(BoxBorder.Rounded)
         .BorderColor(Color.Red));
     return 1;

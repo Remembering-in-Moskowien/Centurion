@@ -82,18 +82,18 @@ public static class DryRunHelper
             return ExitCodes.Success;
         }
 
-        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]▶ Dry-run[/] 命令 [bold]{config.CommandName}[/] · profile=[yellow]{profileName}[/]");
+        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]▶ {ConsoleServices.T("Dry-run")}[/] {ConsoleServices.T("command")} [bold]{config.CommandName}[/] · profile=[yellow]{profileName}[/]");
         AnsiConsole.Write(PipelineGraphRenderer.RenderTree(dag));
 
         if (models.Count > 0)
         {
             var table = new Table()
                 .Border(TableBorder.Rounded)
-                .Title("[bold]涉及模型[/]")
+                .Title($"[bold]{ConsoleServices.T("Models involved")}[/]")
                 .Width(CliLayout.TableWidth())
-                .AddColumn(new TableColumn("域").LeftAligned())
-                .AddColumn(new TableColumn("模型").LeftAligned())
-                .AddColumn(new TableColumn("状态").LeftAligned());
+                .AddColumn(new TableColumn(ConsoleServices.T("Domain")).LeftAligned())
+                .AddColumn(new TableColumn(ConsoleServices.T("Model")).LeftAligned())
+                .AddColumn(new TableColumn(ConsoleServices.T("State")).LeftAligned());
             foreach (var m in models.Cast<dynamic>())
                 table.AddRow($"[dim]{m.domain}[/]", $"[bold]{m.model}[/]",
                     m.ready ? "[green]● ready[/]" : "[red]○ missing[/]");
@@ -104,14 +104,14 @@ public static class DryRunHelper
         {
             var ptable = new Table()
                 .Border(TableBorder.Rounded)
-                .Title("[bold]相关 Provider（单价，总价按实际时长/token 计）[/]")
+                .Title($"[bold]{ConsoleServices.T("Related providers (unit price; total billed by actual duration/tokens)")}[/]")
                 .Width(CliLayout.TableWidth())
-                .AddColumn(new TableColumn("接口族").LeftAligned())
+                .AddColumn(new TableColumn(ConsoleServices.T("Family")).LeftAligned())
                 .AddColumn(new TableColumn("Provider").LeftAligned().Width(18))
                 .AddColumn(new TableColumn("类型").Centered())
                 .AddColumn(new TableColumn("$/1M tok").RightAligned())
                 .AddColumn(new TableColumn("$/min").RightAligned())
-                .AddColumn(new TableColumn("质量").Centered());
+                .AddColumn(new TableColumn(ConsoleServices.T("Quality")).Centered());
             foreach (var p in providers.Cast<dynamic>())
                 ptable.AddRow($"[dim]{p.family}[/]", $"[bold]{p.name}[/]",
                     p.kind == "Cloud" ? "[cyan]C[/]" : "[dim]L[/]",
@@ -119,7 +119,7 @@ public static class DryRunHelper
             AnsiConsole.Write(ptable);
         }
 
-        ConsoleServices.Output.WriteInfo("Dry-run: 未执行任何算子。实际运行去掉 --dry-run 即可。");
+        ConsoleServices.Output.WriteInfo(ConsoleServices.T("Dry-run: no operators executed. Run again without --dry-run to execute."));
         await Task.CompletedTask;
         return ExitCodes.Success;
     }

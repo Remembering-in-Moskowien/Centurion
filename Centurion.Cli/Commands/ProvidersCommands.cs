@@ -29,13 +29,13 @@ public sealed class ProvidersListCommand(
         var all = new List<(IProvider Provider, bool Available)>();
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .Title("[bold]Provider 注册表[/]")
+            .Title($"[bold]{ConsoleServices.T("Provider Registry")}[/]")
             .Width(CliLayout.TableWidth())
-            .AddColumn(new TableColumn("接口族").LeftAligned())
-            .AddColumn(new TableColumn("Provider").LeftAligned().Width(18))
+            .AddColumn(new TableColumn(ConsoleServices.T("Family")).LeftAligned())
+            .AddColumn(new TableColumn(ConsoleServices.T("Provider")).LeftAligned().Width(18))
             .AddColumn(new TableColumn("$/1M tok").RightAligned())
-            .AddColumn(new TableColumn("质量").Centered())
-            .AddColumn(new TableColumn("状态").LeftAligned());
+            .AddColumn(new TableColumn(ConsoleServices.T("Quality")).Centered())
+            .AddColumn(new TableColumn(ConsoleServices.T("State")).LeftAligned());
 
         foreach (var group in groups)
         {
@@ -44,7 +44,9 @@ public sealed class ProvidersListCommand(
                 var c = provider.Capabilities;
                 var available = await provider.IsAvailableAsync(ct);
                 all.Add((provider, available));
-                var status = available ? "[green]● 可用[/]" : "[red]○ 不可用[/]";
+                var status = available
+                    ? $"[green]● {ConsoleServices.T("available")}[/]"
+                    : $"[red]○ {ConsoleServices.T("unavailable")}[/]";
                 table.AddRow(
                     $"[dim]{group.Key}[/]",
                     $"[bold]{provider.Name}[/]",
@@ -55,13 +57,13 @@ public sealed class ProvidersListCommand(
         }
 
         AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine("[dim]图例: L=本地(0 成本) · C=云端(API)，详情 providers test <name>[/]");
+        AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("Legend: L=local (0 cost) · C=cloud (API), details: providers test <name>")}[/]");
         AnsiConsole.WriteLine();
 
         // 成本对比图：每 1M token 成本（本地为 0，直观展示云/本地成本差）
         var chart = new BarChart()
             .Width(64)
-            .Label("成本对比 — $/1M tokens")
+            .Label(ConsoleServices.T("Cost comparison — $/1M tokens"))
             .CenterLabel();
         foreach (var (provider, _) in all.OrderByDescending(p => p.Provider.Capabilities.CostPer1MTokensUsd))
         {
@@ -71,7 +73,7 @@ public sealed class ProvidersListCommand(
 
         var availableCount = all.Count(p => p.Available);
         AnsiConsole.MarkupLine(
-            $"可用 [green]{availableCount}[/]/{all.Count} — 探测: [cyan]Centurion providers test <name>[/]");
+            ConsoleServices.T("Available [green]{0}[/]/{1} — probe: [cyan]Centurion providers test <name>[/]", availableCount, all.Count));
         return 0;
     }
 
@@ -122,18 +124,18 @@ public sealed class ProvidersTestCommand(
         var table = new Table()
             .Border(TableBorder.Rounded)
             .Title($"[bold]{provider.Name}[/] — {provider.DisplayName}")
-            .AddColumn(new TableColumn("属性").Width(12))
-            .AddColumn(new TableColumn("值"));
-        table.AddRow("类型", $"{c.Kind}");
-        table.AddRow("语言", string.Join(", ", c.SupportedLanguages));
+            .AddColumn(new TableColumn(ConsoleServices.T("Property")).Width(12))
+            .AddColumn(new TableColumn(ConsoleServices.T("Value")));
+        table.AddRow(ConsoleServices.T("Type"), $"{c.Kind}");
+        table.AddRow(ConsoleServices.T("Language"), string.Join(", ", c.SupportedLanguages));
         table.AddRow("GPU", c.RequiresGpu ? "required" : "optional");
-        table.AddRow("延迟", $"{c.Latency}");
-        table.AddRow("质量", $"{c.Quality}");
-        table.AddRow("成本", $"{c.CostPerAudioMinuteUsd:F4} $/音频分钟 · {c.CostPer1MTokensUsd:F2} $/1M tokens");
-        table.AddRow("说明", c.Description);
-        table.AddRow("状态", available
-            ? "[green]● 可用[/]"
-            : "[red]○ 不可用 (missing API key or local service not running)[/]");
+        table.AddRow(ConsoleServices.T("Latency"), $"{c.Latency}");
+        table.AddRow(ConsoleServices.T("Quality"), $"{c.Quality}");
+        table.AddRow(ConsoleServices.T("Cost"), $"{c.CostPerAudioMinuteUsd:F4} $/min · {c.CostPer1MTokensUsd:F2} $/1M tokens");
+        table.AddRow(ConsoleServices.T("Description"), c.Description);
+        table.AddRow(ConsoleServices.T("State"), available
+            ? $"[green]● {ConsoleServices.T("available")}[/]"
+            : $"[red]○ {ConsoleServices.T("unavailable")} ({ConsoleServices.T("missing API key or local service not running")})[/]");
         AnsiConsole.Write(table);
         return available ? 0 : 1;
     }
