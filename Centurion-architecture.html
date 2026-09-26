@@ -55,8 +55,8 @@
   <div class="sub">Speech In, Subtitles Out · 语音/视频 → 精修 ASS 字幕 · 本地优先 · GPU 感知 · 算子-管道（Operator-Pipeline）架构</div>
   <div class="badges">
     <span class="badge ok">✓ 构建 0 警告 / 0 错误</span>
-    <span class="badge ok">✓ 测试 335 通过（xUnit）</span>
-    <span class="badge">.NET 10.0 · 6 个项目 · 272 个源文件</span>
+    <span class="badge ok">✓ 测试 382 通过（xUnit）</span>
+    <span class="badge">.NET 10.0 · 5 个项目 · 305 个源文件</span>
     <span class="badge">Windows / Linux / macOS</span>
     <span class="badge">2026-09-26</span>
   </div>
@@ -68,25 +68,26 @@
       <div class="card" style="flex:1.3">
         <h3>Centurion.Cli · Spectre.Console 命令行</h3>
         <div style="margin-bottom:4px">
-          <span class="pill">asr</span><span class="pill">ocr</span><span class="pill">from-script</span><span class="pill">convert</span><span class="pill">correct</span><span class="pill">translate</span><span class="pill">dub</span><span class="pill">build</span><span class="pill">validate</span><span class="pill">migrate</span><span class="pill">update</span><span class="pill">models</span><span class="pill">providers</span>
+          <span class="pill">init</span><span class="pill">asr</span><span class="pill">ocr</span><span class="pill">from-script</span><span class="pill">convert</span><span class="pill">correct</span><span class="pill">translate</span><span class="pill">dub</span><span class="pill">build</span><span class="pill">serve</span><span class="pill">quality</span><span class="pill">pipeline-graph</span><span class="pill">validate</span><span class="pill">migrate</span><span class="pill">update</span>
         </div>
-        <div style="margin-bottom:4px">微命令（单算子/最小编排）：</div>
+        <div style="margin-bottom:4px">模型 / Provider 管理分支：</div>
         <div>
-          <span class="pill">transcribe</span><span class="pill">vocalsep</span><span class="pill">diarize</span><span class="pill">split</span><span class="pill">clean</span><span class="pill">align</span><span class="pill">spellcheck</span><span class="pill">quality</span>
+          <span class="pill">models list / install / verify / remove</span><span class="pill">providers list / test</span>
         </div>
         <ul style="margin-top:6px">
-          <li>Spectre.Console.Cli 路由 → CommandApp.Configure 注册 19 条命令 + models/providers 分支（6 子命令）</li>
-          <li>--verbose / --lang zh-CN / --github-proxy 全局参数</li>
+          <li>Spectre.Console.Cli 路由 → CommandApp.Configure 注册 15 条命令 + models/providers 分支（6 子命令）</li>
+          <li>--verbose / --lang zh-CN / --github-proxy 全局参数；init 交互式向导；--json / --dry-run 可脚本消费</li>
           <li>ConsoleServices 统一输出/进度/确认；日志双写控制台 + logs 目录</li>
+          <li>单算子小命令已移除——统一走 DAG 编排（pipeline-graph 可视化）</li>
         </ul>
       </div>
       <div class="card" style="flex:1">
-        <h3>Centurion.Server · ASP.NET Core REST API</h3>
+        <h3>Centurion serve · 进程内 REST API</h3>
         <ul>
-          <li>GET / → 服务信息；GET /health；GET /commands；GET /version</li>
-          <li><b>POST /commands/{name}</b>：CommandRequest JSON → ParameterBinder → 反射执行 CLI 命令内核</li>
-          <li>复用 AddCenturionCore 全部注册；命令内控制台输出转 Server 日志</li>
-          <li>引用 Cli 以复用命令注册表（ServerCommandRegistry）</li>
+          <li>独立 Server 项目已并入 Cli（Cli.csproj 引入 FrameworkReference AspNetCore.App）</li>
+          <li>--host（默认 localhost）/ --port（默认 8080）/ --urls 覆盖；--dry-run 预览监听地址与全部端点</li>
+          <li>GET /health · GET /commands · GET /version（构建日期，非版本号）；POST /commands/{name} 执行命令内核</li>
+          <li>Ctrl+C 由 WebApplication 生命周期优雅停止</li>
         </ul>
       </div>
     </div>
@@ -100,12 +101,12 @@
 
     <div class="row" style="margin-bottom:8px">
       <div class="card" style="flex:1">
-        <h3>PipelineExecutor</h3>
+        <h3>PipelineExecutor（DAG 执行器）</h3>
         <ul>
-          <li>顺序执行动态算子序列</li>
-          <li>每步健康检查（IHealthCheckableOperator）</li>
-          <li>步骤计时 → StepTimings 扩展槽；全程可取消</li>
-          <li>非致命错误记 warn 并继续</li>
+          <li>节点 = 算子，边 = 数据依赖；按拓扑序执行，支持并行分支</li>
+          <li>条件节点（when）与降级：VocalSeparation ↔ Diarization 可并行</li>
+          <li>每节点超时 / 重试 / 取消；步骤计时 → StepTimings；全程可取消</li>
+          <li>非致命错误记 warn 并继续；单节点失败不拖垮整个任务</li>
         </ul>
       </div>
       <div class="card" style="flex:1">
@@ -151,7 +152,7 @@
       </div>
     </div>
 
-    <div class="band-title" style="margin-bottom:4px">asr 主流程算子链（SpawnCommand 动态组装）</div>
+    <div class="band-title" style="margin-bottom:4px">主流程算子链（DAG 编排，动态组装）</div>
     <div class="stage-flow">
       <span class="stage">SubtitleTrackChecker 轨道检查</span><span class="arrow">→</span>
       <span class="stage">FFmpegConvert 转换</span><span class="arrow">→</span>
@@ -165,11 +166,18 @@
       <span class="stage">QualityReport 质量报告</span><span class="arrow">→</span>
       <span class="stage fin">保存 IR 中间文件</span>
     </div>
+    <div class="stage-flow" style="margin-top:2px">
+      <span class="stage">OCR 分支</span><span class="arrow">→</span>
+      <span class="stage">VideoSubFinder 提取字幕帧（sourceforge 自动下载）</span><span class="arrow">→</span>
+      <span class="stage">OcrExtract 识别（RapidOCR 本地 ONNX / GLM-OCR 云 / Ollama / llama.cpp）</span><span class="arrow">→</span>
+      <span class="stage">去重合并 → 时间轴句</span><span class="arrow">→</span>
+      <span class="stage fin">合并进 IR</span>
+    </div>
     <div class="flow-note">
       其他命令链：<b>dub</b>：SpeakerProfiling → TtsSynthesis（Qwen3-TTS）→ TimeAlignment → AudioMix → QualityReport → .dub.wav；
       <b>correct</b>：ScriptLoader → SubtitleTextCorrector → FFmpegConvert → AudioPreprocess →（VocalSep）→ Alignment → OverlapResolution → CorrectionReport → QualityReport；
-      <b>convert</b>：ConvertParseOperator（SubtitlesParserV2）；<b>ocr</b>：OcrExtractOperator（抽帧 + GLM-OCR）；<b>from-script</b>：ScriptLoader → ScriptTimelineMapper；
-      <b>build</b>：加载 IR → SubtitleFormatRenderer / AssSubBuilder 渲染 ASS/SRT/TXT（不走 Executor）；微命令 = 单算子直跑。
+      <b>convert</b>：ConvertParseOperator（SubtitlesParserV2）；<b>from-script</b>：ScriptLoader → ScriptTimelineMapper；
+      <b>build</b>：加载 IR → SubtitleFormatRenderer / AssSubBuilder 渲染 ASS/SRT/TXT（不走 Executor）；<b>validate / migrate</b>：IR Schema 前置校验与升级。
     </div>
 
     <div class="band-title" style="margin-bottom:4px">策略族 —— 按 WorkflowConfig 由工厂选择，可插拔</div>
@@ -227,7 +235,7 @@
         <h3>Core/Providers（实现 + 装配）</h3>
         <ul>
           <li>本地 ASR 3（whispercpp / crispasr-qwen / crispasr-whisper）+ 云 ASR 4（openai/groq/dashscope/deepgram）</li>
-          <li>OCR 3（zhipu/ollama/llamacpp）· LLM 11（OpenAI 兼容）· TTS（llama-tts）· Diarization 2 · VocalSeparation（demucs）</li>
+          <li>OCR 4（zhipu / ollama / llamacpp / <b>rapidocr</b> 本地 PaddleOCR ONNX）· LLM 11（OpenAI 兼容）· TTS（llama-tts）· Diarization 2 · VocalSeparation（demucs）</li>
           <li>ProviderFactory 解析 fallback 链（云优先→本地兜底 / 本地优先→云备用）；无密钥自动回退本地</li>
           <li>ProviderPolicies：指数退避重试 / 熔断 / 限流 / 跨链预算闸门；ApiKeyStore（环境变量 CENTURION_&lt;域&gt;_API_KEY）</li>
         </ul>
@@ -302,7 +310,8 @@
       <span class="ext-chip"><b>Qwen3-TTS</b>（llama.cpp llama-tts）· 配音/音色克隆</span>
       <span class="ext-chip"><b>qwen3-forced-aligner</b> · 词级对齐</span>
       <span class="ext-chip"><b>Cloud ASR</b> · OpenAI / Groq / DashScope / Deepgram（Provider 链互备）</span>
-      <span class="ext-chip"><b>GLM-OCR</b>（智谱云端）/ <b>Ollama</b> / <b>llama.cpp</b> · OCR 后端</span>
+      <span class="ext-chip"><b>GLM-OCR</b>（智谱云端）/ <b>RapidOCR</b>（本地 PaddleOCR ONNX）/ <b>Ollama</b> / <b>llama.cpp</b> · OCR 后端</span>
+      <span class="ext-chip"><b>VideoSubFinder</b> · 提取视频内嵌字幕帧（sourceforge 自动下载）</span>
       <span class="ext-chip"><b>LLM 翻译</b> · 11+ 提供商（Microsoft.Extensions.AI / OllamaSharp）</span>
       <span class="ext-chip"><b>Hunspell</b> · 拼写词典</span>
     </div>
@@ -340,24 +349,23 @@
 
   <!-- ============ 第 6 层：工程结构 ============ -->
   <div class="band" style="border-top:3px solid #475569">
-    <div class="band-title"><span class="tag" style="background:#475569">解决方案工程结构</span> 6 个项目 · 依赖单向朝 Models 汇聚</div>
+    <div class="band-title"><span class="tag" style="background:#475569">解决方案工程结构</span> 5 个项目 · 依赖单向朝 Models 汇聚</div>
     <div class="dep">
-      <span class="proj models">Centurion.Models 纯模型（42）</span>
+      <span class="proj models">Centurion.Models 纯模型（49）</span>
       <span class="darr">←</span>
-      <span class="proj abstr">Centurion.Abstractions 接口/DTO（36）</span>
+      <span class="proj abstr">Centurion.Abstractions 接口/DTO（43）</span>
       <span class="darr">←</span>
-      <span class="proj core">Centurion.Core 引擎（104）</span>
+      <span class="proj core">Centurion.Core 引擎（129）</span>
       <span class="darr">←</span>
-      <span class="proj cli">Centurion.Cli 命令行（28）</span>
+      <span class="proj cli">Centurion.Cli 命令行（45）</span>
     </div>
     <div class="dep" style="margin-top:6px">
-      <span class="proj server">Centurion.Server REST API（4）→ 引用 Core + Cli</span>
-      <span style="font-size:12px;color:#6b7280">（跨层复用 CLI 命令内核）</span>
-      <span class="proj tests">Centurion.Tests xUnit（28）→ Models + Abstractions + Core</span>
+      <span class="proj tests">Centurion.Tests xUnit（38）→ Models + Abstractions + Core</span>
+      <span style="font-size:12px;color:#6b7280">（另含 tools/schema-gen：由 CenturionSchemaExporter 生成 IR JSON Schema）</span>
     </div>
     <div class="flow-note">
       统一 .NET 10.0 · Directory.Build.props 集中版本/仓库元数据 · 外部元数据 JSON 注册表（Tools + Models，启动时经环境变量/默认路径加载，仓库内不含该文件）·
-      InternalsVisibleTo 对 Core/Tests 开放内部类型 · 源文件数为各项目 .cs 计数
+      InternalsVisibleTo 对 Core/Tests 开放内部类型 · 源文件数为各项目 .cs 计数 · serve 由 Cli 进程内承载（无独立 Server 项目）
     </div>
   </div>
 
@@ -371,7 +379,7 @@
     <span>▼ 数据/调用流向 · ← 项目引用方向</span>
   </div>
 
-  <div class="footer">Centurion · 验证状态：构建 0 警告 0 错误，335/335 测试通过 · IR schema 1.0（版本化 + validate/migrate）· Provider 抽象（6 域 + fallback 链 + profile）· 本图由代码结构 + DI 注册 + 命令实现归纳生成（示意性架构图）</div>
+  <div class="footer">Centurion · 验证状态：构建 0 警告 0 错误，382/382 测试通过 · IR schema 1.0（版本化 + validate/migrate）· Provider 抽象（6 域 + fallback 链 + profile）· DAG 编排（并行/条件/重试）· VAD 前置过滤已整体移除 · 本图由代码结构 + DI 注册 + 命令实现归纳生成（示意性架构图）</div>
 
 </div>
 </html>
