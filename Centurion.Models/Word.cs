@@ -13,6 +13,8 @@ public class Word
     public required string Speaker { get; set; }
     /// <summary>词性标注（POS tag），未标注时为 null。</summary>
     public string? PosTag { get; set; }
+    /// <summary>词级 ASR 置信度（0~1；模型提供时填充，否则为 null）。</summary>
+    public double? Confidence { get; set; }
     /// <summary>该词与脚本的对齐匹配状态，默认为 <see cref="MappingStatus.Matched"/>。</summary>
     public MappingStatus Status { get; set; } = MappingStatus.Matched;
 }

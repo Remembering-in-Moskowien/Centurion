@@ -1,0 +1,170 @@
+using System.Diagnostics;
+using Centurion.Abstractions;
+using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Utils;
+using Centurion.Cli.Commands.Settings;
+using Centurion.Core.Utils.Reporting;
+using Centurion.Core.Utils.Serialization;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Models.Console;
+using Centurion.Models.Workflow;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using Spectre.Console.Cli;
+
+namespace Centurion.Cli.Commands;
+
+/// <summary>
+/// <c>quality</c> 命令：中间文件 → 质量报告（.quality.json + .quality.html），
+/// 可选自动修复（--fix）与 CI 阈值评估（--fail-on，任一不满足退出码 1）。
+/// 评估结果（Passed / FailedThresholds）写回 .quality.json 供 CI 消费。
+/// </summary>
+public sealed class QualityCommand(
+    ITempDirectoryManager tempManager,
+    PipelineExecutor pipelineExecutor,
+    QualityReportOperator qualityReportOp,
+    ICenturionDocumentStore store,
+    ILogger<QualityCommand> logger) : AsyncCommand<QualitySettings>
+{
+    private static readonly JsonSerializerSettings SerializerSettings = new()
+    {
+        Formatting = Formatting.Indented,
+        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+        NullValueHandling = NullValueHandling.Ignore,
+        Converters = [new StringEnumConverter()]
+    };
+
+    /// <inheritdoc />
+    protected override async Task<int> ExecuteAsync(CommandContext context, QualitySettings settings, CancellationToken ct)
+    {
+        try
+        {
+            var inputPath = settings.InputFile.FullName;
+            if (!File.Exists(inputPath))
+                throw new FileNotFoundException($"Input file not found: {inputPath}", inputPath);
+            if (!CenturionFileIO.IsCenturionFile(inputPath))
+                throw new InvalidDataException(
+                    $"'{inputPath}' is not a Centurion intermediate file. Run 'Centurion convert <file>' first.");
+
+            var outputPath = settings.OutputFile?.FullName
+                ?? CenturionFileIO.DefaultOutputPath(inputPath, "quality");
+
+            var loadedDoc = await store.LoadAsync(inputPath, ct);
+            var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
+            workflowContext.Config.OutputFilePath = outputPath;
+
+            await using var tempDir = await tempManager.CreateTempDirectoryAsync("quality_");
+            workflowContext.State.PipelineTempDirectory = tempDir.Path;
+
+            // 1) 质量报告（算子写出 .quality.json + .quality.html）
+            var stopwatch = Stopwatch.StartNew();
+            await pipelineExecutor.ExecuteAsync([qualityReportOp], workflowContext, ct);
+            stopwatch.Stop();
+            var report = QualityReportBuilder.Build(workflowContext, outputPath, stopwatch.Elapsed.TotalSeconds);
+
+            // 2) 自动修复（重叠/过短/行宽/CPS）并写回修复后的中间文件
+            var appliedFixes = new List<string>();
+            var skippedFixes = new List<string>();
+            if (settings.Fix)
+            {
+                var sentences = QualityReportBuilder.EffectiveSentences(workflowContext.State);
+                var fixResult = QualityFixer.Fix(sentences);
+                workflowContext.State.CurrentSentences = fixResult.Sentences;
+                appliedFixes = fixResult.Applied;
+                skippedFixes = fixResult.Skipped;
+
+                if (appliedFixes.Count > 0)
+                {
+                    // 修复改变了句子 → 重建报告（覆盖算子写出的文件）
+                    report = QualityReportBuilder.Build(workflowContext, outputPath, stopwatch.Elapsed.TotalSeconds);
+                }
+            }
+
+            // 保存中间文件（修复后写回新句子；否则原样拷贝）
+            var outDoc = CenturionDocumentBuilder.Create(workflowContext, "quality", outputPath);
+            await store.SaveAsync(outDoc, outputPath, ct);
+
+            // 3) CI 阈值评估：Evaluate 语义为 true = 超限（问题存在），任一超限即失败
+            var rules = new List<QualityThresholdRule>();
+            foreach (var expr in settings.FailOn)
+            {
+                var rule = QualityThresholdRule.TryParse(expr);
+                if (rule is null)
+                    throw new InvalidDataException(
+                        $"Invalid --fail-on rule '{expr}'. Expected forms like 'cps>20', 'coverage<95', 'maxcps<=18'.");
+                rules.Add(rule);
+            }
+            report.Passed = true;
+            report.FailedThresholds.Clear();
+            foreach (var rule in rules)
+            {
+                if (rule.Evaluate(report))
+                {
+                    report.Passed = false;
+                    report.FailedThresholds.Add($"{rule.Expression} (actual {DescribeActual(rule, report)})");
+                }
+            }
+
+            // 4) 写回最终报告（.json 含 Passed/FailedThresholds；.html 同内容）
+            var reportPath = BuildReportPath(inputPath, outputPath);
+            File.WriteAllText(reportPath, JsonConvert.SerializeObject(report, SerializerSettings));
+            var htmlPath = settings.HtmlFile?.FullName ?? Path.ChangeExtension(reportPath, ".html");
+            File.WriteAllText(htmlPath, QualityHtmlReport.Render(report));
+
+            // 5) 输出摘要
+            ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Quality report written to {0}", reportPath));
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T(
+                "Sentences: {0}, issues: {1} (error {2} / warning {3}), HTML: {4}",
+                report.Counts.SentenceCount, report.Issues.Count,
+                report.Issues.Count(i => i.Severity == QualityIssueSeverity.Error.ToString()),
+                report.Issues.Count(i => i.Severity == QualityIssueSeverity.Warning.ToString()),
+                htmlPath));
+
+            if (appliedFixes.Count > 0)
+            {
+                ConsoleServices.Output.WriteInfo(ConsoleServices.T(
+                    "Auto-fix applied {0} change(s); fixed intermediate: {1}", appliedFixes.Count, outputPath));
+                foreach (var fix in appliedFixes.Take(10))
+                    ConsoleServices.Output.WriteLine($"  - {fix}");
+                if (appliedFixes.Count > 10)
+                    ConsoleServices.Output.WriteLine($"  … and {appliedFixes.Count - 10} more");
+            }
+            foreach (var skip in skippedFixes.Take(5))
+                ConsoleServices.Output.WriteLine($"  (skipped) {skip}");
+
+            if (!report.Passed)
+            {
+                ConsoleServices.Output.WriteError(ConsoleServices.T(
+                    "Quality gate failed: {0}", string.Join("; ", report.FailedThresholds)));
+                return 1;
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "quality execution failed.");
+            ConsoleServices.Output.WriteError(ex.Message);
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// 报告路径 = 输入文件同名目录下的 <c>&lt;stem&gt;.quality.json</c>
+    /// （stem 去掉输入文件名的 .centurion.json 后缀）；与中间文件路径无关。
+    /// </summary>
+    private static string BuildReportPath(string inputPath, string outputPath)
+    {
+        var dir = Path.GetDirectoryName(outputPath) ?? ".";
+        var stem = Path.GetFileNameWithoutExtension(inputPath);
+        if (stem.EndsWith(".centurion", StringComparison.OrdinalIgnoreCase))
+            stem = stem[..^".centurion".Length];
+        return Path.Combine(dir, stem + ".quality.json");
+    }
+
+    private static string DescribeActual(QualityThresholdRule rule, QualityReport report)
+        => rule.Evaluate(report) ? "failed" : "ok";
+}

@@ -68,7 +68,112 @@ public static class QualityReportBuilder
             report.Alignment.MapperCoverage = correction.TextCoverage;
         }
 
+        // 行级质量评估（CPS / 行宽 / 最小时长 / 最大时长 / 重叠 / 置信度）→ Timing + Issues
+        var assessment = QualityAssessor.Assess(sentences, new QualityAssessmentOptions(), BuildConfidenceMap(sentences));
+        report.Timing = assessment.Timing;
+        report.Issues = assessment.Issues;
+
+        // ASR 置信度（模型提供时）
+        report.Confidence = BuildConfidence(sentences);
+        if (report.Confidence.MeanConfidence is null && sentences.Count > 0)
+            report.Warnings.Add("ASR model did not provide per-sentence confidence; LowConfidence analysis is skipped.");
+
+        // 翻译 QA（TranslationOperator 已写入 TranslationQa）
+        if (state.TranslationQa is not null)
+            report.Translation = MapTranslationQa(state.TranslationQa);
+        else if (state.IsTranslated && sentences.Count > 0)
+            report.Warnings.Add("Translation QA is unavailable (no glossary/length metrics recorded for translated sentences).");
+
+        // TTS / 配音（dub 命令时）
+        if (string.Equals(context.Config.CommandName, "dub", StringComparison.OrdinalIgnoreCase))
+            report.Tts = BuildTts(context, sentences);
+
         return report;
+    }
+
+    /// <summary>句级置信度映射（index → 0~1；仅供 Assess 的低置信度判定）。</summary>
+    private static IReadOnlyDictionary<int, double> BuildConfidenceMap(List<Sentence> sentences)
+    {
+        var map = new Dictionary<int, double>();
+        for (var i = 0; i < sentences.Count; i++)
+        {
+            if (sentences[i].Confidence is { } c)
+                map[i] = c;
+        }
+        return map;
+    }
+
+    /// <summary>ASR 置信度聚合：平均 + 低置信度索引（阈值 0.5）。</summary>
+    private static QualityConfidence BuildConfidence(List<Sentence> sentences)
+    {
+        var values = sentences.Select(s => s.Confidence).Where(c => c is not null).Select(c => c!.Value).ToList();
+        var confidence = new QualityConfidence
+        {
+            MeanConfidence = values.Count > 0 ? Math.Round(values.Average(), 3) : null,
+            LowConfidenceSentenceIndexes = sentences
+                .Select((s, i) => (s, i))
+                .Where(x => x.s.Confidence is { } c && c < 0.5)
+                .Select(x => x.i)
+                .ToList()
+        };
+        return confidence;
+    }
+
+    /// <summary>TranslationQa → 报告质量翻译指标（回译相似度未启用，恒为 null）。</summary>
+    private static QualityTranslation MapTranslationQa(TranslationQa qa) => new()
+    {
+        GlossaryHitRate = qa.GlossaryHitRate,
+        GlossaryHits = qa.GlossaryHits,
+        GlossaryExpected = qa.GlossaryExpected,
+        MeanLengthRatio = qa.MeanLengthRatio,
+        LengthDeviation = qa.LengthDeviation,
+        CachedSentenceCount = qa.CachedSentenceCount
+    };
+
+    /// <summary>dub 命令的 TTS 指标：对齐误差、语速、停顿、重叠、ducking（响度探测未接入时警告）。</summary>
+    private static QualityTts BuildTts(SubtitleWorkflowContext context, List<Sentence> sentences)
+    {
+        var segments = context.State.DubSegments;
+        var succeeded = segments.Where(s => !s.Skipped).ToList();
+        var errors = succeeded
+            .Where(s => s.TargetDurationSec > 0 && s.AlignedDurationSec > 0)
+            .Select(s => Math.Abs(s.TargetDurationSec - s.AlignedDurationSec) * 1000.0)
+            .ToList();
+        var gaps = new List<double>();
+        var negativeGapSeconds = 0.0;
+        var ordered = succeeded.OrderBy(s => s.TargetStartMs).ToList();
+        for (var i = 0; i + 1 < ordered.Count; i++)
+        {
+            var gap = (ordered[i + 1].TargetStartMs - ordered[i].TargetEndMs) / 1000.0;
+            gaps.Add(gap);
+            if (gap < 0)
+                negativeGapSeconds += -gap;
+        }
+
+        var tts = new QualityTts
+        {
+            MeanAlignmentErrorMs = errors.Count > 0 ? Math.Round(errors.Average(), 1) : 0,
+            MaxAlignmentErrorMs = errors.Count > 0 ? Math.Round(errors.Max(), 1) : 0,
+            MeanSpeechRate = ComputeSpeechRate(sentences),
+            MeanPauseSeconds = gaps.Count > 0 ? Math.Round(gaps.Where(g => g > 0).DefaultIfEmpty(0).Average(), 3) : 0,
+            MaxPauseSeconds = gaps.Count > 0 ? Math.Round(gaps.Max(), 3) : 0,
+            NegativeGapSeconds = Math.Round(negativeGapSeconds, 3),
+            DuckingApplied = context.Config.DubDucking && !string.IsNullOrWhiteSpace(context.Config.DubBackgroundPath)
+        };
+        return tts;
+    }
+
+    /// <summary>TTS 合成段平均语速（字符/秒；无段时 0）。</summary>
+    private static double ComputeSpeechRate(List<Sentence> sentences)
+    {
+        var segments = sentences
+            .Where(s => s.End > s.Start)
+            .Select(s => (Chars: s.Text?.Count(ch => !char.IsWhiteSpace(ch)) ?? 0, Seconds: (s.End - s.Start) / 1000.0))
+            .Where(x => x.Seconds > 0)
+            .ToList();
+        return segments.Count == 0
+            ? 0
+            : Math.Round(segments.Average(x => x.Chars / x.Seconds), 2);
     }
 
     /// <summary>构建 dub 专属指标（非 dub 命令返回 null）。</summary>
@@ -113,7 +218,7 @@ public static class QualityReportBuilder
     }
 
     /// <summary>取当前工作集；为空时回退到最新有内容的阶段列表（对齐/分割/转录）。</summary>
-    private static List<Sentence> EffectiveSentences(WorkflowState state)
+    public static List<Sentence> EffectiveSentences(WorkflowState state)
     {
         if (state.CurrentSentences.Count > 0)
             return state.CurrentSentences;

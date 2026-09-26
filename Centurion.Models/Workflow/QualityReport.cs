@@ -18,6 +18,27 @@ public class QualityReport
     /// <summary>时间轴/对齐质量指标。</summary>
     public QualityAlignment Alignment { get; set; } = new();
 
+    /// <summary>行级时序/可读性指标（CPS、行宽、最小时长、最大时长、重叠）。</summary>
+    public QualityTiming? Timing { get; set; }
+
+    /// <summary>ASR 置信度信息（模型提供时）。</summary>
+    public QualityConfidence? Confidence { get; set; }
+
+    /// <summary>翻译 QA 指标（术语命中、长度偏差、回译相似度、缓存）。</summary>
+    public QualityTranslation? Translation { get; set; }
+
+    /// <summary>TTS/配音对齐与响度度量（dub 命令时）。</summary>
+    public QualityTts? Tts { get; set; }
+
+    /// <summary>行级问题明细（HTML 报告可逐行定位；由 QualityAssessor 生成）。</summary>
+    public List<QualityLineIssue> Issues { get; set; } = [];
+
+    /// <summary>阈值评估是否全部通过（CI 依据；--fail-on 触发失败时为 false）。</summary>
+    public bool Passed { get; set; } = true;
+
+    /// <summary>未通过的阈值规则列表（如 "cps>20"）。</summary>
+    public List<string> FailedThresholds { get; set; } = [];
+
     /// <summary>非致命警告列表。</summary>
     public List<string> Warnings { get; set; } = [];
 
@@ -117,6 +138,178 @@ public class QualityAlignment
 
     /// <summary>最长句时长（毫秒）。</summary>
     public double MaxSentenceDurationMs { get; set; }
+}
+
+/// <summary>行级问题严重度。</summary>
+public enum QualityIssueSeverity
+{
+    /// <summary>不影响播放/理解，但值得关注。</summary>
+    Warning,
+
+    /// <summary>明显影响可读性或时间轴正确性（CI 阈值通常针对此类）。</summary>
+    Error
+}
+
+/// <summary>行级问题类型（与修复引擎一一对应）。</summary>
+public enum QualityIssueType
+{
+    /// <summary>语速超过 CPS 阈值。</summary>
+    CpsTooHigh,
+
+    /// <summary>单行字符数超过行宽阈值。</summary>
+    LineTooLong,
+
+    /// <summary>句子时长低于最小时长阈值。</summary>
+    TooShort,
+
+    /// <summary>句子时长超过最大时长阈值。</summary>
+    TooLong,
+
+    /// <summary>与下一句时间轴重叠。</summary>
+    Overlap,
+
+    /// <summary>零时长（Start == End）。</summary>
+    ZeroDuration,
+
+    /// <summary>ASR 置信度低于阈值（模型提供时）。</summary>
+    LowConfidence,
+
+    /// <summary>译文未命中术语表目标词。</summary>
+    GlossaryMiss,
+
+    /// <summary>译文长度相对原文偏差过大。</summary>
+    LengthDeviation,
+
+    /// <summary>句间出现负间隙（后句开始早于前句结束，即重叠）。</summary>
+    NegativeGap
+}
+
+/// <summary>一条可定位到具体字幕行的质量问题。</summary>
+public class QualityLineIssue
+{
+    /// <summary>问题类型（QualityIssueType 名称）。</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>严重度（warning / error）。</summary>
+    public string Severity { get; set; } = QualityIssueSeverity.Warning.ToString();
+
+    /// <summary>0 基句子索引（HTML 报告行号 = Index + 1）。</summary>
+    public int SentenceIndex { get; set; }
+
+    /// <summary>句子起始时间（毫秒）。</summary>
+    public double StartMs { get; set; }
+
+    /// <summary>句子结束时间（毫秒）。</summary>
+    public double EndMs { get; set; }
+
+    /// <summary>句子原文（或译文）。</summary>
+    public string Text { get; set; } = string.Empty;
+
+    /// <summary>问题描述。</summary>
+    public string Message { get; set; } = string.Empty;
+
+    /// <summary>建议修复方式（quality --fix 可自动应用）。</summary>
+    public string? Fix { get; set; }
+
+    /// <summary>该问题的量化值（如实际 CPS、实际字符数、重叠毫秒数）。</summary>
+    public double? Value { get; set; }
+
+    /// <summary>该问题的阈值（用于对比）。</summary>
+    public double? Limit { get; set; }
+}
+
+/// <summary>时序/可读性统计（CPS、行宽、最小时长、最大时长、重叠）。</summary>
+public class QualityTiming
+{
+    /// <summary>平均语速（字符/秒）。</summary>
+    public double MeanCps { get; set; }
+
+    /// <summary>最大句级语速（字符/秒）。</summary>
+    public double MaxCps { get; set; }
+
+    /// <summary>超过 CPS 阈值的句子数。</summary>
+    public int CpsTooHighCount { get; set; }
+
+    /// <summary>单行字符数超过行宽阈值的句子数。</summary>
+    public int LineTooLongCount { get; set; }
+
+    /// <summary>时长低于最小时长阈值的句子数。</summary>
+    public int TooShortCount { get; set; }
+
+    /// <summary>时长超过最大时长阈值的句子数。</summary>
+    public int TooLongCount { get; set; }
+
+    /// <summary>与下一句重叠的句子数。</summary>
+    public int OverlapCount { get; set; }
+
+    /// <summary>重叠总量（秒）。</summary>
+    public double TotalOverlapSeconds { get; set; }
+
+    /// <summary>句间平均停顿（秒；负值表示存在重叠）。</summary>
+    public double MeanGapSeconds { get; set; }
+}
+
+/// <summary>ASR 置信度信息。</summary>
+public class QualityConfidence
+{
+    /// <summary>平均句级置信度（0~1；模型未提供时为 null）。</summary>
+    public double? MeanConfidence { get; set; }
+
+    /// <summary>低于阈值的低置信度句子索引。</summary>
+    public List<int> LowConfidenceSentenceIndexes { get; set; } = [];
+}
+
+/// <summary>翻译 QA 指标。</summary>
+public class QualityTranslation
+{
+    /// <summary>术语命中率（0~1：命中目标术语的译文句子占比；无术语表时为 1）。</summary>
+    public double GlossaryHitRate { get; set; } = 1;
+
+    /// <summary>命中术语的句子数。</summary>
+    public int GlossaryHits { get; set; }
+
+    /// <summary>需要命中术语的句子数。</summary>
+    public int GlossaryExpected { get; set; }
+
+    /// <summary>译文/原文长度比均值（>1 偏长，&lt;1 偏短）。</summary>
+    public double MeanLengthRatio { get; set; } = 1;
+
+    /// <summary>长度比偏离 1.0 的平均绝对偏差。</summary>
+    public double LengthDeviation { get; set; }
+
+    /// <summary>回译相似度（0~1；未启用回译时为 null）。</summary>
+    public double? BackTranslateSimilarity { get; set; }
+
+    /// <summary>按句缓存命中句数（--translation-cache 时）。</summary>
+    public int CachedSentenceCount { get; set; }
+}
+
+/// <summary>TTS/配音对齐与响度度量。</summary>
+public class QualityTts
+{
+    /// <summary>TTS 时长预测 vs 实际对齐的平均误差（毫秒）。</summary>
+    public double MeanAlignmentErrorMs { get; set; }
+
+    /// <summary>TTS 时长预测 vs 实际对齐的最大误差（毫秒）。</summary>
+    public double MaxAlignmentErrorMs { get; set; }
+
+    /// <summary>平均语速（字符/秒，TTS 合成段）。</summary>
+    public double MeanSpeechRate { get; set; }
+
+    /// <summary>句间平均停顿（秒）。</summary>
+    public double MeanPauseSeconds { get; set; }
+
+    /// <summary>句间最大停顿（秒）。</summary>
+    public double MaxPauseSeconds { get; set; }
+
+    /// <summary>负间隙（重叠）总量（秒）；无重叠时为 0。</summary>
+    public double NegativeGapSeconds { get; set; }
+
+    /// <summary>EBU R128 综合响度（LUFS；探测失败时为 null）。</summary>
+    public double? LoudnessLufs { get; set; }
+
+    /// <summary>是否应用了 ducking（有伴奏且 DubDucking 开启时 true）。</summary>
+    public bool DuckingApplied { get; set; }
 }
 
 /// <summary>dub（媒体译制）专属质量指标。</summary>

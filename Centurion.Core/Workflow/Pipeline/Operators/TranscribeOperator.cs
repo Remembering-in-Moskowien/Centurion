@@ -67,7 +67,7 @@ public class TranscribeOperator(
                 $"via {usage.ProviderName} (est. ${usage.EstimatedCostUsd:F4}).");
     }
 
-    /// <summary>把词级结果按句分组（按标点启发式切句；无标点时整段为一句）。</summary>
+    /// <summary>把词级结果按句分组（按标点启发式切句；无标点时整段为一句），句级置信度为词级均值。</summary>
     internal static List<Sentence> GroupIntoSentences(IReadOnlyList<Word> words)
     {
         var sentences = new List<Sentence>();
@@ -95,7 +95,17 @@ public class TranscribeOperator(
         }
         if (current is not null)
             sentences.Add(current);
+
+        foreach (var sentence in sentences)
+            sentence.Confidence = AggregateConfidence(sentence.Words);
         return sentences;
+    }
+
+    /// <summary>词级置信度聚合为句级（平均；全部为 null 时返回 null）。</summary>
+    internal static double? AggregateConfidence(IReadOnlyList<Word> words)
+    {
+        var values = words.Where(w => w.Confidence is not null).Select(w => w.Confidence!.Value).ToList();
+        return values.Count == 0 ? null : Math.Round(values.Average(), 4);
     }
 
     private static bool IsSentenceBoundary(string text)
