@@ -20,7 +20,8 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <summary>生成与日志文件一致的 info 前缀（HH:mm:ss info:）。</summary>
     private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
 
-    private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]succ[/]: ";
+    /// <summary>成功徽章 + 日志式前缀（✔ 仅为控制台装饰，日志文件记录纯文本）。</summary>
+    private static string SuccessPrefix => $"{DateTime.Now:HH:mm:ss} [green]✔[/] ";
 
     /// <summary>
     /// 以白色向控制台写入文本（不换行），并记录 info 日志。
@@ -56,8 +57,8 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteWarning(string message) => _logger.LogWarning(message);
 
     /// <summary>
-    /// 以绿色向控制台写入一条成功信息（带日志式前缀与 [SUCCESS] 标记），
-    /// 并记录带 [SUCCESS] 前缀的 info 日志，控制台与文件逐字一致。
+    /// 以绿色向控制台写入一条成功信息（✔ 徽章 + 日志式前缀），
+    /// 并记录纯文本 info 日志（无徽章，日志文件保持干净）。
     /// </summary>
     /// <param name="message">成功信息文本。</param>
     public void WriteSuccess(string message)

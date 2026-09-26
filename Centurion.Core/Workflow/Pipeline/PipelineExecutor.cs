@@ -73,14 +73,14 @@ public sealed class PipelineExecutor
         var stepTimings = new Dictionary<string, TimeSpan>();
         context.State.StepTimings = stepTimings;
 
-        ConsoleServices.Output.WriteLine(ConsoleServices.T("Pipeline execution started"));
+        ConsoleServices.Output.WriteMarkupLine($"[bold cyan]▶[/] {ConsoleServices.T("Pipeline execution started")}");
         _logger.LogInformation("Pipeline started for {InputPath}", context.Config.InputFilePath);
 
         var totalStopwatch = Stopwatch.StartNew();
         var results = await ExecuteReadyNodesAsync(dag, context, cancellationToken, stepTimings);
         totalStopwatch.Stop();
 
-        ConsoleServices.Output.WriteLine(ConsoleServices.T("Total pipeline time: {0}", $@"{totalStopwatch.Elapsed:mm\:ss\.fff}"));
+        ConsoleServices.Output.WriteMarkupLine($"[bold green]✔[/] {ConsoleServices.T("Total pipeline time: {0}", $@"{totalStopwatch.Elapsed:mm\:ss\.fff}")}");
         _logger.LogInformation(@"Total pipeline execution time: {Total:mm\:ss\.fff}", totalStopwatch.Elapsed);
         return results;
     }
@@ -122,6 +122,12 @@ public sealed class PipelineExecutor
                 resultByNode[result.Name] = result;
                 completed.Add(result.Name);
                 stepTimings[result.Name] = result.Elapsed;
+
+                if (result.Status is PipelineStepStatus.Completed or PipelineStepStatus.Retried)
+                    ConsoleServices.Output.WriteMarkupLine(
+                        $"[dim]    ✓ {result.Name} in {result.Elapsed.TotalSeconds:F1}s[/]");
+                else if (result.Status == PipelineStepStatus.Skipped)
+                    ConsoleServices.Output.WriteMarkupLine($"[dim]    - {result.Name} skipped[/]");
 
                 if (result.Status == PipelineStepStatus.Failed)
                     throw new PipelineExecutionException(
@@ -211,7 +217,7 @@ public sealed class PipelineExecutor
             throw;
         }
 
-        ConsoleServices.Output.WriteLine(ConsoleServices.T("Executing step: {0}", nodeName));
+        ConsoleServices.Output.WriteMarkupLine($"[cyan]→[/] {ConsoleServices.T("Executing step: {0}", nodeName)}");
         _logger.LogInformation("Starting step: {StepName}", nodeName);
 
         Exception? lastError = null;
