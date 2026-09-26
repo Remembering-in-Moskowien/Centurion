@@ -16,7 +16,7 @@ namespace Centurion.Core.Workflow.Pipeline.Operators;
 public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
     : PipelineOperatorBase<QualityReportOperator>(logger)
 {
-    private static readonly JsonSerializerSettings Settings = new()
+    internal static readonly JsonSerializerSettings SerializerSettings = new()
     {
         Formatting = Formatting.Indented,
         ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -40,13 +40,17 @@ public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
         var report = QualityReportBuilder.Build(context, outputPath, _stopwatch.Elapsed.TotalSeconds);
 
         var reportPath = Path.ChangeExtension(outputPath, ".quality.json");
-        File.WriteAllText(reportPath, JsonConvert.SerializeObject(report, Settings));
+        File.WriteAllText(reportPath, JsonConvert.SerializeObject(report, SerializerSettings));
+
+        var htmlPath = Path.ChangeExtension(outputPath, ".quality.html");
+        File.WriteAllText(htmlPath, QualityHtmlReport.Render(report));
 
         context.State.Extensions["QualityReportPath"] = reportPath;
+        context.State.Extensions["QualityReportHtmlPath"] = htmlPath;
 
         LogProviderUsage(context);
 
-        LogInfo($"Quality report written to '{reportPath}' (sentences: {report.Counts.SentenceCount}, speakers: {report.Counts.SpeakerCount}).");
+        LogInfo($"Quality report written to '{reportPath}' (sentences: {report.Counts.SentenceCount}, speakers: {report.Counts.SpeakerCount}); HTML: '{htmlPath}'.");
         return Task.CompletedTask;
     }
 

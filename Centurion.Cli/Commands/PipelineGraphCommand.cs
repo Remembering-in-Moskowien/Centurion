@@ -27,6 +27,7 @@ public sealed class PipelineGraphCommand(
     IServiceProvider serviceProvider,
     ILogger<PipelineGraphCommand> logger) : AsyncCommand<PipelineGraphSettings>
 {
+    /// <summary>执行：渲染指定命令的 DAG 拓扑（控制台或文件）。</summary>
     protected override async Task<int> ExecuteAsync(CommandContext context, PipelineGraphSettings settings, CancellationToken ct)
     {
         try

@@ -17,6 +17,7 @@ public class ProcessManager(ILogger<ProcessManager> logger)
     /// <param name="executablePath">可执行文件完整路径</param>
     /// <param name="arguments">命令行参数</param>
     /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="throwOnNonZeroExit">进程退出码非 0 时是否抛 InvalidOperationException（默认 true）</param>
     /// <returns>进程的标准输出内容</returns>
     /// <exception cref="TimeoutException">超时</exception>
     /// <exception cref="InvalidOperationException">进程退出码非0或无法启动</exception>
@@ -35,6 +36,7 @@ public class ProcessManager(ILogger<ProcessManager> logger)
     /// <param name="executablePath">可执行文件完整路径</param>
     /// <param name="arguments">按顺序排列的参数列表（不含引号）</param>
     /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="throwOnNonZeroExit">进程退出码非 0 时是否抛 InvalidOperationException（默认 true）</param>
     /// <returns>进程的标准输出内容</returns>
     public async Task<string> ExecuteAsync(
         string executablePath,

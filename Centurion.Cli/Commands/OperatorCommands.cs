@@ -177,23 +177,3 @@ public sealed class SpellCheckCommand(
     protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [spellCheckOp];
 }
 
-/// <summary>
-/// <c>quality</c> 独立算子命令：中间文件 → 只执行 质量报告（写入 .quality.json，不改句子）。
-/// </summary>
-public sealed class QualityCommand(
-    ITempDirectoryManager tempManager,
-    PipelineExecutor pipelineExecutor,
-    QualityReportOperator qualityReportOp,
-    ILogger<QualityCommand> logger,
-    ICenturionDocumentStore store)
-    : OperatorCommandBase(tempManager, pipelineExecutor, logger, store)
-{
-    /// <inheritdoc />
-    protected override string OpName => "quality";
-
-    /// <inheritdoc />
-    protected override bool AcceptsMedia => false;
-
-    /// <inheritdoc />
-    protected override IEnumerable<IPipelineOperator> CreateOperators(WorkflowConfig config) => [qualityReportOp];
-}

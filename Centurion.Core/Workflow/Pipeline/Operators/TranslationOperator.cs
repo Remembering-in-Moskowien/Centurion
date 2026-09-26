@@ -41,7 +41,48 @@ public sealed class TranslationOperator(
         context.State.TranslatedSentences = sentences;
         context.State.CurrentSentences = sentences;
         context.State.IsTranslated = true;
+        context.State.TranslationQa = BuildTranslationQa(sentences, _options);
         OnProgress(100, "Translation completed");
         LogInfo($"Translation completed ({_options.TargetLanguage}).");
     }
+
+    /// <summary>计算翻译 QA：术语命中率 + 译文/原文长度偏差（纯文本统计，不额外调用 LLM）。</summary>
+    internal static TranslationQa BuildTranslationQa(List<Sentence> sentences, TranslationOptions options)
+    {
+        var qa = new TranslationQa { TranslatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText)) };
+
+        if (options.Glossary.Count > 0)
+        {
+            foreach (var sentence in sentences)
+            {
+                var source = sentence.Text ?? string.Empty;
+                var translated = sentence.TranslatedText ?? string.Empty;
+                foreach (var (sourceTerm, targetTerm) in options.Glossary)
+                {
+                    if (!source.Contains(sourceTerm, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    qa.GlossaryExpected++;
+                    if (translated.Contains(targetTerm, StringComparison.Ordinal))
+                        qa.GlossaryHits++;
+                }
+            }
+            qa.GlossaryHitRate = qa.GlossaryExpected > 0
+                ? Math.Round(qa.GlossaryHits / (double)qa.GlossaryExpected, 3)
+                : 1;
+        }
+
+        var ratios = sentences
+            .Where(s => !string.IsNullOrWhiteSpace(s.TranslatedText) && !string.IsNullOrWhiteSpace(s.Text))
+            .Select(s => NonBlankChars(s.TranslatedText!) / (double)Math.Max(1, NonBlankChars(s.Text!)))
+            .ToList();
+        if (ratios.Count > 0)
+        {
+            qa.MeanLengthRatio = Math.Round(ratios.Average(), 3);
+            qa.LengthDeviation = Math.Round(ratios.Average(r => Math.Abs(r - 1.0)), 3);
+        }
+
+        return qa;
+    }
+
+    private static int NonBlankChars(string text) => text.Count(ch => !char.IsWhiteSpace(ch));
 }

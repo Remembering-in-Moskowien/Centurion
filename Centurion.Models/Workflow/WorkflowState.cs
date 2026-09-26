@@ -50,6 +50,9 @@ public class WorkflowState
     /// <summary>翻译后的句子列表（译文逐句写回 Sentence.TranslatedText），未启用翻译时为 null。</summary>
     public List<Sentence>? TranslatedSentences { get; set; }
 
+    /// <summary>翻译 QA 指标（术语命中率/长度偏差等；TranslationOperator 写入，质量报告消费）。</summary>
+    public TranslationQa? TranslationQa { get; set; }
+
     // ---------- 阶段完成标志（检查点恢复 + IR provenance 推导） ----------
     /// <summary>音频转换阶段是否已完成。</summary>
     public bool IsAudioConverted { get; set; }
