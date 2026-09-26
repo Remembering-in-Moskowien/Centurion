@@ -9,10 +9,11 @@ namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
 /// 下载并缓存 VideoSubFinder CLI，供 OCR 字幕帧检测使用。
-/// 下载源（按平台，全部可经 GitHubDownloadProxy 加速）：
-///   - Windows x64：GitHub lionc2240/autovsf 镜像的官方 VideoSubFinder_6.10_x64.zip
-///     （官方包内含 VideoSubFinderWXW.exe，支持无头命令行模式；若含 VideoSubFinderCli.exe 则优先）。
-///   - Linux / macOS：GitHub eritpchy/videosubfinder-cli 的 CLI 构建。
+/// 下载源（Windows x64，按序尝试，逐源 元数据→下载→SHA-256→解压→安装，失败自动切下一个）：
+///   1. GitHub lionc2240/autovsf 镜像的官方 VideoSubFinder_6.10_x64.zip（含 SHA-256 digest）；
+///   2. SourceForge 镜像直链（twds.dl，用户指定；同一官方包，SHA-256 已知）；
+///   3. SourceForge best_release.json 动态解析（无 SHA-256，部分网络不可达）。
+///   官方包内含 VideoSubFinderWXW.exe（支持无头命令行模式）。
 /// 安装失败（下载不可达 / 包内无可用可执行文件）返回 null，OCR 主链路降级为 FFmpeg 抽帧。
 /// </summary>
 public sealed class VideoSubFinderManager(
@@ -28,6 +29,14 @@ public sealed class VideoSubFinderManager(
 
     private const string SourceForgeReleaseApi =
         "https://sourceforge.net/projects/videosubfinder/best_release.json";
+
+    /// <summary>SourceForge 官方 Windows 包镜像直链（用户指定；与 GitHub autovsf 同一官方包）。</summary>
+    private const string WindowsSourceForgeDirectZip =
+        "https://twds.dl.sourceforge.net/project/videosubfinder/VideoSubFinder_6.10_x64.zip";
+
+    /// <summary>官方 VideoSubFinder_6.10_x64.zip 的已知 SHA-256（与 autovsf 资产一致）。</summary>
+    private const string WindowsSourceForgeZipSha256 =
+        "3c0cc03793ec9753a6a4ee8a91c1d226c20b80aab901718f7c97d4fcb3580c0e";
 
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly SemaphoreSlim InstallGate = new(1, 1);
@@ -55,15 +64,7 @@ public sealed class VideoSubFinderManager(
 
             try
             {
-                var release = OperatingSystem.IsWindows()
-                    ? await GetWindowsGitHubReleaseAsync(cancellationToken)
-                    : await GetGitHubReleaseAsync(LinuxMacGitHubReleaseApi, assetName, cancellationToken);
-                if (await WasRejectedReleaseAsync(release, cancellationToken))
-                {
-                    logger.LogInformation("The current VideoSubFinder release was already checked and did not contain a usable executable.");
-                    return null;
-                }
-                return await DownloadAndInstallAsync(release, assetName, executableNames, cancellationToken);
+                return await TryInstallFromSourcesAsync(assetName, executableNames, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -180,18 +181,55 @@ public sealed class VideoSubFinderManager(
         ? ["VideoSubFinderWXW_intel.exe", "VideoSubFinderWXW.exe", "VideoSubFinderCli.exe"]
         : ["VideoSubFinderCli.run", "VideoSubFinderCli"];
 
-    /// <summary>Windows：GitHub autovsf 镜像（含 SHA-256 digest）；GitHub 失败时回退 SourceForge 官方。</summary>
+    /// <summary>Windows 源 1：GitHub autovsf 镜像（含 SHA-256 digest）。</summary>
     private async Task<ReleaseArchive> GetWindowsGitHubReleaseAsync(CancellationToken cancellationToken)
+        => await GetGitHubReleaseAsync(WindowsGitHubReleaseApi, "VideoSubFinder_6.10_x64.zip", cancellationToken);
+
+    /// <summary>Windows 源 2：SourceForge 镜像直链（twds.dl，用户指定；SHA-256 已知）。</summary>
+    private static Task<ReleaseArchive> GetWindowsSourceForgeDirectAsync(CancellationToken cancellationToken)
+        => Task.FromResult(new ReleaseArchive(WindowsSourceForgeDirectZip, WindowsSourceForgeZipSha256));
+
+    /// <summary>按序尝试各源：元数据解析 → 下载 → SHA-256 → 解压安装；全部失败返回 null。</summary>
+    private async Task<string?> TryInstallFromSourcesAsync(
+        string assetName, IReadOnlyList<string> executableNames, CancellationToken cancellationToken)
     {
-        try
+        var sources = new List<Func<CancellationToken, Task<ReleaseArchive>>>();
+        if (OperatingSystem.IsWindows())
         {
-            return await GetGitHubReleaseAsync(WindowsGitHubReleaseApi, "VideoSubFinder_6.10_x64.zip", cancellationToken);
+            sources.Add(ct => GetWindowsGitHubReleaseAsync(ct));
+            sources.Add(ct => GetWindowsSourceForgeDirectAsync(ct));
+            sources.Add(ct => GetWindowsSourceForgeReleaseAsync(ct));
         }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or TaskCanceledException)
+        else
         {
-            logger.LogInformation("Windows VideoSubFinder GitHub mirror unavailable ({Message}); trying SourceForge.", ex.Message);
-            return await GetWindowsSourceForgeReleaseAsync(cancellationToken);
+            sources.Add(ct => GetGitHubReleaseAsync(LinuxMacGitHubReleaseApi, assetName, ct));
         }
+
+        foreach (var source in sources)
+        {
+            try
+            {
+                var release = await source(cancellationToken);
+                if (await WasRejectedReleaseAsync(release, cancellationToken))
+                {
+                    logger.LogInformation("The current VideoSubFinder release was already checked and did not contain a usable executable.");
+                    continue;
+                }
+                var installed = await DownloadAndInstallAsync(release, assetName, executableNames, cancellationToken);
+                if (installed is not null)
+                    return installed;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or IOException or TaskCanceledException)
+            {
+                logger.LogWarning(ex, "VideoSubFinder source failed; trying next download source.");
+            }
+        }
+
+        return null;
     }
 
     /// <summary>SourceForge 官方最佳版本（无 SHA-256，仅 URL；部分网络不可达）。</summary>
