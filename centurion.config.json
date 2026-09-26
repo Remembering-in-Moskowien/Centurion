@@ -1,0 +1,9 @@
+{
+  "profile": "offline",
+  "language": null,
+  "githubProxy": null,
+  "json": null,
+  "logLevel": null,
+  "outputFormat": "ass",
+  "recipe": "Centurion asr D:\\Centurion\\samples\\test.mp4\nCenturion translate test.centurion.json --target zh\nCenturion build test.centurion.json --format ass"
+}

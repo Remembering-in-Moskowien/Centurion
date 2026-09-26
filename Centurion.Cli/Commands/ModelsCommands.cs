@@ -76,10 +76,12 @@ public sealed class ModelsListCommand(
         var table = new Table()
             .Border(TableBorder.Rounded)
             .Title("[bold]模型注册表[/]")
+            .Width(CliLayout.TableWidth())
             .AddColumn(new TableColumn("域").LeftAligned())
             .AddColumn(new TableColumn("模型").LeftAligned())
             .AddColumn(new TableColumn("类型").Centered())
             .AddColumn(new TableColumn("状态").LeftAligned());
+            // 全宽排版：标题居中与表格视觉统一
 
         foreach (var domain in ModelCatalog.Domains(registry))
         {
@@ -101,6 +103,7 @@ public sealed class ModelsListCommand(
         }
 
         AnsiConsole.Write(table);
+        AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine(
             $"总计 [green]{readyCount}[/] 就绪 / [red]{missingCount}[/] 缺失" +
             (missingCount > 0 ? "  — 安装: [cyan]Centurion models install <model>[/]" : ""));

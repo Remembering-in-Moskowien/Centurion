@@ -30,11 +30,10 @@ public sealed class ProvidersListCommand(
         var table = new Table()
             .Border(TableBorder.Rounded)
             .Title("[bold]Provider 注册表[/]")
+            .Width(CliLayout.TableWidth())
             .AddColumn(new TableColumn("接口族").LeftAligned())
-            .AddColumn(new TableColumn("Provider").LeftAligned())
-            .AddColumn(new TableColumn("类型").Centered())
+            .AddColumn(new TableColumn("Provider").LeftAligned().Width(18))
             .AddColumn(new TableColumn("$/1M tok").RightAligned())
-            .AddColumn(new TableColumn("延迟").Centered())
             .AddColumn(new TableColumn("质量").Centered())
             .AddColumn(new TableColumn("状态").LeftAligned());
 
@@ -46,21 +45,17 @@ public sealed class ProvidersListCommand(
                 var available = await provider.IsAvailableAsync(ct);
                 all.Add((provider, available));
                 var status = available ? "[green]● 可用[/]" : "[red]○ 不可用[/]";
-                var kind = c.Kind == Centurion.Models.Providers.ProviderKind.Cloud
-                    ? "[cyan]C[/]"
-                    : "[dim]L[/]";
                 table.AddRow(
                     $"[dim]{group.Key}[/]",
                     $"[bold]{provider.Name}[/]",
-                    kind,
                     $"{c.CostPer1MTokensUsd:F2}",
-                    $"{c.Latency}",
                     $"{c.Quality}",
                     status);
             }
         }
 
         AnsiConsole.Write(table);
+        AnsiConsole.MarkupLine("[dim]图例: L=本地(0 成本) · C=云端(API)，详情 providers test <name>[/]");
         AnsiConsole.WriteLine();
 
         // 成本对比图：每 1M token 成本（本地为 0，直观展示云/本地成本差）

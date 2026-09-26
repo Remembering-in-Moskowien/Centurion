@@ -79,6 +79,7 @@ public sealed class InitCommand(
             var table = new Table()
                 .Border(TableBorder.Rounded)
                 .Title($"[bold]推荐命令链 · {workflow}[/]")
+                .Width(CliLayout.TableWidth())
                 .AddColumn(new TableColumn("#").Centered())
                 .AddColumn(new TableColumn("命令").LeftAligned());
             for (var i = 0; i < lines.Length; i++)
