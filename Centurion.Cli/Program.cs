@@ -129,36 +129,54 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetApplicationName("Centurion");
-    config.AddCommand<SpawnCommand>("asr");
-    config.AddCommand<OcrCommand>("ocr");
-    config.AddCommand<FromScriptCommand>("from-script");
-    config.AddCommand<CorrectCommand>("correct");
-    config.AddCommand<TranslateCommand>("translate");
-    config.AddCommand<DubCommand>("dub");
-    config.AddCommand<ConvertCommand>("convert");
-    config.AddCommand<BuildCommand>("build");
-    config.AddCommand<UpdateCommand>("update");
-    // 单算子小命令已移除：全部核心命令统一走 DAG 管线（asr/ocr/from-script/translate/dub/correct/quality）
-    // REST 服务：POST /commands/{name} 复用 CLI 命令内核（CommandRequest 契约）
-    config.AddCommand<ValidateCommand>("validate");
-    config.AddCommand<MigrateCommand>("migrate");
-    config.AddCommand<QualityCommand>("quality");
-    // 管线 DAG 可视化（不执行，只渲染拓扑）
-    config.AddCommand<PipelineGraphCommand>("pipeline-graph");
-    // 模型注册表管理 + Provider 选型/探测
+    // ─── 核心字幕管线（统一走 DAG，pipeline-graph 可查看拓扑） ───
+    config.AddCommand<SpawnCommand>("asr")
+        .WithDescription("自动字幕生成：音视频 → 转录/说话人分割/分句/对齐 → Centurion 中间文件");
+    config.AddCommand<OcrCommand>("ocr")
+        .WithDescription("视频/图片字幕识别：抽帧 OCR（RapidOCR/LLM）→ 分句/清洗 → 中间文件");
+    config.AddCommand<FromScriptCommand>("from-script")
+        .WithDescription("脚本对齐：按台本对媒体转录并映射时间轴 → 中间文件");
+    config.AddCommand<CorrectCommand>("correct")
+        .WithDescription("字幕校正：按参考脚本/音频时间轴校正文本与时间线（timeline-only/text-only/both）");
+    config.AddCommand<TranslateCommand>("translate")
+        .WithDescription("字幕翻译：LLM 策略 + 术语表/目标台本 1:1 对齐，支持双语输出");
+    config.AddCommand<DubCommand>("dub")
+        .WithDescription("媒体译制：说话人画像 → TTS 合成 → 时间对齐 → 混音 → 译制 wav");
+    config.AddCommand<ConvertCommand>("convert")
+        .WithDescription("字幕转换：解析 ASS/SRT/TXT 字幕 → Centurion 中间文件");
+    config.AddCommand<BuildCommand>("build")
+        .WithDescription("字幕构建：中间文件 → ASS/SRT/TXT 字幕");
+    // ─── 质量与工具 ───
+    config.AddCommand<QualityCommand>("quality")
+        .WithDescription("质量报告：输出 .quality.json/.html，--fix 自动修复，--fail-on CI 阈值门禁");
+    config.AddCommand<PipelineGraphCommand>("pipeline-graph")
+        .WithDescription("管线 DAG 可视化：渲染指定命令的拓扑（不执行，-c 选命令）");
+    config.AddCommand<ValidateCommand>("validate")
+        .WithDescription("校验 Centurion 中间文件是否符合 IR Schema");
+    config.AddCommand<MigrateCommand>("migrate")
+        .WithDescription("IR Schema 迁移：把旧版本中间文件升级到指定版本（--to）");
+    config.AddCommand<UpdateCommand>("update")
+        .WithDescription("自更新：从 GitHub Releases 检查/下载/应用新版本");
+    // ─── 模型注册表管理 + Provider 选型/探测 ───
     config.AddBranch("models", models =>
     {
-        models.SetDescription("Model registry management (list/install/verify/remove).");
-        models.AddCommand<ModelsListCommand>("list");
-        models.AddCommand<ModelsInstallCommand>("install");
-        models.AddCommand<ModelsVerifyCommand>("verify");
-        models.AddCommand<ModelsRemoveCommand>("remove");
+        models.SetDescription("模型注册表管理：列出/安装/校验/移除本地模型（whisper/qwen3/diarization/bert/tts）");
+        models.AddCommand<ModelsListCommand>("list")
+            .WithDescription("列出全部注册模型与本地就绪状态（表格 + 徽章）");
+        models.AddCommand<ModelsInstallCommand>("install")
+            .WithDescription("下载安装指定模型（缺失时运行会提示此命令）");
+        models.AddCommand<ModelsVerifyCommand>("verify")
+            .WithDescription("校验模型本地文件是否就绪（缺失返回退出码 1）");
+        models.AddCommand<ModelsRemoveCommand>("remove")
+            .WithDescription("删除模型本地文件/目录（需确认）");
     });
     config.AddBranch("providers", providers =>
     {
-        providers.SetDescription("Provider inspection (list/test).");
-        providers.AddCommand<ProvidersListCommand>("list");
-        providers.AddCommand<ProvidersTestCommand>("test");
+        providers.SetDescription("Provider 检查：列出/探测本地与云推理提供方（成本/延迟/质量）");
+        providers.AddCommand<ProvidersListCommand>("list")
+            .WithDescription("列出全部 Provider 及其能力与可用性（表格 + 成本图表）");
+        providers.AddCommand<ProvidersTestCommand>("test")
+            .WithDescription("探测指定 Provider 的可用性并显示能力声明");
     });
 });
 
