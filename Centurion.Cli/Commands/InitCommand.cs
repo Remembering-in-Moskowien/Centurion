@@ -71,7 +71,9 @@ public sealed class InitCommand(
             // 3) 立即应用 profile
             ProviderProfileResolver.Current = ProviderProfileResolver.FromString(profile);
 
-            // 4) 输出引导
+            // 4) 输出引导（字幕文件先行 convert 提示）
+            if (IsSubtitleFile(media))
+                ConsoleServices.Output.WriteInfo(ConsoleServices.T("Detected a subtitle file; the chain starts with `Centurion convert` to turn it into IR first."));
             AnsiConsole.Write(new Rule($"[bold green]{ConsoleServices.T("Configuration complete")}[/]").RuleStyle("green"));
             ConsoleServices.Output.WriteMarkupLine(ConsoleServices.T("Generated [bold]{0}[/] (profile={1}, format={2})", configPath, profile, format));
 
@@ -114,42 +116,56 @@ public sealed class InitCommand(
     internal static string BuildRecipe(string media, string workflow, string format, string? target)
     {
         var baseName = Path.GetFileNameWithoutExtension(media);
+        var ir = $"{baseName}.centurion.json";
         return workflow switch
         {
             "asr" => string.Join('\n', new[]
             {
                 $"Centurion asr {media}",
-                $"Centurion translate {baseName}.centurion.json --target {target ?? "zh"}",
-                $"Centurion build {baseName}.centurion.json --format {format}"
+                $"Centurion translate {ir} --target {target ?? "zh"}",
+                $"Centurion build {ir} --format {format}"
             }),
             "ocr" => string.Join('\n', new[]
             {
                 $"Centurion ocr {media}",
-                $"Centurion translate {baseName}.centurion.json --target {target ?? "zh"}",
-                $"Centurion build {baseName}.centurion.json --format {format}"
+                $"Centurion translate {ir} --target {target ?? "zh"}",
+                $"Centurion build {ir} --format {format}"
             }),
             "from-script" => string.Join('\n', new[]
             {
                 $"Centurion from-script {media} <script>",
-                $"Centurion translate {baseName}.centurion.json --target {target ?? "zh"}",
-                $"Centurion build {baseName}.centurion.json --format {format}"
+                $"Centurion translate {ir} --target {target ?? "zh"}",
+                $"Centurion build {ir} --format {format}"
             }),
-            "translate" => string.Join('\n', new[]
-            {
-                $"Centurion translate {baseName}.centurion.json --target {target ?? "zh"}",
-                $"Centurion build {baseName}.centurion.json --format {format}"
-            }),
-            "dub" => string.Join('\n', new[]
-            {
-                $"Centurion translate {baseName}.centurion.json --target {target ?? "zh"}",
-                $"Centurion dub {baseName}.centurion.json"
-            }),
-            "correct" => string.Join('\n', new[]
-            {
-                $"Centurion correct {baseName}.centurion.json",
-                $"Centurion build {baseName}.centurion.json --format {format}"
-            }),
-            _ => string.Join('\n', new[] { $"Centurion asr {media}", $"Centurion build {baseName}.centurion.json --format {format}" })
+            "translate" => Join(WithConvertFirst(media, ir,
+                $"Centurion translate {ir} --target {target ?? "zh"}",
+                $"Centurion build {ir} --format {format}")),
+            "dub" => Join(WithConvertFirst(media, ir,
+                $"Centurion translate {ir} --target {target ?? "zh"}",
+                $"Centurion dub {ir}")),
+            "correct" => Join(WithConvertFirst(media, ir,
+                $"Centurion correct {ir}",
+                $"Centurion build {ir} --format {format}")),
+            _ => Join($"Centurion asr {media}", $"Centurion build {ir} --format {format}")
         };
     }
+
+    /// <summary>输入为字幕文件（srt/ass/ssa/vtt/txt）时，链首插入 convert 步骤把字幕转为 IR。</summary>
+    private static bool IsSubtitleFile(string media)
+    {
+        var ext = Path.GetExtension(media);
+        return string.Equals(ext, ".srt", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ext, ".ass", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ext, ".ssa", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ext, ".vtt", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>字幕文件时在步骤前加 convert；否则原样。</summary>
+    private static string[] WithConvertFirst(string media, string ir, params string[] steps) =>
+        IsSubtitleFile(media)
+            ? new[] { $"Centurion convert {media}" }.Concat(steps).ToArray()
+            : steps;
+
+    private static string Join(params string[] steps) => string.Join('\n', steps);
 }
