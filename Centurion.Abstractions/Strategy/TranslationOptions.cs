@@ -19,4 +19,7 @@ public class TranslationOptions
 
     /// <summary>单次 LLM 请求翻译的句数上限。</summary>
     public int BatchSize { get; init; } = 10;
+
+    /// <summary>批并行度：同时进行中的 LLM 翻译批数上限（默认 4；内存/限流受限时可调 1 恢复串行）。</summary>
+    public int MaxConcurrency { get; init; } = 4;
 }
