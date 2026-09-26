@@ -13,3 +13,4 @@ Centurion.sln.DotSettings.user
 # Sample/test artifacts & debug logs
 /samples/
 *.log
+/artifacts
