@@ -99,6 +99,10 @@ public sealed class TranslateCommand(
                 serviceProvider, strategy, options);
             var dag = BuildTranslateDag(translationOp, qualityReportOp);
 
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, workflowContext.Config, serviceProvider, settings.Json, ct);
+
             var stepResults = await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
             var skipped = stepResults.Where(r => r.Status == PipelineStepStatus.Skipped).Select(r => r.Name).ToList();
             if (skipped.Count > 0)
@@ -113,11 +117,26 @@ public sealed class TranslateCommand(
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Translated {0}/{1} sentences -> {2}", translatedCount, sentences.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "translate",
+                    status = "ok",
+                    input = inputPath,
+                    output = outputPath,
+                    translated = translatedCount,
+                    total = sentences.Count,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Translation pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Translation pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

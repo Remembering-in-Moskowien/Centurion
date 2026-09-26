@@ -25,6 +25,7 @@ public sealed class FromScriptCommand(
     ScriptTimelineMapperOperator mapperOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<FromScriptCommand> logger, ICenturionDocumentStore store) : AsyncCommand<FromScriptSettings>
 {
     /// <summary>
@@ -87,6 +88,10 @@ public sealed class FromScriptCommand(
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
+
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
 
             // 保存为 Centurion 中间文件（含词级时间戳/说话人/脚本映射等全部详细信息）
@@ -96,11 +101,24 @@ public sealed class FromScriptCommand(
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Subtitle generation completed"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "from-script",
+                    status = "ok",
+                    input = inputPath,
+                    output = outputPath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "From-script pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "From-script pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

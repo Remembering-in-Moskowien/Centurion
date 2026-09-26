@@ -7,7 +7,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <c>convert</c> 命令的选项：将现有字幕文件转换为 Centurion 中间文件（*.centurion.json）。
 /// 中间文件包含句子与词级时间轴（ASS karaoke 标签解析）的完整详细信息，供后续命令继续处理。
 /// </summary>
-public sealed class ConvertSettings : CommandSettings
+public sealed class ConvertSettings : GlobalCommandSettings
 {
     /// <summary>
     /// 输入字幕文件（任意 SubtitlesParserV2 支持的格式）。

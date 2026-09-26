@@ -1,4 +1,5 @@
 using Centurion.Cli.Commands.Settings;
+using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Factories;
 using Centurion.Core.Capabilities.Infrastructure;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Centurion.Cli;
 using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
@@ -99,7 +101,7 @@ public sealed class PipelineGraphCommand(
         {
             logger.LogError(ex, "pipeline graph rendering failed.");
             ConsoleServices.Output.WriteError(ex.Message);
-            return 1;
+            return ExitCodes.Failure;
         }
     }
 

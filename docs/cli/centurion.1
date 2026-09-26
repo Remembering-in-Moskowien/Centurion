@@ -1,0 +1,119 @@
+.TH CENTURION 1 "2026-09-26" "0.1.0" "Centurion Manual"
+.SH NAME
+Centurion \- subtitle workflow CLI (transcribe, translate, dub, quality)
+.SH SYNOPSIS
+.B Centurion
+[\fIOPTIONS\fR] \fICOMMAND\fR [\fIARGS\fR]
+.SH DESCRIPTION
+Centurion is a subtitle workflow CLI: transcribe audio/video (ASR or OCR),
+align to a script, translate, dub, and build ASS/SRT/TXT subtitles.
+All core pipelines run as a DAG; run
+.B Centurion pipeline-graph \-c <command>
+to preview topology.
+.SH QUICK START (3 commands)
+.nf
+Centurion asr media.mp4
+Centurion translate media.centurion.json --target zh
+Centurion build media.centurion.json --format ass
+.fi
+Or run
+.B Centurion init
+for an interactive wizard that writes centurion.config.json and the recommended command chain.
+.SH GLOBAL OPTIONS
+.TP
+.B \-\-json
+Output the result summary as machine-readable JSON (suppresses human lines; script-consumable).
+.TP
+.B \-\-dry-run
+Preview DAG, involved models and provider unit costs without executing.
+.TP
+.B \-v, \-\-verbose
+Show full execution info (step timings and per-stage logs).
+.TP
+.B \-\-lang <CODE>
+Runtime UI language (e.g. zh-CN).
+.TP
+.B \-\-profile <NAME>
+Provider selection profile: offline / fast / quality / cheap.
+.TP
+.B \-\-github-proxy <URL> / \-\-no-github-proxy
+GitHub download acceleration (mirror) control.
+.TP
+.B \-h, \-\-help
+Print help.
+.SH COMMANDS
+.TP
+.B init
+Interactive wizard: generate centurion.config.json + recommended command chain.
+.TP
+.B asr <INPUT_FILE>
+Auto subtitle generation: audio/video -> transcription/diarization/splitting/alignment -> intermediate file.
+.TP
+.B ocr <INPUT_FILE>
+Subtitle OCR from video frames (RapidOCR/LLM) -> splitting/cleaning -> intermediate file.
+.TP
+.B from-script <INPUT_FILE> <SCRIPT_FILE>
+Script alignment: transcribe media against the given script and map the timeline.
+.TP
+.B correct <CENTURION_FILE>
+Subtitle correction against reference script/audio timeline (timeline-only/text-only/both).
+.TP
+.B translate <CENTURION_FILE>
+LLM translation with glossary and target script 1:1 alignment; bilingual support.
+.TP
+.B dub <CENTURION_FILE>
+Media dubbing: speaker profiling -> TTS -> time alignment -> mixing -> WAV.
+.TP
+.B convert <INPUT_FILE>
+Parse ASS/SRT/TXT subtitles into the Centurion intermediate file.
+.TP
+.B build <CENTURION_FILE>
+Build intermediate file into ASS/SRT/TXT subtitles.
+.TP
+.B quality <INPUT_FILE>
+Quality report (.json/.html), \-\-fix auto-repair, \-\-fail-on CI gates.
+.TP
+.B pipeline-graph
+Render a command's DAG topology (no execution); \-c selects asr/ocr/from-script/translate/dub/correct/convert.
+.TP
+.B validate <files>
+Validate Centurion intermediate files against the IR schema.
+.TP
+.B migrate <file>
+Migrate intermediate files to a newer IR schema version (\-\-to).
+.TP
+.B update
+Self-update from GitHub Releases.
+.TP
+.B models
+Model registry management: list / install / verify / remove.
+.TP
+.B providers
+Provider inspection: list / test (capabilities, cost, latency, quality).
+.SH EXIT CODES
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Execution failure (missing model, pipeline/IO errors).
+.TP
+.B 2
+Usage errors (reserved; parse errors are reported by the CLI itself).
+.TP
+.B 130
+Cancelled by user (Ctrl+C).
+.SH CONFIGURATION
+centurion.config.json in the current directory (or up two levels). Environment variables override it:
+CENTURION_PROFILE, CENTURION_LANG, CENTURION_GITHUB_PROXY, CENTURION_LOG_LEVEL, CENTURION_JSON, CENTURION_OUTPUT_FORMAT.
+CLI arguments take precedence over both.
+.SH EXAMPLES
+See the samples/ directory for media, subtitles, and intermediate files.
+.nf
+Centurion models list
+Centurion providers list
+Centurion convert samples/test.srt --dry-run
+Centurion quality samples/sample.centurion.json --fail-on cps>20
+.fi
+.SH SEE ALSO
+GitHub Releases for the binary; issue tracker for bug reports.

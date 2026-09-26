@@ -8,7 +8,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <summary>
 /// <c>asr</c> 命令的选项：从音视频媒体自动完成转录、说话人分割、分句与对齐，生成字幕。
 /// </summary>
-public sealed class SpawnSettings : CommandSettings
+public sealed class SpawnSettings : GlobalCommandSettings
 {
 
     // ----- 基础参数（不变）-----

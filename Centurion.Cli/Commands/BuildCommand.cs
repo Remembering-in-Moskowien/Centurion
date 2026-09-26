@@ -1,4 +1,5 @@
 using Centurion.Cli.Commands.Settings;
+using Centurion.Abstractions;
 using Centurion.Models.Ass;
 using Centurion.Core.Capabilities.Infrastructure;using Centurion.Abstractions.Utils;
 using Microsoft.Extensions.Logging;
@@ -58,8 +59,8 @@ public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCom
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Build pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Build pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

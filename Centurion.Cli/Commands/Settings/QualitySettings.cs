@@ -7,7 +7,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <c>quality</c> 命令的选项：质量报告（.quality.json + .quality.html）、
 /// 自动修复（--fix）与 CI 阈值（--fail-on）。
 /// </summary>
-public sealed class QualitySettings : CommandSettings
+public sealed class QualitySettings : GlobalCommandSettings
 {
     /// <summary>
     /// 待评估的 Centurion 中间文件（.centurion.json）。

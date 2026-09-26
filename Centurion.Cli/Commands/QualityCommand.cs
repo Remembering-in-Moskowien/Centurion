@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Spectre.Console.Cli;
+using Centurion.Cli;
 
 namespace Centurion.Cli.Commands;
 
@@ -139,16 +140,15 @@ public sealed class QualityCommand(
             {
                 ConsoleServices.Output.WriteError(ConsoleServices.T(
                     "Quality gate failed: {0}", string.Join("; ", report.FailedThresholds)));
-                return 1;
+                return ExitCodes.Failure;
             }
 
             return 0;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "quality execution failed.");
-            ConsoleServices.Output.WriteError(ex.Message);
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "quality execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

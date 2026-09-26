@@ -6,7 +6,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <summary>
 /// <c>update</c> 命令的选项：检查 / 下载 / 应用新版本。
 /// </summary>
-public sealed class UpdateSettings : CommandSettings
+public sealed class UpdateSettings : GlobalCommandSettings
 {
     /// <summary>
     /// 是否仅检查新版本而不下载任何内容。

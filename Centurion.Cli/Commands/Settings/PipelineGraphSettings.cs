@@ -6,7 +6,7 @@ namespace Centurion.Cli.Commands.Settings;
 /// <summary>
 /// <c>pipeline graph</c> 命令的选项：渲染指定命令的 DAG 管线拓扑（节点、依赖、条件、重试/降级标注）。
 /// </summary>
-public sealed class PipelineGraphSettings : CommandSettings
+public sealed class PipelineGraphSettings : GlobalCommandSettings
 {
     /// <summary>
     /// 要渲染的命令 DAG：asr（默认）或 translate。

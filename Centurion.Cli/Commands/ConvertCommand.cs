@@ -22,6 +22,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
     private readonly QualityReportOperator _qualityReportOp;
     private readonly ILogger<ConvertCommand> _logger;
     private readonly ICenturionDocumentStore _store;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// 使用管道执行器与转换算子工厂初始化命令。
@@ -36,13 +37,15 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
         Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory,
         QualityReportOperator qualityReportOp,
         ILogger<ConvertCommand> logger,
-        ICenturionDocumentStore store)
+        ICenturionDocumentStore store,
+        IServiceProvider serviceProvider)
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _convertOperatorsFactory = convertOperatorsFactory ?? throw new ArgumentNullException(nameof(convertOperatorsFactory));
         _qualityReportOp = qualityReportOp ?? throw new ArgumentNullException(nameof(qualityReportOp));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _store = store ?? throw new ArgumentNullException(nameof(store));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     /// <summary>
@@ -69,6 +72,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
             // convert DAG：解析算子 → 质量报告（pipeline-graph 命令共享同一装配）
             var dag = BuildConvertDag(_convertOperatorsFactory().ToList(), _qualityReportOp);
+
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, config, _serviceProvider, settings.Json, cancellationToken);
+
             await _executor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
             // 保存为 Centurion 中间文件（供后续命令继续处理）
@@ -77,13 +85,25 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Conversion succeeded"));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
-            return 0;
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "convert",
+                    status = "ok",
+                    input = settings.InputFile.FullName,
+                    output = outputPath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
             // 命令层为执行路径的最外层：此处统一输出唯一一次 fail
-            FailLogGate.Log(_logger, ex, "Conversion pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(_logger, ex, "Conversion pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

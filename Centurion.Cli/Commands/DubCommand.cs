@@ -22,6 +22,7 @@ public sealed class DubCommand(
     AudioMixOperator audioMixOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<DubCommand> logger, ICenturionDocumentStore store) : AsyncCommand<DubSettings>
 {
     /// <summary>
@@ -80,6 +81,10 @@ public sealed class DubCommand(
             // dub DAG：画像 → 合成 → 对齐 → 混音 → 质量报告（pipeline-graph 命令共享同一装配）
             var dag = BuildDubDag(speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp);
 
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, workflowContext.Config, serviceProvider, settings.Json, ct);
+
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
 
             var segments = workflowContext.State.DubSegments;
@@ -97,14 +102,27 @@ public sealed class DubCommand(
             }
 
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Dubbed audio completed: {0}", wavPath));
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "dub",
+                    status = "ok",
+                    input = inputPath,
+                    output = wavPath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Synthesized {0}/{1} segments -> {2}", dubbed, segments.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", outputPath));
             return 0;
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Dubbing pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Dubbing pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

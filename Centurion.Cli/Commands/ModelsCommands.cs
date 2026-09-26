@@ -1,3 +1,5 @@
+using Centurion.Cli.Commands.Settings;
+using Centurion.Abstractions;
 using Centurion.Core.Capabilities.Managers.Media;
 using Centurion.Models.Console;
 using Centurion.Models.Metadata;
@@ -55,8 +57,8 @@ internal static class ModelCatalog
     }
 }
 
-/// <summary>models 子命令的公共选项（无全局参数）。</summary>
-public class ModelsSettings : CommandSettings
+/// <summary>models 子命令的公共选项（含全局 --json/--dry-run）。</summary>
+public class ModelsSettings : GlobalCommandSettings
 {
 }
 
@@ -127,14 +129,14 @@ public sealed class ModelsInstallCommand(
         if (hits.Count == 0)
         {
             ConsoleServices.Output.WriteError($"Unknown model '{settings.Model}'. Run 'Centurion models list' to see registered models.");
-            return 1;
+            return ExitCodes.Failure;
         }
         if (hits.Count > 1)
         {
             ConsoleServices.Output.WriteError(
                 $"Model '{settings.Model}' is ambiguous: " +
                 string.Join(", ", hits.Select(h => $"{h.Domain.Name}/{h.ModelName}")) + ".");
-            return 1;
+            return ExitCodes.Failure;
         }
 
         var (domain, modelName, _) = hits[0];
@@ -158,14 +160,14 @@ public sealed class ModelsVerifyCommand(
         if (hits.Count == 0)
         {
             ConsoleServices.Output.WriteError($"Unknown model '{settings.Model}'. Run 'Centurion models list' to see registered models.");
-            return 1;
+            return ExitCodes.Failure;
         }
         if (hits.Count > 1)
         {
             ConsoleServices.Output.WriteError(
                 $"Model '{settings.Model}' is ambiguous: " +
                 string.Join(", ", hits.Select(h => $"{h.Domain.Name}/{h.ModelName}")) + ".");
-            return 1;
+            return ExitCodes.Failure;
         }
 
         var (domain, modelName, _) = hits[0];
@@ -199,14 +201,14 @@ public sealed class ModelsRemoveCommand(
         if (hits.Count == 0)
         {
             ConsoleServices.Output.WriteError($"Unknown model '{settings.Model}'. Run 'Centurion models list' to see registered models.");
-            return 1;
+            return ExitCodes.Failure;
         }
         if (hits.Count > 1)
         {
             ConsoleServices.Output.WriteError(
                 $"Model '{settings.Model}' is ambiguous: " +
                 string.Join(", ", hits.Select(h => $"{h.Domain.Name}/{h.ModelName}")) + ".");
-            return 1;
+            return ExitCodes.Failure;
         }
 
         var (domain, modelName, _) = hits[0];

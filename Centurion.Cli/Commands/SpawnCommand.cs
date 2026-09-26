@@ -23,6 +23,7 @@ public sealed class SpawnCommand(
     TextPreprocessingOperator textCleaningOp,
     QualityReportOperator qualityReportOp,
     PipelineExecutor pipelineExecutor,
+    IServiceProvider serviceProvider,
     ILogger<SpawnCommand> logger, ICenturionDocumentStore store)
     : AsyncCommand<SpawnSettings>
 {
@@ -113,6 +114,10 @@ public sealed class SpawnCommand(
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
+            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            if (settings.DryRun)
+                return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
+
             // Execute the DAG pipeline（就绪节点并行；条件跳过、重试、超时、降级由执行器统一处理）
             var stepResults = await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
             var skipped = stepResults.Where(r => r.Status == PipelineStepStatus.Skipped).Select(r => r.Name).ToList();
@@ -130,11 +135,24 @@ public sealed class SpawnCommand(
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", intermediatePath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
             return 0;
+
+            if (settings.Json)
+            {
+                JsonOutput.Write(new
+                {
+                    command = "asr",
+                    status = "ok",
+                    input = inputPath,
+                    output = intermediatePath,
+                    steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
+                });
+            }
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
-            FailLogGate.Log(logger, ex, "Pipeline execution failed.");
-            return 1;
+            CliErrorPrinter.Print(logger, ex, "Pipeline execution failed.");
+            return ExitCodes.Failure;
         }
     }
 

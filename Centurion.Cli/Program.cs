@@ -1,3 +1,4 @@
+using Centurion.Cli;
 using Centurion.Core.Utils.Infrastructure;
 using Centurion.Models.Console;
 using System.Globalization;
@@ -17,11 +18,7 @@ ConsoleServices.Confirm = new SpectreConfirmPrompt();
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-// ----- Brand banner -----
-AnsiConsole.Write(new FigletText("Centurion").Centered().Color(Color.Aqua));
-var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "dev";
-AnsiConsole.Write(new Markup($"[dim]v{version} · 字幕工作流 CLI[/]").Centered());
-AnsiConsole.Write(new Rule().RuleStyle("grey"));
+
 
 // --verbose / -v：显示完整执行信息（步骤耗时、各阶段日志）；默认仅输出 warn/fail，控制台保持干净
 var verbose = args.Any(a => a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
@@ -34,17 +31,37 @@ var lang = args.Where((a, i) => i > 0 && args[i - 1].Equals("--lang", StringComp
 var githubProxyArg = args.Where((a, i) => i > 0 && args[i - 1].Equals("--github-proxy", StringComparison.OrdinalIgnoreCase))
     .Select(a => a.TrimStart('-'))
     .FirstOrDefault();
+
+// centurion.config.json + CENTURION_* 环境变量：作为默认值（命令行参数优先）
+var appConfig = CenturionConfig.Load();
+var proxyValue = githubProxyArg ?? appConfig.GithubProxy;
 if (args.Any(a => a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase)))
     Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.Disabled = true;
-else if (!string.IsNullOrWhiteSpace(githubProxyArg))
-    Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.ProxyPrefix = githubProxyArg.EndsWith('/') ? githubProxyArg : githubProxyArg + "/";
+else if (proxyValue == "")
+    Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.Disabled = true;
+else if (!string.IsNullOrWhiteSpace(proxyValue))
+    Centurion.Core.Utils.Infrastructure.GitHubDownloadProxy.ProxyPrefix = proxyValue.EndsWith('/') ? proxyValue : proxyValue + "/";
 // --profile <offline|fast|quality|cheap>：Provider 选型 profile（本地/云互备策略、预算取向）
 var profileArg = args.Where((a, i) => i > 0 && args[i - 1].Equals("--profile", StringComparison.OrdinalIgnoreCase))
     .Select(a => a.TrimStart('-'))
     .FirstOrDefault();
-if (!string.IsNullOrWhiteSpace(profileArg))
+
+var profileName = profileArg ?? appConfig.Profile;
+if (!string.IsNullOrWhiteSpace(profileName))
     Centurion.Core.Providers.ProviderProfileResolver.Current =
-        Centurion.Core.Providers.ProviderProfileResolver.FromString(profileArg);
+        Centurion.Core.Providers.ProviderProfileResolver.FromString(profileName);
+
+// --json 全局开关：config.Json 或命令行 --json 任一开启 → 抑制人类可读行，仅输出 JSON
+var globalJson = appConfig.Json == true || args.Any(a => a.Equals("--json", StringComparison.OrdinalIgnoreCase));
+
+// ----- Brand banner（--json 模式跳过，保持 stdout 纯净）-----
+if (!globalJson)
+{
+    AnsiConsole.Write(new FigletText("Centurion").Centered().Color(Color.Aqua));
+    var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "dev";
+    AnsiConsole.Write(new Markup($"[dim]v{version} · 字幕工作流 CLI[/]").Centered());
+    AnsiConsole.Write(new Rule().RuleStyle("grey"));
+}
 
 var filteredArgs = args
     .Where((a, i) => !a.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
@@ -56,6 +73,9 @@ var filteredArgs = args
         && !a.Equals("--no-github-proxy", StringComparison.OrdinalIgnoreCase)        && !(i > 0 && args[i - 1].Equals("--profile", StringComparison.OrdinalIgnoreCase))
         && !a.Equals("--profile", StringComparison.OrdinalIgnoreCase))
     .ToArray();
+
+if (lang is null && !string.IsNullOrWhiteSpace(appConfig.Language))
+    lang = appConfig.Language;
 
 if (!string.IsNullOrWhiteSpace(lang))
 {
@@ -84,7 +104,7 @@ Console.CancelKeyPress += (_, e) =>
 var services = new ServiceCollection();
 services.AddLogging(logging =>
 {
-    logging.SetMinimumLevel(verbose ? LogLevel.Information : LogLevel.Warning);
+    logging.SetMinimumLevel(globalJson || !verbose ? LogLevel.Warning : LogLevel.Information);
     // 文件日志记录全部级别（含 info），控制台仍按全局级别过滤
     logging.AddFilter<Centurion.Core.Capabilities.Logging.FileLoggerProvider>(level => level >= LogLevel.Trace);
     // 控制台侧：SpectreConsoleOutput 的信息行已由渲染层直接输出，屏蔽其 info 避免重复显示
@@ -107,6 +127,8 @@ var serviceProvider = services.BuildServiceProvider();
 // 控制台输出统一接入日志系统：每条控制台内容同时写入 ILogger（进而写入 logs 目录）
 var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 ConsoleServices.Output = new SpectreConsoleOutput(loggerFactory.CreateLogger<SpectreConsoleOutput>());
+if (globalJson)
+    Centurion.Cli.Console.SpectreConsoleOutput.SuppressHumanLines = true;
 
 // JSON 本地化：消息按 --lang 选择的语言输出（Localization/{lang}.json，缺省英文）
 ConsoleServices.Localizer = new Centurion.Core.Capabilities.Localization.JsonStringLocalizerFactory().Create("Centurion");
@@ -133,6 +155,9 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetApplicationName("Centurion");
+    // ─── 新手指引 ───
+    config.AddCommand<InitCommand>("init")
+        .WithDescription("交互式向导：生成 centurion.config.json 与推荐命令链（转写→翻译→出字幕）");
     // ─── 核心字幕管线（统一走 DAG，pipeline-graph 可查看拓扑） ───
     config.AddCommand<SpawnCommand>("asr")
         .WithDescription("自动字幕生成：音视频 → 转录/说话人分割/分句/对齐 → Centurion 中间文件");
