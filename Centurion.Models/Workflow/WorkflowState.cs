@@ -1,4 +1,5 @@
 using Centurion.Models;
+using Centurion.Models.Ass;
 
 namespace Centurion.Models.Workflow;
 
@@ -75,6 +76,13 @@ public class WorkflowState
     // ---------- 译制（dub）数据 ----------
     /// <summary>译制分段（说话人画像 + TTS 合成 + 时间对齐 + 混音的段级数据）。</summary>
     public List<DubSegment> DubSegments { get; set; } = [];
+
+    // ---------- ASS 样式表 ----------
+    /// <summary>
+    /// ASS 样式表（[V4+ Styles] 区）。convert 解析 ASS 时写入；build 渲染 ASS 时优先使用；
+    /// 为空时渲染端回退到内置默认样式。由 Studio 前端通过中间文件编辑。
+    /// </summary>
+    public List<AssStyle> Styles { get; set; } = [];
 
     /// <summary>整个流水线是否已收尾完成。</summary>
     public bool IsFinalized { get; set; }

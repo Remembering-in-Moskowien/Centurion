@@ -17,6 +17,11 @@ public class Sentence
     public bool SkipRender { get; set; }
     /// <summary>该句包含的词级明细列表，无词级时间轴时为空。</summary>
     public List<Word> Words { get; set; } = [];
+    /// <summary>
+    /// 绑定的 ASS 样式名（对话行 Style 列）。为空时渲染端回退到默认样式；
+    /// 由 convert 解析 ASS 时填充、build 渲染 ASS 时消费，供 Studio 前端逐行指定样式。
+    /// </summary>
+    public string? Style { get; set; }
 
     /// <summary>
     /// 句子说话人：从词级 <see cref="Word.Speaker"/> 按多数投票推导。
