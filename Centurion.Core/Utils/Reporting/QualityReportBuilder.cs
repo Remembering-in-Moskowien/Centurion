@@ -279,7 +279,7 @@ public static class QualityReportBuilder
     private static QualityAlignment BuildAlignment(WorkflowState state, List<Sentence> sentences)
     {
         var durations = sentences
-            .Select(s => (s.End - s.Start) * 1000)
+            .Select(s => s.End - s.Start)   // Start/End 已统一为毫秒（去掉多余的 ×1000，此前把 ms 误当 s 放大 1000 倍）
             .Where(ms => ms >= 0)
             .ToList();
 

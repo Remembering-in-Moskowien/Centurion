@@ -35,8 +35,8 @@ public static class CliSymbols
         UnicodeSafe = unicodeSafe;
         if (unicodeSafe)
             return;
-        Check = "[OK]";
-        Cross = "[ERR]";
+        Check = "OK";      // 降级值不得含方括号：Spectre 会把 [OK] 当作颜色标记解析而抛异常
+        Cross = "ERR";
         Arrow = "->";
         Play = ">";
         Done = "ok";

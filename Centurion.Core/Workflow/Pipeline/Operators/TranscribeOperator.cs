@@ -58,13 +58,40 @@ public class TranscribeOperator(
         context.State.ProviderUsages.Add(usage);
 
         if (context.State.TranscribeSentences.Count == 0)
-            context.State.TranscribeSentences = GroupIntoSentences(providerResult.Value);
+            context.State.TranscribeSentences = GroupIntoSentences(DeduplicateWordRepeats(providerResult.Value));
         context.State.CurrentSentences = [.. context.State.TranscribeSentences];
         context.State.IsTranscribed = true;
 
         OnProgress(100, "Transcription completed.");
         LogInfo($"Transcribed {context.State.TranscribeSentences.Count} sentences " +
                 $"via {usage.ProviderName} (est. ${usage.EstimatedCostUsd:F4}).");
+    }
+
+    /// <summary>
+    /// 去除词流中相邻完全重复的词（文本相同且起止时间戳完全一致）。
+    /// CrispASR 的 qwen3 后端在分段解码时会把句首 token 重复发射一次
+    /// （同文本同时间戳，实测几乎每句首词都重复，导致字幕每句前多出一个词）；
+    /// 真实语音中不存在两个时间戳完全一致的词，故此规则安全，不会误删叠词/叠句。
+    /// </summary>
+    /// <param name="words">转录词流（provider 原始输出）。</param>
+    /// <returns>去重后的词流。</returns>
+    internal static List<Word> DeduplicateWordRepeats(IReadOnlyList<Word> words)
+    {
+        var result = new List<Word>(words.Count);
+        Word? prev = null;
+        foreach (var word in words)
+        {
+            if (prev is not null
+                && prev.Start == word.Start
+                && prev.End == word.End
+                && string.Equals(prev.Text, word.Text, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            result.Add(word);
+            prev = word;
+        }
+        return result;
     }
 
     /// <summary>把词级结果按句分组（按标点启发式切句；无标点时整段为一句），句级置信度为词级均值。</summary>
@@ -77,16 +104,24 @@ public class TranscribeOperator(
         Sentence? current = null;
         foreach (var word in words)
         {
-            current ??= new Sentence
+            if (current is null)
             {
-                Start = word.Start,
-                End = word.End,
-                Text = word.Text,
-                Words = [word]
-            };
-            current.Words.Add(word);
-            current.Text = string.Concat(current.Words.Select(w => w.Text));
-            current.End = word.End;
+                // 首词直接建立句子（Words 初始即含该词）；此前在 ??= 后又 Add 一次，
+                // 导致每句首词双加（字幕每句前多出一个词），已修复。
+                current = new Sentence
+                {
+                    Start = word.Start,
+                    End = word.End,
+                    Text = word.Text,
+                    Words = [word]
+                };
+            }
+            else
+            {
+                current.Words.Add(word);
+                current.Text = string.Concat(current.Words.Select(w => w.Text));
+                current.End = word.End;
+            }
             if (IsSentenceBoundary(word.Text))
             {
                 sentences.Add(current);
