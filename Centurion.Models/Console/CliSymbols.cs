@@ -10,7 +10,7 @@ namespace Centurion.Models.Console;
 public static class CliSymbols
 {
     /// <summary>成功徽章。</summary>
-    [NotNull] public static string Check = "✔";
+    [NotNull] public static string Check = "✓";
     /// <summary>失败/错误符号。</summary>
     [NotNull] public static string Cross = "✖";
     /// <summary>步骤箭头。</summary>

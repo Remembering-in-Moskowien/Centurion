@@ -5,24 +5,24 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli;
 
 /// <summary>
-/// Spectre.Cli 类型注册器：将命令及依赖类型登记到 Microsoft DI 容器。
+/// Spectre.Cli type registrar: registers command and dependency types with the Microsoft DI container.
 /// </summary>
 public sealed class TypeRegistrar(IServiceCollection services) : ITypeRegistrar
 {
     /// <summary>
-    /// 构建服务提供器并返回对应的类型解析器。
+    /// Builds a service provider and returns the matching type resolver.
     /// </summary>
-    /// <returns>用于运行时解析类型的解析器。</returns>
+    /// <returns>The resolver used to resolve types at runtime.</returns>
     public ITypeResolver Build()
     {
         return new TypeResolver(services.BuildServiceProvider());
     }
 
     /// <summary>
-    /// 以单例方式注册服务类型到实现类型的映射。
+    /// Registers a singleton mapping from a service type to an implementation type.
     /// </summary>
-    /// <param name="service">服务抽象类型。</param>
-    /// <param name="implementation">具体实现类型。</param>
+    /// <param name="service">The service abstraction type.</param>
+    /// <param name="implementation">The concrete implementation type.</param>
     public void Register(Type service,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         Type implementation)
@@ -31,20 +31,20 @@ public sealed class TypeRegistrar(IServiceCollection services) : ITypeRegistrar
     }
 
     /// <summary>
-    /// 以单例方式注册服务类型到既有实例的映射。
+    /// Registers a singleton mapping from a service type to an existing instance.
     /// </summary>
-    /// <param name="service">服务抽象类型。</param>
-    /// <param name="implementation">已构造好的实现实例。</param>
+    /// <param name="service">The service abstraction type.</param>
+    /// <param name="implementation">An already constructed implementation instance.</param>
     public void RegisterInstance(Type service, object implementation)
     {
         services.AddSingleton(service, implementation);
     }
 
     /// <summary>
-    /// 以延迟工厂方式注册服务，首次解析时才调用工厂创建实例。
+    /// Registers a service via a lazy factory; the factory runs only on first resolution.
     /// </summary>
-    /// <param name="service">服务抽象类型。</param>
-    /// <param name="factory">创建实现实例的工厂委托。</param>
+    /// <param name="service">The service abstraction type.</param>
+    /// <param name="factory">The factory delegate that creates the implementation instance.</param>
     public void RegisterLazy(Type service, Func<object> factory)
     {
         services.AddSingleton(service, _ => factory());
@@ -52,15 +52,15 @@ public sealed class TypeRegistrar(IServiceCollection services) : ITypeRegistrar
 }
 
 /// <summary>
-/// Spectre.Cli 类型解析器：从已构建的 DI 容器解析服务实例。
+/// Spectre.Cli type resolver: resolves service instances from the built DI container.
 /// </summary>
 public sealed class TypeResolver(IServiceProvider provider) : ITypeResolver
 {
     /// <summary>
-    /// 解析指定类型的服务实例。
+    /// Resolves a service instance of the given type.
     /// </summary>
-    /// <param name="type">要解析的类型；为 null 时返回 null。</param>
-    /// <returns>解析到的服务实例；未注册时返回 null。</returns>
+    /// <param name="type">The type to resolve; null returns null.</param>
+    /// <returns>The resolved service instance; null when unregistered.</returns>
     public object? Resolve(Type? type)
     {
         return type == null ? null : provider.GetService(type);

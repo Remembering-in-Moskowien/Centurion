@@ -11,7 +11,7 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>asr</c> 命令：从音视频媒体自动转录、说话人分割、分句与对齐，生成字幕。
+/// <c>asr</c> command: transcribe, diarize, split and align audio/video media into subtitles.
 /// </summary>
 public sealed class SpawnCommand(
     ITempDirectoryManager tempManager,
@@ -28,11 +28,11 @@ public sealed class SpawnCommand(
     : AsyncCommand<SpawnSettings>
 {
     /// <summary>
-    /// 执行自动字幕生成流程：组装并运行管道，写出 ASS 字幕文件。
+    /// Runs the auto-subtitle pipeline: assembles and runs it, then writes the ASS subtitle file.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">spawn 命令选项。</param>
-    /// <param name="ct">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The asr (spawn) command settings.</param>
+    /// <param name="ct">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, SpawnSettings settings, CancellationToken ct)
     {
         try
@@ -155,9 +155,9 @@ public sealed class SpawnCommand(
     }
 
     /// <summary>
-    /// 组装 ASR DAG（pipeline graph 命令与 asr 命令共享的单一事实源）：
-    /// 条件节点按配置跳过（人声分离/说话人分割/对齐/清洗）；
-    /// 说话人分割与对齐失败可降级（重试耗尽后跳过继续），不拖垮整条任务。
+    /// Assembles the ASR DAG (single source of truth shared with the pipeline graph command):
+    /// conditional nodes are skipped per config (vocal separation/diarization/alignment/cleaning);
+    /// diarization and alignment degrade on failure (skip after retries), never stalling the whole task.
     /// </summary>
     internal static PipelineDag BuildAsrDag(
         SubtitleTrackCheckerOperator trackChecker,
@@ -176,17 +176,17 @@ public sealed class SpawnCommand(
 
         var builder = PipelineDag.CreateBuilder();
         builder
-            .Add("Track Check", trackChecker, description: "检查输入媒体轨道与格式")
-            .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "重采样/转码为统一音频")
-            .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "降噪/重采样/响度归一化")
+            .Add("Track Check", trackChecker, description: "Inspect input media tracks and format")
+            .Add("FFmpeg Convert", ffmpegOp, dependsOn: ["Track Check"], description: "Resample/transcode to a unified audio")
+            .Add("Audio Preprocess", audioPreprocessOp, dependsOn: ["FFmpeg Convert"], description: "Noise reduction/resample/loudness normalization")
             .Add("Vocal Separation", vocalSepOp,
                 dependsOn: ["Audio Preprocess"],
                 when: c => c.Config.VocalSeparation,
-                description: "Demucs 人声分离（按配置开启；关闭时跳过）")
+                description: "Demucs vocal separation (enabled by config; skipped when off)")
             .Add("Transcribe", transcribeOp,
                 dependsOn: ["Vocal Separation"],
                 maxRetries: 1,
-                description: "ASR 转录（失败自动重试 1 次）");
+                description: "ASR transcription (auto-retry once on failure)");
 
         var afterTranscribe = "Transcribe";
         if (diarizationOp is not null)
@@ -196,19 +196,19 @@ public sealed class SpawnCommand(
                 when: c => !string.Equals(c.Config.DiarizationBackend, "none", StringComparison.OrdinalIgnoreCase),
                 maxRetries: 1,
                 degradeOnFailure: true,
-                description: "说话人分割标注（失败降级跳过，不中断）");
+                description: "Speaker diarization (degrade-skip on failure, non-fatal)");
             afterTranscribe = "Speaker Diarization";
         }
 
         builder.Add("Sentence Splitting", splitOp,
             dependsOn: [afterTranscribe],
-            description: "分句（合并/切分）");
+            description: "Sentence splitting (merge/split)");
 
         var afterSplit = "Sentence Splitting";
         builder.Add("Text Cleaning", textCleaningOp,
             dependsOn: [afterSplit],
             when: c => c.Config.EnableTextCleaning,
-            description: "对齐前文本清洗（按配置开关）");
+            description: "Text cleaning before alignment (enabled by config)");
         afterSplit = "Text Cleaning";
 
         if (alignmentOp is not null)
@@ -218,13 +218,13 @@ public sealed class SpawnCommand(
                 when: c => c.Config.EnableAlignment,
                 maxRetries: 1,
                 degradeOnFailure: true,
-                description: "词级强制对齐（失败降级跳过，不中断）");
+                description: "Word-level forced alignment (degrade-skip on failure, non-fatal)");
             afterSplit = "Force Alignment";
         }
 
         builder.Add("Quality Report", qualityReportOp,
             dependsOn: [afterSplit],
-            description: "质量报告收尾");
+            description: "Quality report wrap-up");
         return builder.Build();
     }
 

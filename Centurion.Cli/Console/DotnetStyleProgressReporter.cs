@@ -2,18 +2,19 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Console;
 
 /// <summary>
-/// dotnet CLI 风格的单行 spinner 动画进度（替代复杂的 Spectre 复合进度条）。
-/// 以一行旋转字符 + 文本描述实时刷新，完成时清行，风格与 dotnet 构建输出一致、克制。
+/// dotnet-CLI-style single-line spinner progress (a restrained alternative to the
+/// complex Spectre composite progress bar). Refreshes one line of spinner + text,
+/// clears on completion, matching dotnet build output in style.
 /// </summary>
 public sealed class DotnetStyleProgressReporter : IProgressReporter
 {
     private static readonly string[] Frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
     /// <summary>
-    /// 启动单行 spinner 进度，执行给定动作后停止并清行。
+    /// Starts single-line spinner progress, runs the action, then stops and clears the line.
     /// </summary>
-    /// <param name="title">spinner 前缀标题文本。</param>
-    /// <param name="action">在 spinner 运行期间执行的进度动作，可通过上下文更新进度。</param>
+    /// <param name="title">Spinner prefix title text.</param>
+    /// <param name="action">Progress action run while the spinner is active; can update progress via the context.</param>
     public void StartProgress(string title, Action<IProgressContext> action)
     {
         var spinner = new SpinnerState(title);

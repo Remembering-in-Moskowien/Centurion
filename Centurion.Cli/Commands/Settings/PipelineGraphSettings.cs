@@ -4,19 +4,19 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>pipeline graph</c> 命令的选项：渲染指定命令的 DAG 管线拓扑（节点、依赖、条件、重试/降级标注）。
+/// Options for the <c>pipeline graph</c> command: render a command's DAG topology (nodes, dependencies, conditions, retry/degrade labels).
 /// </summary>
 public sealed class PipelineGraphSettings : GlobalCommandSettings
 {
     /// <summary>
-    /// 要渲染的命令 DAG：asr（默认）或 translate。
+    /// The command DAG to render: asr (default) or translate.
     /// </summary>
     [CommandOption("-c|--command <COMMAND>")]
     [Description("Pipeline command to render: asr (default) or translate")]
     public string Command { get; init; } = "asr";
 
     /// <summary>
-    /// 输出文件路径（.mmd / .txt / .html）；省略时输出到控制台。
+    /// Output file path (.mmd / .txt / .html); prints to the console when omitted.
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
     [Description("Write graph to file (.mmd/.txt/.html); defaults to console")]

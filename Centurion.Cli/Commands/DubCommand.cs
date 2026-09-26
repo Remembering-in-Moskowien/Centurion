@@ -10,9 +10,11 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>dub</c> 命令：媒体译制——输入 Centurion 中间文件（含句子/翻译/说话人），输出配音后的 wav 音频与中间文件。
-/// Phase 1 MVP 管线：说话人画像 → TTS 合成（Qwen3-TTS via llama-tts）→ 时间对齐 → 混音 → 质量报告。
-/// 工具与模型按需自动下载（llama.cpp / Qwen3-TTS GGUF）。
+/// <c>dub</c> command: media dubbing — takes a Centurion intermediate file
+/// (sentences/translations/speakers) and outputs a dubbed wav plus an intermediate file.
+/// Phase 1 MVP pipeline: speaker profiling → TTS synthesis (Qwen3-TTS via llama-tts)
+/// → time alignment → mixing → quality report. Tools and models auto-download on demand
+/// (llama.cpp / Qwen3-TTS GGUF).
 /// </summary>
 public sealed class DubCommand(
     ITempDirectoryManager tempManager,
@@ -26,11 +28,11 @@ public sealed class DubCommand(
     ILogger<DubCommand> logger, ICenturionDocumentStore store) : AsyncCommand<DubSettings>
 {
     /// <summary>
-    /// 执行译制流程：组装 dub 管线并运行，输出译制 wav。
+    /// Runs the dubbing flow: assembles and runs the dub pipeline, writing the dubbed wav.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">dub 命令选项。</param>
-    /// <param name="ct">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The dub command settings.</param>
+    /// <param name="ct">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, DubSettings settings, CancellationToken ct)
     {
         try
@@ -125,8 +127,8 @@ public sealed class DubCommand(
     }
 
     /// <summary>
-    /// 组装 dub DAG（pipeline graph 命令与 dub 命令共享的单一事实源）：
-    /// 说话人画像 → TTS 合成 → 时间对齐 → 混音 → 质量报告。
+    /// Assembles the dub DAG (single source of truth shared with the pipeline graph command):
+    /// speaker profiling → TTS synthesis → time alignment → mixing → quality report.
     /// </summary>
     internal static PipelineDag BuildDubDag(
         SpeakerProfilingOperator speakerProfilingOp,
@@ -137,11 +139,11 @@ public sealed class DubCommand(
     {
         var builder = PipelineDag.CreateBuilder();
         builder
-            .Add("Speaker Profiling", speakerProfilingOp, description: "说话人画像提取")
-            .Add("TTS Synthesis", ttsSynthesisOp, dependsOn: ["Speaker Profiling"], description: "逐段 TTS 合成（Qwen3-TTS）")
-            .Add("Time Alignment", timeAlignmentOp, dependsOn: ["TTS Synthesis"], description: "合成音频与字幕时间轴对齐")
-            .Add("Audio Mix", audioMixOp, dependsOn: ["Time Alignment"], description: "混音/响度/ducking")
-            .Add("Quality Report", qualityReportOp, dependsOn: ["Audio Mix"], description: "质量报告收尾");
+            .Add("Speaker Profiling", speakerProfilingOp, description: "Extract speaker profiles")
+            .Add("TTS Synthesis", ttsSynthesisOp, dependsOn: ["Speaker Profiling"], description: "Per-segment TTS synthesis (Qwen3-TTS)")
+            .Add("Time Alignment", timeAlignmentOp, dependsOn: ["TTS Synthesis"], description: "Align synthesized audio with the subtitle timeline")
+            .Add("Audio Mix", audioMixOp, dependsOn: ["Time Alignment"], description: "Mixing/loudness/ducking")
+            .Add("Quality Report", qualityReportOp, dependsOn: ["Audio Mix"], description: "Quality report wrap-up");
         return builder.Build();
     }
 }

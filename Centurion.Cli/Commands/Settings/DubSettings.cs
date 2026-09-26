@@ -4,61 +4,75 @@ using System.ComponentModel;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>dub</c> 命令设置：媒体译制（Centurion 中间文件 → 译制 wav + 中间文件）。
-/// Phase 2/3 扩展：伴奏混音（ducking）、响度归一化、TTS 并行、长句分块、重叠降级。
+/// Settings for the <c>dub</c> command: media dubbing (Centurion intermediate file
+/// → dubbed wav + intermediate file). Phase 2/3: background mixing (ducking),
+/// loudness normalization, parallel TTS, long-sentence chunking, overlap fallback.
 /// </summary>
 public sealed class DubSettings : GlobalCommandSettings
 {
 
-    /// <summary>输入的 Centurion 中间文件（含句子、翻译与说话人信息）。</summary>
+    /// <summary>Input Centurion intermediate file (sentences, translations and speaker info).</summary>
     [CommandArgument(0, "<CENTURION_FILE>")]
+    [Description("Centurion intermediate file (.centurion.json)")]
     public required FileInfo CenturionFile { get; set; }
 
-    /// <summary>可选：原媒体文件（用于说话人参考音频提取；也作为输入时长基准）。</summary>
+    /// <summary>Optional: original media file (speaker reference audio extraction; also the input duration baseline).</summary>
     [CommandOption("--media <FILE>")]
+    [Description("Original media file (speaker reference extraction; duration baseline)")]
     public FileInfo? MediaFile { get; set; }
 
-    /// <summary>可选：手动指定说话人参考音频目录（每说话人一个 wav，文件名 SPEAKER_xx.wav）。</summary>
+    /// <summary>Optional: speaker reference audio directory (one wav per speaker, named SPEAKER_xx.wav).</summary>
     [CommandOption("--speaker-reference <DIR>")]
+    [Description("Speaker reference audio directory (one wav per speaker, SPEAKER_xx.wav)")]
     public DirectoryInfo? SpeakerReference { get; set; }
 
-    /// <summary>配音目标语言（ISO 639-1，如 zh/en/ja/de）。</summary>
+    /// <summary>Dubbing target language (ISO 639-1, e.g. zh/en/ja/de).</summary>
     [CommandOption("--target-language <LANG>")]
+    [Description("Dubbing target language (ISO 639-1, e.g. zh/en/ja/de)")]
     public string TargetLanguage { get; set; } = "zh";
 
-    /// <summary>TTS 引擎（当前仅 "llama"）。</summary>
+    /// <summary>TTS engine (currently "llama").</summary>
     [CommandOption("--tts-engine <ENGINE>")]
+    [Description("TTS engine (currently llama)")]
     public string TtsEngine { get; set; } = "llama";
 
-    /// <summary>TTS 模型名（metadata.json Models 中注册的键，如 1.7b-base-q4）。</summary>
+    /// <summary>TTS model name (a key registered in metadata.json Models, e.g. 1.7b-base-q4).</summary>
     [CommandOption("--tts-model <MODEL>")]
+    [Description("TTS model name (key in metadata.json Models, e.g. 1.7b-base-q4)")]
     public string TtsModel { get; set; } = "1.7b-base-q4";
 
-    /// <summary>输出中间文件路径；缺省为输入名 .dub.centurion.json（wav 另以 .dub.wav 输出）。</summary>
+    /// <summary>Output intermediate file; defaults to {input}.dub.centurion.json (wav written as .dub.wav).</summary>
     [CommandOption("-o|--output <FILE>")]
+    [Description("Output intermediate file (default: {input}.dub.centurion.json; wav as .dub.wav)")]
     public FileInfo? OutputFile { get; set; }
 
-    /// <summary>严格时间对齐：超出 0.5x-2.0x 可调范围时钳制到边界（默认开；关闭则保留原合成时长）。</summary>
+    /// <summary>Strict time alignment: clamp to bounds outside the 0.5x-2.0x adjustable range (default on; off keeps the raw synthesis duration).</summary>
     [CommandOption("--strict-timing")]
+    [Description("Strict time alignment: clamp outside the 0.5x-2.0x range (default on)")]
     public bool StrictTiming { get; set; } = true;
 
-    /// <summary>可选：伴奏/背景音频（原声带或配乐）；提供后启用 sidechain ducking 混音。</summary>
+    /// <summary>Optional: background audio (soundtrack or score); enables sidechain ducking mixing when provided.</summary>
     [CommandOption("--background <FILE>")]
+    [Description("Background audio (soundtrack/score); enables sidechain ducking")]
     public FileInfo? BackgroundFile { get; set; }
 
-    /// <summary>禁用 ducking（有 --background 时默认开启）。</summary>
+    /// <summary>Disable ducking (enabled by default when --background is set).</summary>
     [CommandOption("--no-ducking")]
+    [Description("Disable ducking (enabled by default with --background)")]
     public bool NoDucking { get; set; }
 
-    /// <summary>输出响度目标（LUFS，默认 -16；配合 loudnorm 归一化）。</summary>
+    /// <summary>Output loudness target in LUFS (default -16; used with loudnorm normalization).</summary>
     [CommandOption("--loudness-target <LUFS>")]
+    [Description("Output loudness target in LUFS (default -16)")]
     public double LoudnessTarget { get; set; } = -16;
 
-    /// <summary>TTS 合成并行度（默认 2；CPU 内存吃紧时调 1）。</summary>
+    /// <summary>TTS synthesis parallelism (default 2; set 1 when CPU memory is tight).</summary>
     [CommandOption("--tts-parallelism <N>")]
+    [Description("TTS synthesis parallelism (default 2; set 1 when memory is tight)")]
     public int TtsParallelism { get; set; } = 2;
 
-    /// <summary>长句分块阈值（秒，默认 15；目标时长超过时按比例拆分子段合成再拼接）。</summary>
+    /// <summary>Long-sentence chunking threshold in seconds (default 15; longer segments are split proportionally).</summary>
     [CommandOption("--max-chunk-seconds <S>")]
+    [Description("Long-sentence chunking threshold in seconds (default 15)")]
     public double MaxChunkSeconds { get; set; } = 15;
 }

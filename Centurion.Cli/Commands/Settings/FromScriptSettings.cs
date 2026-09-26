@@ -6,48 +6,49 @@ using Spectre.Console.Cli;
 namespace Centurion.Cli.Commands.Settings;
 
 /// <summary>
-/// <c>from-script</c> 命令的选项：将纯文本脚本对齐到音视频并生成带时间轴的字幕。
+/// Options for the <c>from-script</c> command: align a plain-text script to audio/video
+/// and produce timestamped subtitles.
 /// </summary>
 public sealed class FromScriptSettings : GlobalCommandSettings
 {
 
     /// <summary>
-    /// 输入音视频媒体文件。
+    /// Input audio/video media file.
     /// </summary>
     [CommandArgument(0, "<INPUT_FILE>")]
     [Description("Input media file")]
     public required FileInfo InputFile { get; init; }
 
     /// <summary>
-    /// 纯文本脚本文件。
+    /// Plain-text script file.
     /// </summary>
     [CommandArgument(1, "<SCRIPT_FILE>")]
     [Description("Plain-text script file")]
     public required FileInfo ScriptFile { get; init; }
 
     /// <summary>
-    /// 输出中间文件路径；省略时以输入文件名加 .centurion.json 输出。
+    /// Output IR intermediate file; defaults to {input}.centurion.json.
     /// </summary>
     [CommandOption("-o|--output <OUTPUT_FILE>")]
     [Description("Output IR intermediate file")]
     public FileInfo? OutputFile { get; init; }
 
     /// <summary>
-    /// 音频语言代码，默认 en。
+    /// Audio language code, default en.
     /// </summary>
     [CommandOption("-l|--language <LANG>")]
     [Description("Audio language code, default en")]
     public string Language { get; init; } = "en";
 
     /// <summary>
-    /// 转录引擎名称。
+    /// Transcription engine name.
     /// </summary>
     [CommandOption("-t|--transcriber <ENGINE>")]
     [Description("Transcription engine")]
     public string Transcriber { get; init; } = "whisper";
 
     /// <summary>
-    /// 转录模型名称。
+    /// Transcription model name.
     /// </summary>
     [CommandOption("--tm|--transcriber-model <MODEL>")]
     [Description("Transcription model")]
@@ -55,35 +56,35 @@ public sealed class FromScriptSettings : GlobalCommandSettings
 
     // ----- 音频预处理模块 -----
     /// <summary>
-    /// 是否启用条件式 FFmpeg 降噪。
+    /// Whether to enable conditional FFmpeg noise reduction.
     /// </summary>
     [CommandOption("--audio-noise-reduction")]
     [Description("Enable conditional FFmpeg noise reduction")]
     public bool EnableAudioNoiseReduction { get; init; } = false;
 
     /// <summary>
-    /// 低于此信噪比（dB）时启用降噪，默认 15 dB。
+    /// Enable noise reduction below this SNR (dB), default 15 dB.
     /// </summary>
     [CommandOption("--audio-snr-threshold <DB>")]
     [Description("Enable noise reduction below this SNR threshold, default 15 dB")]
     public double AudioSnrThresholdDb { get; init; } = 15.0;
 
     /// <summary>
-    /// 是否禁用音频重采样（输出仍会强制转为 16 kHz）。
+    /// Whether to disable audio resampling (output is still forced to 16 kHz).
     /// </summary>
     [CommandOption("--disable-audio-resampling")]
     [Description("Disable audio resampling (output is still forced to 16 kHz)")]
     public bool DisableAudioResampling { get; init; }
 
     /// <summary>
-    /// 是否禁用 100 Hz 高通滤波器。
+    /// Whether to disable the 100 Hz high-pass filter.
     /// </summary>
     [CommandOption("--disable-audio-highpass")]
     [Description("Disable the 100 Hz high-pass filter")]
     public bool DisableAudioHighPass { get; init; }
 
     /// <summary>
-    /// 是否禁用 EBU R128 响度归一化。
+    /// Whether to disable EBU R128 loudness normalization.
     /// </summary>
     [CommandOption("--disable-audio-loudness")]
     [Description("Disable EBU R128 loudness normalization")]
@@ -91,14 +92,14 @@ public sealed class FromScriptSettings : GlobalCommandSettings
 
     // ----- 人声分离模块 (Vocal Separation) -----
     /// <summary>
-    /// 是否在转录前用 Demucs 分离人声（仅适用于音乐/背景音乐较重的素材）。
+    /// Whether to separate vocals with Demucs before transcription (only for music/BGM-heavy media).
     /// </summary>
     [CommandOption("--vs|--vocal-separation")]
     [Description("Separate vocals with Demucs before transcription (only for music/BGM-heavy media)")]
     public bool VocalSeparation { get; init; } = false;
 
     /// <summary>
-    /// Demucs 人声分离模型名称，默认 htdemucs。
+    /// Demucs vocal separation model name, default htdemucs.
     /// </summary>
     [CommandOption("--vocal-separation-model <MODEL>")]
     [Description("Demucs model name, default htdemucs")]
@@ -106,36 +107,36 @@ public sealed class FromScriptSettings : GlobalCommandSettings
 
     // ----- 推理设备 (Device) -----
     /// <summary>
-    /// 推理设备偏好：auto、cpu、cuda、vulkan、directml（GPU 工具会自动下载对应变体）。
+    /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).
     /// </summary>
     [CommandOption("--device <DEVICE>")]
     [Description("Inference device: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded)")]
     public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
 
     /// <summary>
-    /// 是否启用强制对齐。
+    /// Whether to enable forced alignment.
     /// </summary>
     [CommandOption("-a|--align")]
     [Description("Enable forced alignment")]
     public bool EnableAlignment { get; init; } = true;
 
     /// <summary>
-    /// 强制对齐使用的模型名称。
+    /// Model used for forced alignment.
     /// </summary>
     [CommandOption("--am|--alignment-model <MODEL>")]
     [Description("Model for forced alignment")]
     public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
 
     /// <summary>
-    /// 强制对齐分段：相邻句子的时间间隙超过该秒数时切分为独立块（默认 2.0 秒）。
-    /// 每块仅启动一次对齐进程，长音频下显著提速。
+    /// Alignment chunking: split into independent blocks when the gap between sentences exceeds this many seconds (default 2.0).
+    /// Each block starts one alignment pass, speeding up long audio.
     /// </summary>
     [CommandOption("--align-chunk-gap <SEC>")]
     [Description("Split alignment into chunks when the gap between sentences exceeds this many seconds, default 2.0")]
     public double AlignmentChunkGapSeconds { get; init; } = 2.0;
 
     /// <summary>
-    /// 强制对齐分段：单个块的最大音频时长（秒），默认 120 秒。
+    /// Alignment chunking: maximum audio duration per block in seconds, default 120.
     /// </summary>
     [CommandOption("--align-max-chunk <SEC>")]
     [Description("Maximum audio duration per alignment chunk in seconds, default 120")]
@@ -143,36 +144,36 @@ public sealed class FromScriptSettings : GlobalCommandSettings
 
 
     /// <summary>
-    /// 字幕显示时允许的最大每秒字符数。
+    /// Maximum displayed characters per second.
     /// </summary>
     [CommandOption("--max-cps <CPS>")]
     [Description("Maximum displayed characters per second")]
     public double MaxCps { get; init; } = 5.0;
 
     /// <summary>
-    /// 单行字幕允许的最大字符数。
+    /// Maximum characters per subtitle line.
     /// </summary>
     [CommandOption("--max-chars-per-line <CHARS>")]
     [Description("Maximum characters per subtitle line")]
     public int MaxCharsPerLine { get; init; } = 18;
 
     /// <summary>
-    /// 脚本对音频覆盖率的告警阈值（0–1）。
+    /// Warning threshold for script-to-audio coverage (0–1).
     /// </summary>
     [CommandOption("--coverage-threshold <RATIO>")]
     [Description("Warning threshold for script-to-audio coverage")]
     public double CoverageThreshold { get; init; } = 0.92;
 
     /// <summary>
-    /// 是否将脚本中缺失的词渲染为省略号占位。
+    /// Whether to render missing script words as an ellipsis placeholder.
     /// </summary>
     [CommandOption("--fill-gap")]
     [Description("Render missing script words as an ellipsis")]
     public bool FillGapWithEllipsis { get; init; } = true;
 
     /// <summary>
-    /// 是否在字幕文本前显示说话人标签；默认开启，传 --no-speaker-labels 关闭。
-    /// 说话人信息始终写入 ASS 的 Name 字段，不受本开关影响。
+    /// Whether to prefix subtitle text with speaker labels (default on; pass --no-speaker-labels to disable).
+    /// Speaker info is always written to the ASS Name field regardless of this switch.
     /// </summary>
     [CommandOption("--no-speaker-labels")]
     [Description("Do not prefix subtitle text with speaker labels (Name field is always written)")]

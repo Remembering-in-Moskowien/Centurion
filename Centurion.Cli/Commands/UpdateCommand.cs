@@ -8,18 +8,18 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// 自更新命令：从 GitHub Releases 检查 / 下载 / 应用新版本。
+/// Self-update command: check / download / apply new versions from GitHub Releases.
 /// </summary>
 public sealed class UpdateCommand(
     IUpdateService updateService,
     ILogger<UpdateCommand> logger) : AsyncCommand<UpdateSettings>
 {
     /// <summary>
-    /// 执行自更新：检查新版本、按选项下载并可选择立即应用更新。
+    /// Runs self-update: checks for new versions, downloads per options and optionally applies immediately.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">更新命令选项。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The update command settings.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, UpdateSettings settings, CancellationToken cancellationToken)
     {
         try

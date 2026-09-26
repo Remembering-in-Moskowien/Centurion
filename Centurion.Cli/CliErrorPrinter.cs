@@ -7,17 +7,17 @@ using System.Text.Json;
 namespace Centurion.Cli;
 
 /// <summary>
-/// 统一错误输出：日志通道输出红色失败行（与文件日志一致），
-/// 并附加可操作的修复建议（黄色提示行），帮助新用户自行解决问题。
+/// Unified error output: logs a red failure line (matching file logs) and appends
+/// actionable fix suggestions (yellow hint lines) so new users can self-service.
 /// </summary>
 public static class CliErrorPrinter
 {
     /// <summary>
-    /// 记录失败日志并输出修复建议。
+    /// Logs the failure and prints a fix suggestion.
     /// </summary>
-    /// <param name="logger">命令日志器。</param>
-    /// <param name="ex">捕获的异常。</param>
-    /// <param name="context">失败上下文描述（写入日志）。</param>
+    /// <param name="logger">The command logger.</param>
+    /// <param name="ex">The caught exception.</param>
+    /// <param name="context">Failure context description (written to the log).</param>
     public static void Print(ILogger logger, Exception ex, string context)
     {
         FailLogGate.Log(logger, ex, context);
@@ -26,7 +26,7 @@ public static class CliErrorPrinter
             ConsoleServices.Output.WriteWarning(ConsoleServices.T("Suggestion: {0}", hint));
     }
 
-    /// <summary>把常见异常映射为可操作的修复建议；无法识别时给通用指引。</summary>
+    /// <summary>Maps common exceptions to actionable fix suggestions; falls back to a generic hint.</summary>
     public static string? Suggest(Exception ex) => ex switch
     {
         Centurion.Core.Capabilities.Managers.Media.ModelMissingException m =>

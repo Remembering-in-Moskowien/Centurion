@@ -12,8 +12,9 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>convert</c> 命令：解析现有字幕文件并转换为 Centurion 中间文件（*.centurion.json）。
-/// 中间文件是命令链中唯一的结构化字幕交换格式，供 correct/translate/dub/build 继续处理。
+/// <c>convert</c> command: parses existing subtitle files into Centurion intermediate
+/// files (*.centurion.json). The IR is the single structured subtitle exchange format
+/// in the chain, consumed by correct/translate/dub/build.
 /// </summary>
 public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 {
@@ -25,14 +26,14 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
-    /// 使用管道执行器与转换算子工厂初始化命令。
+    /// Initializes the command with a pipeline executor and a convert-operator factory.
     /// </summary>
-    /// <param name="executor">负责按顺序执行算子管道的执行器。</param>
-    /// <param name="convertOperatorsFactory">创建转换管道所需算子集合的工厂委托。</param>
-    /// <param name="qualityReportOp">质量报告算子（管线末尾写出 .quality.json）。</param>
-    /// <param name="logger">记录命令执行失败的日志器。</param>
-    /// <param name="store">中间文件存储（*.centurion.json 读写/校验/迁移）。</param>
-    /// <param name="serviceProvider">服务容器（算子工厂/策略解析）。</param>
+    /// <param name="executor">Executes the operator pipeline in order.</param>
+    /// <param name="convertOperatorsFactory">Factory delegate building the operator set for the conversion pipeline.</param>
+    /// <param name="qualityReportOp">Quality report operator (writes .quality.json at the pipeline tail).</param>
+    /// <param name="logger">Logs command execution failures.</param>
+    /// <param name="store">Intermediate file store (*.centurion.json read/write/validate/migrate).</param>
+    /// <param name="serviceProvider">Service container (operator factories/strategy resolution).</param>
     public ConvertCommand(
         PipelineExecutor executor,
         Func<IEnumerable<IPipelineOperator>> convertOperatorsFactory,
@@ -50,11 +51,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
     }
 
     /// <summary>
-    /// 执行转换：解析输入字幕、运行转换算子管道并写出中间文件。
+    /// Runs conversion: parses the input subtitle, runs the convert pipeline and writes the IR.
     /// </summary>
-    /// <param name="context">Spectre 命令上下文。</param>
-    /// <param name="settings">转换命令选项。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">The Spectre command context.</param>
+    /// <param name="settings">The convert command settings.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     protected override async Task<int> ExecuteAsync(CommandContext context, ConvertSettings settings, CancellationToken cancellationToken)
     {
         try
@@ -109,8 +110,8 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
     }
 
     /// <summary>
-    /// 组装 convert DAG（pipeline graph 命令与 convert 命令共享的单一事实源）：
-    /// 输入字幕解析 → 质量报告。
+    /// Assembles the convert DAG (single source of truth shared with the pipeline graph command):
+    /// input subtitle parse → quality report.
     /// </summary>
     internal static PipelineDag BuildConvertDag(
         IReadOnlyList<Centurion.Abstractions.Pipeline.IPipelineOperator> parseOperators,
@@ -125,13 +126,13 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             while (builder.Contains(name))
                 name = $"{op.Name}#{++index}";
             builder.Add(name, op, dependsOn: previous is null ? null : [previous],
-                description: "解析输入字幕（ASS/SRT/TXT）为结构化句子");
+                description: "Parse the input subtitle (ASS/SRT/TXT) into structured sentences");
             previous = name;
         }
         if (previous is null)
             throw new ArgumentException("convert pipeline requires at least one parse operator.");
 
-        builder.Add("Quality Report", qualityReportOp, dependsOn: [previous], description: "质量报告收尾");
+        builder.Add("Quality Report", qualityReportOp, dependsOn: [previous], description: "Quality report wrap-up");
         return builder.Build();
     }
 }

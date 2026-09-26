@@ -5,21 +5,23 @@ using Microsoft.Extensions.Logging.Console;
 namespace Centurion.Cli.Console;
 
 /// <summary>
-/// 与控制台日志文件保持一致的简单控制台格式化器：
-/// 输出 `HH:mm:ss level: message`（无类别名），与 FileLoggerProvider 的文件行格式逐字一致；
-/// 颜色仅按级别与语义渲染（[SUCCESS] 前缀绿、警告黄、错误/严重红，其余白色），
-/// 重定向输出时自动无颜色。控制台显示的每一行与日志文件中的对应行完全相同。
+/// Simple console formatter that stays consistent with the console log file:
+/// emits `HH:mm:ss level: message` (no category), byte-for-byte matching
+/// FileLoggerProvider's file line format; colors follow level/semantics only
+/// ([SUCCESS] prefix green, warnings yellow, errors/critical red, otherwise white),
+/// and colors are dropped automatically when output is redirected. Every console
+/// line is identical to its counterpart in the log file.
 /// </summary>
 public sealed class PlainConsoleFormatter : ConsoleFormatter
 {
     private const string SuccessPrefix = "[SUCCESS] ";
 
-    /// <summary>创建使用 "plain" 名称注册的格式化器。</summary>
+    /// <summary>Creates the formatter registered under the name "plain".</summary>
     public PlainConsoleFormatter() : base("plain")
     {
     }
 
-    /// <summary>将一条日志格式化为单行控制台文本（与文件日志格式一致）。</summary>
+    /// <summary>Formats a log entry as a single console line (matching the file log format).</summary>
     public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
     {
         var message = logEntry.Formatter(logEntry.State, logEntry.Exception);

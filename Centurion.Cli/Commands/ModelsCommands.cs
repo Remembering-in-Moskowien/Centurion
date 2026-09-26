@@ -9,10 +9,10 @@ using Spectre.Console.Cli;
 
 namespace Centurion.Cli.Commands;
 
-/// <summary>models 子命令的共享模型目录工具：全部模型域 + 按名匹配 + 路径探测。</summary>
+/// <summary>Shared model catalog helper for the models subcommands: all domains + name matching + path probing.</summary>
 internal static class ModelCatalog
 {
-    /// <summary>一个模型域（注册表字典 + 本地目录名）。</summary>
+    /// <summary>A model domain (registry dictionary + local directory name).</summary>
     internal sealed record ModelDomain(string Name, string CategoryFolder, IReadOnlyDictionary<string, ModelMeta> Models);
 
     internal static IReadOnlyList<ModelDomain> Domains(ModelRegistry registry) =>
@@ -26,7 +26,7 @@ internal static class ModelCatalog
         new("qwen3tts", "qwen3tts", registry.Qwen3TtsModels)
     ];
 
-    /// <summary>按模型名（大小写不敏感）在全部域中匹配；返回 (域, 模型名, 元数据)。</summary>
+    /// <summary>Matches a model name across all domains (case-insensitive); returns (domain, model name, metadata).</summary>
     internal static IReadOnlyList<(ModelDomain Domain, string ModelName, ModelMeta Meta)> Find(
         IReadOnlyList<ModelDomain> domains, string modelName)
     {
@@ -41,12 +41,12 @@ internal static class ModelCatalog
         return hits;
     }
 
-    /// <summary>创建 ModelManager（不触发下载，仅解析本地路径）。</summary>
+    /// <summary>Creates a ModelManager (no download; only resolves local paths).</summary>
     internal static ModelManager CreateManager(
         IServiceProvider sp, ModelDomain domain, string modelName) =>
         ActivatorUtilities.CreateInstance<ModelManager>(sp, modelName, domain.Models, domain.CategoryFolder);
 
-    /// <summary>检查本地文件/目录是否存在且非空。</summary>
+    /// <summary>Checks whether the local file/directory exists and is non-empty.</summary>
     internal static bool ExistsLocally(ModelManager manager)
     {
         if (!manager.ManagementEnabled || string.IsNullOrEmpty(manager.ModelFilePath))
@@ -57,12 +57,12 @@ internal static class ModelCatalog
     }
 }
 
-/// <summary>models 子命令的公共选项（含全局 --json/--dry-run）。</summary>
+/// <summary>Common options for the models subcommands (includes global --json/--dry-run).</summary>
 public class ModelsSettings : GlobalCommandSettings
 {
 }
 
-/// <summary>models list：列出全部注册模型与本地状态（Spectre 表格 + 状态徽章）。</summary>
+/// <summary>models list: lists all registered models and local readiness (Spectre table + status badges).</summary>
 public sealed class ModelsListCommand(
     ModelRegistry registry,
     IServiceProvider serviceProvider) : AsyncCommand<ModelsSettings>
@@ -112,15 +112,15 @@ public sealed class ModelsListCommand(
     }
 }
 
-/// <summary>models install/verify/remove &lt;model&gt; 的选项。</summary>
+/// <summary>Options for models install/verify/remove &lt;model&gt;.</summary>
 public sealed class ModelsNameSettings : CommandSettings
 {
-    /// <summary>模型名（whisper 域：tiny/base/...；qwen3asr：qwen3-asr-0.6b 等）。</summary>
+    /// <summary>Model name (whisper domain: tiny/base/...; qwen3asr: qwen3-asr-0.6b, etc.).</summary>
     [CommandArgument(0, "<model>")]
     public string Model { get; set; } = string.Empty;
 }
 
-/// <summary>models install：下载指定模型（缺失时按注册表元数据拉取）。</summary>
+/// <summary>models install: downloads the given model (fetched per registry metadata when missing).</summary>
 public sealed class ModelsInstallCommand(
     ModelRegistry registry,
     IServiceProvider serviceProvider) : AsyncCommand<ModelsNameSettings>
@@ -151,7 +151,7 @@ public sealed class ModelsInstallCommand(
     }
 }
 
-/// <summary>models verify：校验模型本地文件是否就绪。</summary>
+/// <summary>models verify: checks local model files are ready.</summary>
 public sealed class ModelsVerifyCommand(
     ModelRegistry registry,
     IServiceProvider serviceProvider) : AsyncCommand<ModelsNameSettings>
@@ -179,20 +179,20 @@ public sealed class ModelsVerifyCommand(
 
         var table = new Table()
             .Border(CliLayout.Border)
-            .AddColumn(new TableColumn("属性").Width(12))
-            .AddColumn(new TableColumn("值"));
-        table.AddRow("模型", $"[bold]{domain.Name}/{modelName}[/]");
-        table.AddRow("路径", $"[dim]{manager.ModelFilePath}[/]");
-        table.AddRow("状态", ready ? "[green]● ready[/]" : "[red]○ missing[/]");
+            .AddColumn(new TableColumn(ConsoleServices.T("Property")).Width(12))
+            .AddColumn(new TableColumn(ConsoleServices.T("Value")));
+        table.AddRow(ConsoleServices.T("Model"), $"[bold]{domain.Name}/{modelName}[/]");
+        table.AddRow(ConsoleServices.T("Path"), $"[dim]{manager.ModelFilePath}[/]");
+        table.AddRow(ConsoleServices.T("State"), ready ? "[green]● ready[/]" : "[red]○ missing[/]");
         if (!ready)
-            table.AddRow("安装", "[cyan]Centurion models install " + modelName + "[/]");
+            table.AddRow(ConsoleServices.T("Install"), "[cyan]Centurion models install " + modelName + "[/]");
         AnsiConsole.Write(table);
         await Task.CompletedTask;
         return ready ? 0 : 1;
     }
 }
 
-/// <summary>models remove：删除模型本地文件/目录。</summary>
+/// <summary>models remove: deletes local model files/directories.</summary>
 public sealed class ModelsRemoveCommand(
     ModelRegistry registry,
     IServiceProvider serviceProvider) : AsyncCommand<ModelsNameSettings>

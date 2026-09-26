@@ -15,8 +15,10 @@ using Centurion.Models.Console;
 namespace Centurion.Cli.Commands;
 
 /// <summary>
-/// <c>pipeline graph</c> 命令：渲染指定命令的 DAG 管线拓扑（节点、依赖、条件、重试/降级标注）。
-/// 与 asr / ocr / from-script / translate / dub / correct / convert 命令共享同一 DAG 装配，只渲染不执行。
+/// <c>pipeline graph</c> command: renders the DAG topology of a given command
+/// (nodes, dependencies, conditions, retry/degrade labels). Shares the same DAG
+/// assembly as asr / ocr / from-script / translate / dub / correct / convert;
+/// renders only, never executes.
 /// </summary>
 public sealed class PipelineGraphCommand(
     SubtitleTrackCheckerOperator trackChecker,
@@ -42,7 +44,7 @@ public sealed class PipelineGraphCommand(
     IServiceProvider serviceProvider,
     ILogger<PipelineGraphCommand> logger) : AsyncCommand<PipelineGraphSettings>
 {
-    /// <summary>执行：渲染指定命令的 DAG 拓扑（控制台或文件）。</summary>
+    /// <summary>Runs: renders the DAG topology of the selected command (console or file).</summary>
     protected override async Task<int> ExecuteAsync(CommandContext context, PipelineGraphSettings settings, CancellationToken ct)
     {
         try
@@ -94,7 +96,7 @@ public sealed class PipelineGraphCommand(
             }
 
             AnsiConsole.Write(PipelineGraphRenderer.RenderTree(dag));
-            ConsoleServices.Output.WriteLine(ConsoleServices.T("— Mermaid (文件输出用) —"));
+            ConsoleServices.Output.WriteLine(ConsoleServices.T("— Mermaid (file output) —"));
             return 0;
         }
         catch (Exception ex)
@@ -105,7 +107,7 @@ public sealed class PipelineGraphCommand(
         }
     }
 
-    /// <summary>全开配置：展示完整拓扑（含人声分离/说话人分割/对齐条件节点）。</summary>
+    /// <summary>All-on config: shows the full topology (including vocal separation/diarization/alignment conditional nodes).</summary>
     private static WorkflowConfig FullConfig() => new()
     {
         VocalSeparation = true,
@@ -114,7 +116,7 @@ public sealed class PipelineGraphCommand(
         EnableTextCleaning = true
     };
 
-    /// <summary>translate DAG：以占位配置构建（只渲染，不执行翻译）。</summary>
+    /// <summary>translate DAG: built with placeholder config (render only, no translation runs).</summary>
     private PipelineDag BuildTranslateDagForGraph()
     {
         var options = new Centurion.Abstractions.Strategy.TranslationOptions { TargetLanguage = "zh" };
