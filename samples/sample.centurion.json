@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "1.0",
+  "generator": {
+    "tool": "centurion",
+    "version": "0.1.0\u002Bc8107c6a4e6b2a467b70ae3d99de2c06972539f6",
+    "command": "spawn",
+    "generatedAt": "2026-09-26T13:32:54.4664726\u002B08:00",
+    "inputFile": "samples/test.mp4",
+    "outputFile": "D:\\Centurion\\samples\\sample.centurion.json"
+  },
+  "provenance": [
+    {
+      "operator": "audio-convert",
+      "parametersHash": "b7bffc618c9e508bfc2c2fe384ecd674ea093f6a60d2c7199dfb7e64849f26c8",
+      "appliedAt": "2026-09-26T13:32:54.4828675\u002B08:00"
+    },
+    {
+      "operator": "transcribe",
+      "model": "qwen3-asr-1.7b",
+      "parametersHash": "b7bffc618c9e508bfc2c2fe384ecd674ea093f6a60d2c7199dfb7e64849f26c8",
+      "appliedAt": "2026-09-26T13:32:54.4828675\u002B08:00"
+    },
+    {
+      "operator": "split",
+      "parametersHash": "b7bffc618c9e508bfc2c2fe384ecd674ea093f6a60d2c7199dfb7e64849f26c8",
+      "appliedAt": "2026-09-26T13:32:54.4828675\u002B08:00"
+    }
+  ],
+  "config": {
+    "inputFilePath": "samples/test.mp4",
+    "commandName": "spawn",
+    "outputFilePath": "samples/sample.centurion.json",
+    "device": "Auto",
+    "correctStrategy": "Both",
+    "maxDriftMs": 1500,
+    "fuzzyThreshold": 0.72,
+    "hunspellDictionary": "en_US",
+    "mapperStrategy": "rule",
+    "coverageThreshold": 0.92,
+    "maxCps": 5,
+    "maxCharsPerLine": 18,
+    "fillGapWithEllipsis": true,
+    "audioPreprocess": {
+      "enableResampling": true,
+      "enableDownmixing": true,
+      "enableHighPass": true,
+      "enableLoudnessNormalization": true,
+      "enableNoiseReduction": false,
+      "snrThresholdDb": 15,
+      "noiseReductionBackend": "BuiltInFfmpeg"
+    },
+    "transcriberEngine": "crispasr",
+    "transcriberModel": "qwen3-asr-1.7b",
+    "asrProvider": "crispasr",
+    "language": "en",
+    "splitStrategy": "rule",
+    "maxSentenceLength": 80,
+    "targetSentenceLength": 50,
+    "spreadRange": 10,
+    "chunkGranularity": 0.5,
+    "mergeGapSeconds": 1.5,
+    "enablePunctuationRewrite": true,
+    "vocalSeparation": false,
+    "vocalSeparationModel": "htdemucs",
+    "ocrIntervalSeconds": 2,
+    "ocrBackend": "zhipu",
+    "diarizationBackend": "none",
+    "diarizationMethod": "foxnose",
+    "diarizationModel": "pyannote-seg-3.0",
+    "numSpeakers": 0,
+    "diarizationMinSegmentSeconds": 0.5,
+    "karaokeMode": false,
+    "showSpeakerLabels": true,
+    "cacheDirectory": "./cache",
+    "enableAlignment": true,
+    "alignmentModel": "qwen3-forced-aligner-0.6b-f16",
+    "alignmentChunkGapSeconds": 2,
+    "alignmentMaxChunkSeconds": 120,
+    "enableTextCleaning": true,
+    "removePunctuation": false,
+    "expandNumbers": true,
+    "expandAbbreviations": false,
+    "targetLanguage": "",
+    "translationStrategy": "llm",
+    "bilingual": false,
+    "ttsEngine": "llama",
+    "ttsModel": "1.7b-base-q4",
+    "ttsLanguage": "zh",
+    "dubStrictTiming": true,
+    "dubLoudnessTarget": -16,
+    "ttsParallelism": 2,
+    "dubMaxChunkSeconds": 15,
+    "dubDucking": true
+  },
+  "state": {
+    "transcribeSentences": [],
+    "subtitleSentences": [],
+    "correctedSentences": [],
+    "splitSentences": [],
+    "diarizedSentences": [],
+    "alignedSentences": [],
+    "scriptSentences": [],
+    "currentSentences": [
+      {
+        "text": "Welcome to Centurion.",
+        "start": 0,
+        "end": 1.6,
+        "skipRender": false,
+        "words": [
+          {
+            "text": "Welcome",
+            "start": 0,
+            "end": 0.6,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "to",
+            "start": 0.6,
+            "end": 0.8,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          },
+          {
+            "text": "Centurion.",
+            "start": 0.8,
+            "end": 1.6,
+            "speaker": "SPEAKER_00",
+            "status": "Matched"
+          }
+        ]
+      }
+    ],
+    "mapperCoverage": 0,
+    "isAudioConverted": true,
+    "isVocalsSeparated": false,
+    "isTranscribed": true,
+    "isSplit": true,
+    "isDiarized": false,
+    "isAligned": false,
+    "isTranslated": false,
+    "dubSegments": [],
+    "dubSpeakerReferences": {},
+    "styles": [],
+    "errors": [],
+    "warnings": [],
+    "report": {
+      "totalSentences": 0,
+      "textCorrected": 0,
+      "timelineShifted": 0,
+      "unmatched": 0,
+      "averageDriftMs": 0,
+      "maxDriftMs": 0,
+      "textCoverage": 0,
+      "elapsed": "00:00:00"
+    }
+  }
+}

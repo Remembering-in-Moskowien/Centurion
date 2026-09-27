@@ -11,7 +11,7 @@ riderModule.iml
 Centurion.sln.DotSettings.user
 
 # Sample/test artifacts & debug logs
-/samples/
+/samples/*
 *.log
 /artifacts
 centurion.config.json
@@ -23,3 +23,7 @@ _run/
 
 /tools/_shots/
 /tools/_backup/
+
+
+# CI 依赖的样例 IR（其余 samples 保持忽略）
+!/samples/*sample.centurion.json
