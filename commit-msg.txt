@@ -1,8 +1,0 @@
-﻿refactor: 源码项目归类到 src/ 目录
-
-- 5 个源码项目与 tools/schema-gen 移入 src/（git mv 保留历史）
-- Centurion.slnx / CI / README / docs / 架构图路径同步更新
-- .gitignore 放行 CI 依赖的 samples/sample.centurion.json
-- 修复 CI validate 步骤因 samples 被忽略而缺文件的隐患
-
-验证：build 0 警告 0 错误，test 388/388 全绿
