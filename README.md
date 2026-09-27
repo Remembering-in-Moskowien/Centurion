@@ -96,11 +96,11 @@ All inference goes through a **Provider abstraction** (local-first with cloud fa
 
 | Project | Role |
 |---|---|
-| `Centurion.Models` | Pure data models, metadata registry, console facade |
-| `Centurion.Abstractions` | Interfaces, abstract bases, DTOs |
-| `Centurion.Core` | The engine: DAG executor, operators, strategies, providers, DI |
-| `Centurion.Cli` | Spectre.Console CLI front-end (incl. `serve` HTTP mode) |
-| `Centurion.Tests` | xUnit test suite |
+| `src/Centurion.Models` | Pure data models, metadata registry, console facade |
+| `src/Centurion.Abstractions` | Interfaces, abstract bases, DTOs |
+| `src/Centurion.Core` | The engine: DAG executor, operators, strategies, providers, DI |
+| `src/Centurion.Cli` | Spectre.Console CLI front-end (incl. `serve` HTTP mode) |
+| `src/Centurion.Tests` | xUnit test suite |
 
 Fully async & cancellation-aware; **non-fatal errors log a warning and keep going** — no half-baked bailouts 💪
 

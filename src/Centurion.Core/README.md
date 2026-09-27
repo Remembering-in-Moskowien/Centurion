@@ -55,7 +55,7 @@ Centurion.Core/
 - 根对象 `CenturionDocument`（`Centurion.Models.Schema`）：`schemaVersion` + `generator`（工具/版本/命令/时间）+ `provenance`（每步骤 operator / 模型 / 参数 SHA-256 指纹）+ `config` + `state`。
 - 序列化：System.Text.Json **源生成器**（`CenturionJsonContext`，无反射）；Extensions 为进程内临时数据，不持久化。
 - 读写/校验/迁移统一走 `ICenturionDocumentStore`（`Centurion.Core.Utils.Serialization`）；`validate` 前置校验，`migrate` 升级旧版 meta/config/state 格式。
-- JSON Schema：`schemas/centurion-v1.json`（由 `tools/schema-gen` 经 `CenturionSchemaExporter` 生成；结构变更后重跑该工具同步）。
+- JSON Schema：`schemas/centurion-v1.json`（由 `src/tools/schema-gen` 经 `CenturionSchemaExporter` 生成；结构变更后重跑该工具同步）。
 
 ## Provider 抽象（`Providers/`，第⑨阶段）
 

@@ -22,10 +22,10 @@ Windows users: add the FFmpeg `bin` directory to your `PATH` (or drop `ffmpeg.ex
 dotnet build -c Release
 ```
 
-Output lands in `Centurion.Cli/bin/Release/net10.0/` — run it directly:
+Output lands in `src/Centurion.Cli/bin/Release/net10.0/` — run it directly:
 
 ```bash
-./Centurion.Cli/bin/Release/net10.0/Centurion.Cli
+./src/Centurion.Cli/bin/Release/net10.0/Centurion.Cli
 ```
 
 ## 🎬 Your First Subtitles
