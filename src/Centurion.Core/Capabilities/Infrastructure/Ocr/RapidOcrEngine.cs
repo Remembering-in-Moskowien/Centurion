@@ -29,6 +29,16 @@ public sealed class RapidOcrEngine(
     }
 
     /// <summary>
+    /// 确保引擎可用：允许自动下载 PP-OCRv6 模型（下载失败时回退内置 PP-OCRv5 latin）。
+    /// 供 ocr 命令在校验阶段调用，避免“探测不下载”阻断首次使用时的自动模型获取。
+    /// </summary>
+    public async Task<bool> EnsureAvailableAsync(CancellationToken cancellationToken)
+    {
+        var ocr = await GetOcrAsync(initOnMissing: true, cancellationToken);
+        return ocr is not null;
+    }
+
+    /// <summary>
     /// 对单张图片做字幕级 OCR，返回识别文本（每行一条；无文本返回空字符串）。
     /// 引擎不可用时抛出 <see cref="ProviderUnavailableException"/>。
     /// </summary>
