@@ -46,9 +46,9 @@ public sealed class OcrCommand(
                     "OCR with zhipu backend requires a GLM-OCR API key. Provide --ocr-api-key <KEY>, or use --ocr-backend ollama/llamacpp for local inference.");
             if (backend == OcrBackend.RapidOcr)
             {
-                if (!await rapidOcrEngine.IsAvailableAsync(ct))
+                if (!await rapidOcrEngine.EnsureAvailableAsync(ct))
                     throw new InvalidOperationException(
-                        "RapidOCR engine is not available: model download failed or ONNX runtime missing.");
+                        "RapidOCR engine is not available: automatic model download from ModelScope failed. Check network connectivity and retry.");
             }
             else if (backend != OcrBackend.Zhipu && !await ocrClient.ProbeAsync(backend, settings.OcrBaseUrl, ct))
                 throw new InvalidOperationException(
