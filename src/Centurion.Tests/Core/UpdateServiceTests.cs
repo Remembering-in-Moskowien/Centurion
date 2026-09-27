@@ -1,5 +1,6 @@
 using System.IO.Compression;
-using Centurion.Core.Capabilities.Update;using Xunit;
+using Centurion.Core.Capabilities.Update;
+using Xunit;
 
 namespace Centurion.Tests.Core;
 
@@ -57,6 +58,21 @@ public sealed class UpdateServiceTests
         Assert.False(GitHubUpdateService.IsNewer("zeta", "beta"));
     }
 
+    [Fact]
+    public void IsNewer_ComparesByDateWhenBothKnown()
+    {
+        var local = new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero);
+        var remote = new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero);
+        Assert.True(GitHubUpdateService.IsNewer(local, remote, "v0.5.0-alpha"));
+        Assert.False(GitHubUpdateService.IsNewer(remote, local, "v0.5.0-alpha"));
+    }
+
+    [Fact]
+    public void IsNewer_FallsBackToTagComparison_WhenDatesMissing()
+    {
+        Assert.True(GitHubUpdateService.IsNewer(null, null, "v0.5.0-alpha"));
+    }
+
     // ------------------------------------------------------------------
     // MatchAsset
     // ------------------------------------------------------------------
@@ -106,6 +122,20 @@ public sealed class UpdateServiceTests
     public void MatchAsset_EmptyAssets_ReturnsNull()
     {
         Assert.Null(GitHubUpdateService.MatchAsset([], "win-x64", preferredName: null));
+    }
+
+    [Fact]
+    public void MatchAsset_MatchesCompactRidVariant()
+    {
+        // 发布资产常见命名 centurion-win64.zip，而 rid 为 win-x64：应通过紧凑变体命中
+        var assets = new List<ReleaseAssetInfo>
+        {
+            new("centurion-win64.zip", "https://example.com/c.zip", 47_000_000),
+            new("checksums.txt", "https://example.com/checksums.txt", 1),
+        };
+
+        var name = GitHubUpdateService.MatchAsset(assets, "win-x64", preferredName: null);
+        Assert.Equal("centurion-win64.zip", name);
     }
 
     // ------------------------------------------------------------------

@@ -7,8 +7,11 @@
     <RepositoryUrl>https://github.com/Remembering-in-Moskowien/Centurion</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- 构建日期（UTC）：更新检查以此判断远端 Release 是否晚于本地构建；发布可用 -p:BuildDate=... 固定 -->
+    <BuildDate Condition="'$(BuildDate)' == ''">$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</BuildDate>
+  </PropertyGroup>
   <ItemGroup>
-    <!-- 构建日期（UTC）：更新检查以此判断远端 Release 是否晚于本地构建 -->
-    <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))" />
+    <AssemblyMetadata Include="BuildDate" Value="$(BuildDate)" />
   </ItemGroup>
 </Project>

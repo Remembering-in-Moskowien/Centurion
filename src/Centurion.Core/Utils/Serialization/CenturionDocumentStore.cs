@@ -204,9 +204,6 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
         };
     }
 
-    /// <summary>当前工具版本（程序集 InformationalVersion，构建期注入）。</summary>
-    private static string ToolVersion =>
-        typeof(CenturionDocumentStore).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? typeof(CenturionDocumentStore).Assembly.GetName().Version?.ToString() ?? "unknown";
+    /// <summary>当前工具版本：统一为构建号（build-N），缺失回退程序集 InformationalVersion。</summary>
+    private static string ToolVersion => Centurion.Core.Utils.Infrastructure.BuildInfo.DisplayVersion;
 }

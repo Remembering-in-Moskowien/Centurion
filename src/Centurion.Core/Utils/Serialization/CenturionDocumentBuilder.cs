@@ -77,9 +77,6 @@ public static class CenturionDocumentBuilder
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    /// <summary>当前工具版本（程序集 InformationalVersion）。</summary>
-    private static string ToolVersion =>
-        typeof(CenturionDocumentBuilder).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? typeof(CenturionDocumentBuilder).Assembly.GetName().Version?.ToString() ?? "unknown";
+    /// <summary>当前工具版本：统一为构建号（build-N），缺失回退程序集 InformationalVersion。</summary>
+    private static string ToolVersion => Centurion.Core.Utils.Infrastructure.BuildInfo.DisplayVersion;
 }
