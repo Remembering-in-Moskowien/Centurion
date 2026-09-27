@@ -87,6 +87,8 @@
             <CenturionBuildNumber Condition="'$(CenturionBuildNumber)' == ''">0</CenturionBuildNumber>
         </PropertyGroup>
         <WriteLinesToFile File="$(OutputPath)build-number.txt" Lines="$(CenturionBuildNumber)" Overwrite="true" Encoding="ASCII" />
+        <Copy SourceFiles="$(OutputPath)build-number.txt" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true"
+              Condition="'$(PublishDir)' != '' and '$(PublishDir)' != '$(OutputPath)'" />
     </Target>
 
 </Project>
