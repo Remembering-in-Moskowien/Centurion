@@ -13,7 +13,7 @@ public static class CliPalette
     /// Spectre markup color for warning messages (gold, bold) — 金色而非终端/Shell 默认的
     /// 黄色（如 PowerShell 警告色），避免语义撞衫。
     /// </summary>
-    public const string Warning = "gold bold";
+    public const string Warning = "gold1 bold";
     /// <summary>Spectre markup color for critical failures (magenta, bold).</summary>
     public const string Critical = "magenta bold";
     /// <summary>Spectre markup color for success messages (green).</summary>

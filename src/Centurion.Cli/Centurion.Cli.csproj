@@ -29,6 +29,19 @@
         </Content>
     </ItemGroup>
 
+    <!--
+      第三方 VideoSubFinder 捆绑：发布时随主程序打包到 tools\videosubfinder\，
+      VideoSubFinderManager.FindInstalledExecutable 直接命中，运行期无需再下载。
+      源位于仓库根的 .local\videosubfinder（gitignore，不入库）；本地缺失时条件跳过，
+      CI/无资产环境构建不受影响，运行时回退自动下载。
+    -->
+    <ItemGroup Condition="Exists('..\..\.local\videosubfinder')">
+        <None Include="..\..\.local\videosubfinder\**">
+            <Link>tools\videosubfinder\%(RecursiveDir)%(Filename)%(Extension)</Link>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
     <Target Name="MoveSatelliteAssemblies" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <ItemGroup>
             <SatelliteAssemblies Include="$(OutputPath)**\*.resources.dll"
