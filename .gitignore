@@ -17,3 +17,9 @@ Centurion.sln.DotSettings.user
 centurion.config.json
 
 _run/
+
+# ROI picker dev utility (test-only)
+/tools/roi-picker.html
+
+/tools/_shots/
+/tools/_backup/
