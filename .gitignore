@@ -27,3 +27,5 @@ _run/
 
 # CI 依赖的样例 IR（其余 samples 保持忽略）
 !/samples/*sample.centurion.json
+# 本地第三方资产（VSF 捆绑源等），不入库
+/.local/
