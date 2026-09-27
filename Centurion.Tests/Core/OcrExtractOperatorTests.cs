@@ -1,5 +1,6 @@
 using Centurion.Core.Capabilities.Infrastructure.Ocr;
-using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Models;
 using Xunit;
 using Centurion.Core.Utils.Parsing;
 namespace Centurion.Tests.Core;
@@ -199,4 +200,63 @@ public sealed class OcrExtractOperatorTests
     {
         Assert.Equal(expected, OcrExtractOperator.ParseBackend(value));
     }
+
+    [Fact]
+    public void BuildVideoSubFinderArguments_Defaults_UseSubtitleRegion()
+    {
+        var config = new Centurion.Models.Workflow.WorkflowConfig();
+        var args = OcrExtractOperator.BuildVideoSubFinderArguments(
+            config, "input.mp4", "timings.srt", "out");
+
+        Assert.Equal("-c", args[0]);
+        Assert.Equal("-r", args[1]);
+        Assert.Equal("--create_empty_sub", args[2]);
+        Assert.Equal("timings.srt", args[3]);
+        Assert.Equal("-i", args[4]);
+        Assert.Equal("input.mp4", args[5]);
+        Assert.Equal("-o", args[6]);
+        Assert.Equal("out", args[7]);
+        Assert.Equal("-te", args[8]);
+        Assert.Equal("0.2102", args[9]);
+        Assert.Equal("-be", args[10]);
+        Assert.Equal("0", args[11]);
+        Assert.Equal("-le", args[12]);
+        Assert.Equal("0", args[13]);
+        Assert.Equal("-re", args[14]);
+        Assert.Equal("1", args[15]);
+    }
+
+    [Fact]
+    public void BuildVideoSubFinderArguments_CustomRoi_OverridesEdges()
+    {
+        var config = new Centurion.Models.Workflow.WorkflowConfig
+        {
+            OcrRoiTop = 0.5,
+            OcrRoiBottom = 0.8,
+            OcrRoiLeft = 0.1,
+            OcrRoiRight = 0.9
+        };
+        var args = OcrExtractOperator.BuildVideoSubFinderArguments(
+            config, "input.mp4", "timings.srt", "out");
+
+        Assert.Equal("-te", args[8]);
+        Assert.Equal("0.5", args[9]);
+        Assert.Equal("-be", args[10]);
+        Assert.Equal("0.8", args[11]);
+        Assert.Equal("-le", args[12]);
+        Assert.Equal("0.1", args[13]);
+        Assert.Equal("-re", args[14]);
+        Assert.Equal("0.9", args[15]);
+    }
+
+    [Theory]
+    [InlineData(null, 0.2102, "0.2102")]
+    [InlineData(1.0, 1.0, "1")]
+    [InlineData(0.5, 0.0, "0.5")]
+    [InlineData(0.21025, 0.0, "0.2103")]
+    public void FormatRoi_FormatsRatioWithFallback(double? value, double fallback, string expected)
+    {
+        Assert.Equal(expected, OcrExtractOperator.FormatRoi(value, fallback));
+    }
 }
+

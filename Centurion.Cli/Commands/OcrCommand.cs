@@ -2,7 +2,12 @@ using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Workflow.Factories;using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Capabilities.Infrastructure.Ocr;using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Workflow;
+using Centurion.Core.Workflow.Factories;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Capabilities.Infrastructure.Ocr;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Core.Utils.Serialization;
@@ -48,6 +53,11 @@ public sealed class OcrCommand(
             else if (backend != OcrBackend.Zhipu && !await ocrClient.ProbeAsync(backend, settings.OcrBaseUrl, ct))
                 throw new InvalidOperationException(
                     "Local OCR backend not reachable. Start 'ollama serve' or your llama-server, then retry.");
+            ValidateRoi(settings.OcrRoiTop, "--ocr-roi-top");
+            ValidateRoi(settings.OcrRoiBottom, "--ocr-roi-bottom");
+            ValidateRoi(settings.OcrRoiLeft, "--ocr-roi-left");
+            ValidateRoi(settings.OcrRoiRight, "--ocr-roi-right");
+
 
             var intermediatePath = settings.OutputFile?.FullName
                 ?? CenturionFileIO.DefaultOutputPath(inputPath, "ocr");
@@ -75,7 +85,11 @@ public sealed class OcrCommand(
                 OcrBackend = settings.OcrBackend,
                 OcrModel = settings.OcrModel,
                 OcrApiKey = settings.OcrApiKey,
-                OcrBaseUrl = settings.OcrBaseUrl
+                OcrBaseUrl = settings.OcrBaseUrl,
+                OcrRoiTop = settings.OcrRoiTop,
+                OcrRoiBottom = settings.OcrRoiBottom,
+                OcrRoiLeft = settings.OcrRoiLeft,
+                OcrRoiRight = settings.OcrRoiRight
             };
             var workflowContext = new SubtitleWorkflowContext(config);
 
@@ -134,5 +148,14 @@ public sealed class OcrCommand(
             .Add("Text Cleaning", textCleaningOp, dependsOn: ["Sentence Splitting"], description: "Normalize punctuation/digits/abbreviations")
             .Add("Quality Report", qualityReportOp, dependsOn: ["Text Cleaning"], description: "Quality report wrap-up");
         return builder.Build();
+    }
+
+    /// <summary>校验 ROI 比例参数（0-1，视频尺寸比例）。</summary>
+    /// <param name="value">比例值，可空（空表示用默认）。</param>
+    /// <param name="option">命令行选项名，用于错误提示。</param>
+    private static void ValidateRoi(double? value, string option)
+    {
+        if (value is < 0 or > 1)
+            throw new ArgumentException($"{option} must be between 0 and 1 (video size ratio).");
     }
 }

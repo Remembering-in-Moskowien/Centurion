@@ -83,7 +83,7 @@ public sealed partial class OcrExtractOperator(
             else
             {
                 frames = await ExtractVideoSubFinderFramesAsync(
-                    inputPath, tempDir, videoSubFinderPath, cancellationToken);
+                    config, inputPath, tempDir, videoSubFinderPath, cancellationToken);
                 if (frames.Count == 0)
                 {
                     LogInfo("VideoSubFinder found no subtitle frames; falling back to fixed-interval extraction.");
@@ -165,7 +165,7 @@ public sealed partial class OcrExtractOperator(
     }
 
     private async Task<List<OcrFrame>> ExtractVideoSubFinderFramesAsync(
-        string inputPath, string tempDir, string executablePath, CancellationToken cancellationToken)
+        WorkflowConfig config, string inputPath, string tempDir, string executablePath, CancellationToken cancellationToken)
     {
         var outputDir = Path.Combine(tempDir, "videosubfinder");
         Directory.CreateDirectory(outputDir);
@@ -176,18 +176,8 @@ public sealed partial class OcrExtractOperator(
             OnProgress(1, "Detecting subtitle frames with VideoSubFinder...");
             // VSF WXW（wxWidgets GUI 程序）即使正常完成也返回退出码 -1，
             // 因此忽略退出码，仅以输出产物（RGBImages + SRT）判定成功。
-            await processManager.ExecuteAsync(executablePath,
-            [
-                "-c", // clear dirs
-                "-r", // run search
-                "--create_empty_sub", timecodesPath,
-                "-i", inputPath,
-                "-o", outputDir,
-                "-te", "0.2102", // 字幕区顶部（视频高度比例，VSF 6.10 实测有效）
-                "-be", "0",
-                "-le", "0",
-                "-re", "1"
-            ], cancellationToken, throwOnNonZeroExit: false);
+            var vsfArgs = BuildVideoSubFinderArguments(config, inputPath, timecodesPath, outputDir);
+            await processManager.ExecuteAsync(executablePath, vsfArgs, cancellationToken, throwOnNonZeroExit: false);
 
             var imageDir = Path.Combine(outputDir, "RGBImages");
             if (!Directory.Exists(imageDir))
@@ -211,6 +201,31 @@ public sealed partial class OcrExtractOperator(
             return [];
         }
     }
+
+    /// <summary>
+    /// 构建 VideoSubFinder 命令行参数（字幕检测区域来自配置，未设置时使用默认字幕区）。
+    /// </summary>
+    /// <param name="config">工作流配置（OCR ROI 四个边缘比例，可空）。</param>
+    /// <param name="inputPath">输入视频路径。</param>
+    /// <param name="timecodesPath">时间码 SRT 输出路径（--create_empty_sub）。</param>
+    /// <param name="outputDir">输出目录。</param>
+    internal static IReadOnlyList<string> BuildVideoSubFinderArguments(
+        WorkflowConfig config, string inputPath, string timecodesPath, string outputDir) =>
+    [
+        "-c", // clear dirs
+        "-r", // run search
+        "--create_empty_sub", timecodesPath,
+        "-i", inputPath,
+        "-o", outputDir,
+        "-te", FormatRoi(config.OcrRoiTop, 0.2102),
+        "-be", FormatRoi(config.OcrRoiBottom, 0.0),
+        "-le", FormatRoi(config.OcrRoiLeft, 0.0),
+        "-re", FormatRoi(config.OcrRoiRight, 1.0)
+    ];
+
+    /// <summary>把 ROI 比例值格式化为 VSF 参数（未设置时用默认值，不变式文化与固定小数位）。</summary>
+    internal static string FormatRoi(double? value, double fallback) =>
+        (value ?? fallback).ToString("0.####", CultureInfo.InvariantCulture);
 
     private static List<OcrFrame> CreateIntervalFrames(IReadOnlyList<string> framePaths, double intervalSeconds) =>
         framePaths.Select((path, index) => new OcrFrame(

@@ -109,6 +109,14 @@ public class WorkflowConfig
     public string? OcrApiKey { get; init; }
     /// <summary>OCR 命令：GLM-OCR 端点地址（默认智谱 v4 chat/completions）。</summary>
     public string? OcrBaseUrl { get; init; }
+    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——顶部边缘（视频高度比例 0-1，默认 0.2102 为字幕区顶部，VSF -te）。</summary>
+    public double? OcrRoiTop { get; init; }
+    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——底部边缘（视频高度比例 0-1，默认 0，VSF -be）。</summary>
+    public double? OcrRoiBottom { get; init; }
+    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——左侧边缘（视频宽度比例 0-1，默认 0，VSF -le）。</summary>
+    public double? OcrRoiLeft { get; init; }
+    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——右侧边缘（视频宽度比例 0-1，默认 1，VSF -re）。</summary>
+    public double? OcrRoiRight { get; init; }
 
     // ---------- 说话人分割 ----------
     /// <summary>
