@@ -97,23 +97,38 @@ public sealed class GitHubUpdateService : IUpdateService
 
     private async Task<GitHubReleaseInfo?> GetLatestReleaseAsync(CancellationToken cancellationToken)
     {
-        using var response = await _http.GetAsync($"/repos/{Repository}/releases/latest", cancellationToken);
+        // 仓库 release 全部为 pre-release 时，/releases/latest 返回 404（GitHub 仅在该端点返回正式版）；
+        // 回退列出最近的 release，取最新一个非草稿条目（含 pre-release），保证 alpha/beta 链也能自更新。
+        var latest = await TryGetReleaseAsync($"/repos/{Repository}/releases/latest", cancellationToken);
+        if (latest is not null)
+            return latest;
+
+        using var listResponse = await _http.GetAsync($"/repos/{Repository}/releases?per_page=10", cancellationToken);
+        listResponse.EnsureSuccessStatusCode();
+        await using var listStream = await listResponse.Content.ReadAsStreamAsync(cancellationToken);
+        var dtos = await JsonSerializer.DeserializeAsync<List<ReleaseDto>>(listStream, JsonOptions, cancellationToken);
+        var newest = dtos?.FirstOrDefault(r => r.Draft != true);
+        return newest is null ? null : ToReleaseInfo(newest);
+    }
+
+    private async Task<GitHubReleaseInfo?> TryGetReleaseAsync(string path, CancellationToken cancellationToken)
+    {
+        using var response = await _http.GetAsync(path, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var dto = await JsonSerializer.DeserializeAsync<ReleaseDto>(stream, JsonOptions, cancellationToken);
-        if (dto is null)
-            return null;
-
-        return new GitHubReleaseInfo(
-            dto.TagName ?? dto.Name ?? "unknown",
-            dto.Name ?? dto.TagName ?? "unknown",
-            dto.PublishedAt,
-            dto.Body,
-            dto.Assets?.Select(a => new ReleaseAssetInfo(a.Name, a.BrowserDownloadUrl, a.Size)).ToList() ?? []);
+        return dto is null ? null : ToReleaseInfo(dto);
     }
+
+    private static GitHubReleaseInfo ToReleaseInfo(ReleaseDto dto) => new(
+        dto.TagName ?? dto.Name ?? "unknown",
+        dto.Name ?? dto.TagName ?? "unknown",
+        dto.PublishedAt,
+        dto.Body,
+        dto.Assets?.Select(a => new ReleaseAssetInfo(a.Name, a.BrowserDownloadUrl, a.Size)).ToList() ?? []);
 
     private async Task DownloadAsync(string url, string destinationPath, CancellationToken cancellationToken)
     {
@@ -265,9 +280,15 @@ public sealed class GitHubUpdateService : IUpdateService
         if (exact is not null)
             return exact.Name;
 
+        // 兼容紧凑变体（win-x64 -> win64），覆盖 centurion-win64.zip 这类命名
+        var compactRid = rid.Replace("-x64", "64", StringComparison.Ordinal)
+            .Replace("-arm64", "arm64", StringComparison.Ordinal)
+            .Replace("-", "", StringComparison.Ordinal);
         return assets
-            .Where(a => a.Name.Contains(rid, StringComparison.OrdinalIgnoreCase)
-                        && a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            .Where(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                        && (a.Name.Contains(rid, StringComparison.OrdinalIgnoreCase)
+                            || (compactRid.Length > 0
+                                && a.Name.Contains(compactRid, StringComparison.OrdinalIgnoreCase))))
             .OrderByDescending(a => a.SizeBytes)
             .Select(a => a.Name)
             .FirstOrDefault();
@@ -368,6 +389,7 @@ public sealed class GitHubUpdateService : IUpdateService
         [JsonPropertyName("name")] public string? Name { get; set; }
         [JsonPropertyName("published_at")] public DateTimeOffset? PublishedAt { get; set; }
         [JsonPropertyName("body")] public string? Body { get; set; }
+        [JsonPropertyName("draft")] public bool? Draft { get; set; }
         [JsonPropertyName("assets")] public List<AssetDto>? Assets { get; set; }
     }
 

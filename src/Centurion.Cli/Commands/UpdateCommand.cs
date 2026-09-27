@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Centurion.Abstractions;
 using Centurion.Cli.Commands.Settings;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Capabilities.Update;using Microsoft.Extensions.Logging;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Capabilities.Update;
+using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Abstractions.Utils;
 using Centurion.Models.Console;
@@ -56,10 +58,15 @@ public sealed class UpdateCommand(
             }
 
             var rid = GitHubUpdateService.GetRuntimeIdentifier();
+            var compactRid = rid.Replace("-x64", "64", StringComparison.Ordinal)
+                .Replace("-arm64", "arm64", StringComparison.Ordinal)
+                .Replace("-", "", StringComparison.Ordinal);
             var asset = release.Assets.FirstOrDefault(a =>
                 string.Equals(a.Name, settings.AssetName ?? $"Centurion-{rid}.zip", StringComparison.OrdinalIgnoreCase))
                 ?? release.Assets.FirstOrDefault(a =>
-                    a.Name.Contains(rid, StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                    a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                    && (a.Name.Contains(rid, StringComparison.OrdinalIgnoreCase)
+                        || (compactRid.Length > 0 && a.Name.Contains(compactRid, StringComparison.OrdinalIgnoreCase))));
 
             if (asset is null)
             {
