@@ -29,3 +29,6 @@ _run/
 !/samples/*sample.centurion.json
 # 本地第三方资产（VSF 捆绑源等），不入库
 /.local/
+
+# 发布资产压缩包（本地下载/测试用，不入库）
+*.zip
