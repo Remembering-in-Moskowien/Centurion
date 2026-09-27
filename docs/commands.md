@@ -146,10 +146,14 @@ Centurion ocr movie.mp4 --ocr-api-key <KEY> --ocr-interval 1.5 --ocr-videosubfin
 - `-l, --language <LANG>` — text language, default `en`
 - `--ocr-interval <SECONDS>` — fallback frame interval, default `2`
 - `--ocr-videosubfinder-path <PATH>` — VideoSubFinder CLI path override
-- `--ocr-backend <BACKEND>` — `zhipu` (default) / `ollama` / `llamacpp`
+- `--ocr-backend <BACKEND>` — `zhipu` (default) / `ollama` / `llamacpp` / `rapidocr` (local ONNX)
 - `--ocr-model <MODEL>` — OCR model name
 - `--ocr-api-key <KEY>` — GLM-OCR API key, required for `zhipu`
 - `--ocr-base-url <URL>` — custom OCR endpoint
+- `--ocr-roi-top <RATIO>` — VideoSubFinder subtitle-region top edge (0–1 of height), default `0.2102`
+- `--ocr-roi-bottom <RATIO>` — VideoSubFinder subtitle-region bottom edge (0–1 of height), default `0`
+- `--ocr-roi-left <RATIO>` — VideoSubFinder subtitle-region left edge (0–1 of width), default `0`
+- `--ocr-roi-right <RATIO>` — VideoSubFinder subtitle-region right edge (0–1 of width), default `1`
 - `-s, --splitter <STRATEGY>` and `--splitter-*` — configure text splitting
 - `--llm-provider <PROVIDER>` / `--llm-base-url <URL>` — LLM splitter service
 
