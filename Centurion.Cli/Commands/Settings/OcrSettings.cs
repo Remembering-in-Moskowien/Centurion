@@ -51,6 +51,25 @@ public sealed class OcrSettings : GlobalCommandSettings
     [CommandOption("--ocr-base-url <URL>")]
     [Description("Custom OCR endpoint")]
     public string? OcrBaseUrl { get; init; }
+    /// <summary>VideoSubFinder subtitle-region top edge (0-1 of video height; default 0.2102 = subtitle area).</summary>
+    [CommandOption("--ocr-roi-top <RATIO>")]
+    [Description("VideoSubFinder ROI top edge (0-1 of height), default 0.2102")]
+    public double? OcrRoiTop { get; init; }
+
+    /// <summary>VideoSubFinder subtitle-region bottom edge (0-1 of video height; default 0).</summary>
+    [CommandOption("--ocr-roi-bottom <RATIO>")]
+    [Description("VideoSubFinder ROI bottom edge (0-1 of height), default 0")]
+    public double? OcrRoiBottom { get; init; }
+
+    /// <summary>VideoSubFinder subtitle-region left edge (0-1 of video width; default 0).</summary>
+    [CommandOption("--ocr-roi-left <RATIO>")]
+    [Description("VideoSubFinder ROI left edge (0-1 of width), default 0")]
+    public double? OcrRoiLeft { get; init; }
+
+    /// <summary>VideoSubFinder subtitle-region right edge (0-1 of video width; default 1).</summary>
+    [CommandOption("--ocr-roi-right <RATIO>")]
+    [Description("VideoSubFinder ROI right edge (0-1 of width), default 1")]
+    public double? OcrRoiRight { get; init; }
 
     /// <summary>Split strategy used for recognized text.</summary>
     [CommandOption("-s|--splitter <STRATEGY>")]
