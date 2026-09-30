@@ -41,13 +41,30 @@ public static class MetadataJsonLoader
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
+    private static readonly object Sync = new();
+    private static readonly Dictionary<string, MetadataCatalog> CatalogCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// 加载元数据。外部 JSON 缺失或损坏时回退内置默认，并尝试生成种子文件。
+    /// 同一进程内按最终路径缓存：多次 AddCenturionCore（如 serve 场景）不会
+    /// 重复合并、重复写文件或重复输出合并提示。
     /// </summary>
     public static MetadataCatalog LoadOrDefault(string? explicitPath = null)
     {
         var path = ResolvePath(explicitPath);
+        lock (Sync)
+        {
+            if (CatalogCache.TryGetValue(path, out var cached))
+                return cached;
+            var catalog = LoadOrDefaultCore(path);
+            CatalogCache[path] = catalog;
+            return catalog;
+        }
+    }
 
+    private static MetadataCatalog LoadOrDefaultCore(string path)
+    {
         if (File.Exists(path))
         {
             try
@@ -311,7 +328,9 @@ public static class MetadataJsonLoader
                     ["qwen3Asr"] = ToDtoDict(catalog.Models.Qwen3AsrModels),
                     ["qwen3ForcedAligner"] = ToDtoDict(catalog.Models.Qwen3ForcedAlignerModels),
                     ["diarization"] = ToDtoDict(catalog.Models.DiarizationModels),
-                    ["bertOnnx"] = ToDtoDict(catalog.Models.BertOnnxModels)
+                    ["bertOnnx"] = ToDtoDict(catalog.Models.BertOnnxModels),
+                    ["qwen3Tts"] = ToDtoDict(catalog.Models.Qwen3TtsModels),
+                    ["indextts"] = ToDtoDict(catalog.Models.IndexTtsModels)
                 }
             };
 
