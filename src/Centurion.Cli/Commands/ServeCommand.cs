@@ -1,4 +1,4 @@
-using Centurion.Abstractions;
+﻿using Centurion.Abstractions;
 using Centurion.Abstractions.Commands;
 using Centurion.Cli.Commands.Settings;
 using Centurion.Cli.Server;
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Text;
@@ -56,9 +57,17 @@ public sealed class ServeCommand(
         }
 
         var builder = WebApplication.CreateBuilder();
+        // 拦截 ASP.NET Core 默认日志（Kestrel/Hosting.Lifetime 的 "Now listening on: ..."
+        // 等四行），启动信息改由 serve 本体式排版输出；命令执行日志沿用主程序
+        // 格式化器（plain）与文件日志，保持与 Centurion 其他命令一致
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
-        builder.Logging.AddDebug();
+        builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
+        // 请求管线（Request starting / Executing endpoint 等）非 verbose 噪音，一并拦截；
+        // 命令执行日志（Centurion.Server.*）保留
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.None);
+        builder.Logging.AddConsole(options => options.FormatterName = "plain");
+        builder.Logging.AddConsoleFormatter<Centurion.Cli.Console.PlainConsoleFormatter, ConsoleFormatterOptions>();
+        builder.Logging.AddProvider(new Centurion.Core.Capabilities.Logging.FileLoggerProvider());
         builder.Services.AddCenturionCore();
 
         builder.WebHost.UseUrls(urls);
@@ -180,12 +189,19 @@ public sealed class ServeCommand(
             }
         });
 
+        // 本体式启动输出（替代被拦截的 ASP.NET Core 默认日志）
         AnsiConsole.MarkupLine($"[bold cyan]{CliSymbols.Play} {ConsoleServices.T("serve")}[/] {ConsoleServices.T("listening on")} [bold]{urls}[/]");
+        AnsiConsole.MarkupLine($"{ConsoleServices.T("Endpoints:")}");
+        foreach (var e in ServerCommandRegistry.Names)
+            AnsiConsole.MarkupLine($"  [dim]POST /commands/{e}[/]");
+        AnsiConsole.MarkupLine($"[dim]GET /  /health  /commands  /version[/]");
+        AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("Press Ctrl+C to shut down")}[/]");
         logger.LogInformation("Centurion serve listening on {Urls}", urls);
 
         // WebApplication 自身处理 Ctrl+C/SIGTERM（Program 的 CancelKeyPress 已置 e.Cancel，
         // 不影响 ASP.NET 的停止处理）；RunAsync 返回即服务停止。
         await app.RunAsync();
+        AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("serve stopped")}[/]");
         return ExitCodes.Success;
     }
 }
