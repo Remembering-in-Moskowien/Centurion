@@ -1,4 +1,4 @@
-using Centurion.Cli.Commands.Settings;
+﻿using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Core.Capabilities.Managers.Media;
 using Centurion.Models.Console;
@@ -23,7 +23,8 @@ internal static class ModelCatalog
         new("diarization", "diarization", registry.DiarizationModels),
         new("qwen3aligner", "qwen3aligner", registry.Qwen3ForcedAlignerModels),
         new("bert", "bert", registry.BertOnnxModels),
-        new("qwen3tts", "qwen3tts", registry.Qwen3TtsModels)
+        new("qwen3tts", "qwen3tts", registry.Qwen3TtsModels),
+        new("indextts", "indextts", registry.IndexTtsModels)
     ];
 
     /// <summary>Matches a model name across all domains (case-insensitive); returns (domain, model name, metadata).</summary>

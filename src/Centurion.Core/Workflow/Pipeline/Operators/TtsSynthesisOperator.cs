@@ -1,5 +1,7 @@
-using Centurion.Abstractions.Pipeline;
+﻿using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Tts;
+using Centurion.Core.Capabilities.Infrastructure.Tts;
+using Microsoft.Extensions.DependencyInjection;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
@@ -14,7 +16,7 @@ namespace Centurion.Core.Workflow.Pipeline.Operators;
 /// 结果写入 State.DubSegments（List&lt;DubSegment&gt;，按原句序）。
 /// </summary>
 public sealed class TtsSynthesisOperator(
-    ITtsEngine ttsEngine,
+    IServiceProvider serviceProvider,
     ILogger<TtsSynthesisOperator> logger)
     : PipelineOperatorBase<TtsSynthesisOperator>(logger)
 {
@@ -39,6 +41,7 @@ public sealed class TtsSynthesisOperator(
             return;
         }
 
+        var engine = ResolveEngine(context);
         var references = context.State.DubSpeakerReferences;
 
         var parallelism = Math.Max(1, context.Config.TtsParallelism);
@@ -100,7 +103,7 @@ public sealed class TtsSynthesisOperator(
                 await gate.WaitAsync(cancellationToken);
                 try
                 {
-                    segment.SynthesizedDurationSec = await ttsEngine.SynthesizeAsync(
+                    segment.SynthesizedDurationSec = await engine.SynthesizeAsync(
                         item.Text, item.Reference, context.Config.TtsLanguage, segment.SynthesizedWavPath!, cancellationToken);
                 }
                 catch (TtsSynthesisException ex)
@@ -139,6 +142,20 @@ public sealed class TtsSynthesisOperator(
         var skipped = finalSegments.Count(s => s.Skipped);
         OnProgress(100, $"Synthesized {finalSegments.Count - skipped}/{finalSegments.Count} segments");
         LogInfo($"TTS synthesis completed: {finalSegments.Count} segments ({buckets.Count} speaker groups, parallelism {parallelism}), {skipped} skipped.");
+    }
+
+    /// <summary>
+    /// 按 <see cref="WorkflowConfig.TtsEngine"/> 解析 TTS 引擎（"indextts" → IndexTTS-Rust，其他 → llama-tts）。
+    /// </summary>
+    /// <param name="context">工作流上下文。</param>
+    private ITtsEngine ResolveEngine(SubtitleWorkflowContext context)
+    {
+        var name = context.Config.TtsEngine?.Trim().ToLowerInvariant() ?? "llama";
+        return name switch
+        {
+            "indextts" => serviceProvider.GetRequiredService<IndexTtsEngine>(),
+            _ => serviceProvider.GetRequiredService<LlamaTtsEngine>()
+        };
     }
 
     private static int GetSentenceOrder(double targetStartMs, List<Sentence> sentences)

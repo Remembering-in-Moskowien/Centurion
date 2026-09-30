@@ -1,4 +1,4 @@
-namespace Centurion.Models.Metadata;
+﻿namespace Centurion.Models.Metadata;
 
 /// <summary>描述模型资源的下载与组织形式。</summary>
 public enum ModelDownloadType
@@ -86,7 +86,8 @@ public sealed class ModelRegistry
         BuildDefaultDict(BuildDefaultQwen3ForcedAlignerModels()),
         BuildDefaultDict(BuildDefaultDiarizationModels()),
         BuildDefaultDict(BuildDefaultBertOnnxModels()),
-        BuildDefaultDict([]));
+        BuildDefaultDict(BuildDefaultQwen3TtsModels()),
+        BuildDefaultDict(BuildDefaultIndexTtsModels()));
 
     /// <summary>Whisper.cpp 单文件模型字典，键为模型规格名（tiny/base/.../large）。</summary>
     public IReadOnlyDictionary<string, ModelMeta> WhisperModels { get; }
@@ -102,6 +103,8 @@ public sealed class ModelRegistry
     public IReadOnlyDictionary<string, ModelMeta> BertOnnxModels { get; }
     /// <summary>Qwen3-TTS 模型字典（供 dub 命令 llama-tts 使用），键为模型规格名。</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3TtsModels { get; }
+    /// <summary>IndexTTS-Rust 模型字典（供 dub 命令 --tts-engine indextts 使用），键为模型名。</summary>
+    public IReadOnlyDictionary<string, ModelMeta> IndexTtsModels { get; }
 
     /// <summary>用六类模型字典构造注册表。</summary>
     /// <param name="whisperModels">Whisper.cpp 模型字典。</param>
@@ -111,6 +114,7 @@ public sealed class ModelRegistry
     /// <param name="diarizationModels">说话人分割模型字典。</param>
     /// <param name="bertOnnxModels">BERT ONNX 模型字典。</param>
     /// <param name="qwen3TtsModels">Qwen3-TTS 模型字典。</param>
+    /// <param name="indexttsModels">IndexTTS-Rust 模型字典。</param>
     public ModelRegistry(
         IReadOnlyDictionary<string, ModelMeta> whisperModels,
         IReadOnlyDictionary<string, ModelMeta> fasterWhisperModels,
@@ -118,7 +122,8 @@ public sealed class ModelRegistry
         IReadOnlyDictionary<string, ModelMeta> qwen3ForcedAlignerModels,
         IReadOnlyDictionary<string, ModelMeta> diarizationModels,
         IReadOnlyDictionary<string, ModelMeta> bertOnnxModels,
-        IReadOnlyDictionary<string, ModelMeta> qwen3TtsModels)
+        IReadOnlyDictionary<string, ModelMeta> qwen3TtsModels,
+        IReadOnlyDictionary<string, ModelMeta> indexttsModels)
     {
         WhisperModels = whisperModels ?? throw new ArgumentNullException(nameof(whisperModels));
         FasterWhisperModels = fasterWhisperModels ?? throw new ArgumentNullException(nameof(fasterWhisperModels));
@@ -127,6 +132,7 @@ public sealed class ModelRegistry
         DiarizationModels = diarizationModels ?? throw new ArgumentNullException(nameof(diarizationModels));
         BertOnnxModels = bertOnnxModels ?? throw new ArgumentNullException(nameof(bertOnnxModels));
         Qwen3TtsModels = qwen3TtsModels ?? throw new ArgumentNullException(nameof(qwen3TtsModels));
+        IndexTtsModels = indexttsModels ?? throw new ArgumentNullException(nameof(indexttsModels));
     }
 
     // ---------- 内置默认条目（原硬编码注册数据） ----------
@@ -257,6 +263,28 @@ public sealed class ModelRegistry
             "https://hf-mirror.com/Xenova/all-MiniLM-L6-v2/resolve/main",
             ["onnx/model.onnx", "config.json", "tokenizer.json", "vocab.txt"],
             onnxModelType: "embedding")
+    };
+
+    // Qwen3-TTS 模型（llama-tts 使用）：1.7B Base GGUF（talker + mmproj，目录型）
+    private static Dictionary<string, ModelMeta> BuildDefaultQwen3TtsModels() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        {
+            "1.7b-base-q4",
+            new ModelMeta(
+                "https://hf-mirror.com/ggml-org/Qwen3-TTS-12Hz-1.7B-Base-GGUF/resolve/main",
+                ["Qwen3-TTS-12Hz-1.7B-Base-Q4_K_M.gguf", "mmproj-Qwen3-TTS-12Hz-1.7B-Base-Q8_0.gguf"])
+        }
+    };
+
+    // IndexTTS-Rust 模型（目录型）：官方预转换 ONNX（含外部权重 .data）；gpt/s2mel ONNX 未发布，需自行转换后放置
+    private static Dictionary<string, ModelMeta> BuildDefaultIndexTtsModels() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        {
+            "indextts2",
+            new ModelMeta(
+                "https://hf-mirror.com/ThreadAbort/IndexTTS-Rust/resolve/models/models",
+                ["bigvgan.onnx", "bigvgan.onnx.data", "speaker_encoder.onnx", "speaker_encoder.onnx.data"])
+        }
     };
 
     private static IReadOnlyDictionary<string, ModelMeta> BuildDefaultDict(Dictionary<string, ModelMeta> source) =>
