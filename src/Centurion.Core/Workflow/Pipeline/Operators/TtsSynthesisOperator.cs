@@ -154,6 +154,7 @@ public sealed class TtsSynthesisOperator(
         return name switch
         {
             "indextts" => serviceProvider.GetRequiredService<IndexTtsEngine>(),
+            "qora" => serviceProvider.GetRequiredService<QoraTtsEngine>(),
             _ => serviceProvider.GetRequiredService<LlamaTtsEngine>()
         };
     }
