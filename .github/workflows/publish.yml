@@ -1,0 +1,73 @@
+name: publish
+
+# 每次提交自动发布一个 prerelease：build 号 = git 提交计数（HEAD），
+# 与 BuildInfo/IR generator.version 同源。发布资产不含第三方工具可执行文件
+# （VSF / RapidOCR / QORA-TTS / IndexTTS / llama.cpp 等按需下载或由用户放置）。
+
+on:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Centurion.slnx
+
+      - name: Build (Release)
+        run: dotnet build Centurion.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Centurion.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+
+      - name: Compute build number (git commit count)
+        id: build
+        shell: pwsh
+        run: |
+          $count = (& git rev-list --count HEAD).Trim()
+          "number=$count" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+
+      - name: Publish (win-x64, self-contained)
+        run: dotnet publish src/Centurion.Cli -c Release -r win-x64 --self-contained true -o publish/win-x64
+
+      - name: Package (exclude third-party tool executables)
+        shell: pwsh
+        run: |
+          if (Test-Path publish/win-x64/tools) { Remove-Item publish/win-x64/tools -Recurse -Force }
+          Compress-Archive -Path publish/win-x64/* -DestinationPath centurion-win64.zip -Force
+          Get-Item centurion-win64.zip | Select-Object Name, Length
+
+      - name: Create pre-release (build-N)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "build-${{ steps.build.outputs.number }}"
+          $sha = "${{ github.sha }}"
+          $notes = "Automated pre-release build-${tag} from commit ${sha}."
+          $notes += "`n`nThird-party tool executables (VideoSubFinder, RapidOCR, QORA-TTS, IndexTTS, llama.cpp) are NOT bundled; they are downloaded on first use or placed by the user under tools/."
+          gh release create $tag centurion-win64.zip --repo "${{ github.repository }}" --title "Centurion $tag" --notes $notes --prerelease 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "release tag exists (rerun); updating assets instead"
+            gh release upload $tag centurion-win64.zip --repo "${{ github.repository }}" --clobber 2>&1
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-win64
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
