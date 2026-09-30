@@ -1,4 +1,4 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Core.Capabilities.Infrastructure.Asr;
 using Centurion.Models;
 using Centurion.Models.Asr;
@@ -83,13 +83,13 @@ public static class CloudAsrProviders
     public static ProviderCapabilities CapabilitiesFor(AsrProvider provider) => provider switch
     {
         AsrProvider.OpenAI => ProviderCapabilities.Cloud(0.006, 0, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "OpenAI Whisper-1（whisper-1，按音频分钟计费）"),
+            "OpenAI Whisper-1 (whisper-1, billed per audio minute)"),
         AsrProvider.Groq => ProviderCapabilities.Cloud(0, 0, ProviderLatency.Low, ProviderQualityLevel.High,
-            "Groq whisper-large-v3（当前免费档，延迟低）"),
+            "Groq whisper-large-v3 (currently free tier, low latency)"),
         AsrProvider.DashScope => ProviderCapabilities.Cloud(0.0015, 0, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "阿里百炼 DashScope paraformer-realtime-v2（低成本）"),
+            "Alibaba DashScope paraformer-realtime-v2 (low cost)"),
         AsrProvider.Deepgram => ProviderCapabilities.Cloud(0.0043, 0, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "Deepgram Nova-2（高精度，原生词级时间戳）"),
+            "Deepgram Nova-2 (high accuracy, native word-level timestamps)"),
         _ => ProviderCapabilities.Cloud(0, 0, ProviderLatency.Medium, ProviderQualityLevel.Normal, "Unknown cloud ASR")
     };
 }

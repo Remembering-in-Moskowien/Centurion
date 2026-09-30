@@ -104,9 +104,7 @@ var filteredArgs = args
 
 if (lang is null && !string.IsNullOrWhiteSpace(appConfig.Language))
     lang = appConfig.Language;
-// 自动检测环境语言首选项：系统 UI 为中文时默认中文，其余语言默认英文（英文优先）
-if (lang is null && systemUiLang.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-    lang = "zh-CN";
+// 命令帮助与描述固定英文（默认）；可用 --language 或 centurion.config.json 显式切换
 
 if (!string.IsNullOrWhiteSpace(lang))
 {
@@ -216,6 +214,8 @@ app.Configure(config =>
         .WithDescription(ConsoleServices.T("Pipeline DAG visualization: render a command's topology (no execution, -c selects)"));
     config.AddCommand<ValidateCommand>("validate")
         .WithDescription(ConsoleServices.T("Validate Centurion intermediate files against the IR schema"));
+    config.AddCommand<DoctorCommand>("doctor")
+        .WithDescription(ConsoleServices.T("Environment diagnostics: probe runtime/toolchain/models/config and write a diagnostic log"));
     config.AddCommand<MigrateCommand>("migrate")
         .WithDescription(ConsoleServices.T("IR schema migration: upgrade older intermediate files to a target version (--to)"));
     // ─── 模型注册表管理 + Provider 选型/探测 ───

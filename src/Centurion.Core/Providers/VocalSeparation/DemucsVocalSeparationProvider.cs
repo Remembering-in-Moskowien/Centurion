@@ -1,4 +1,4 @@
-using Centurion.Abstractions;
+﻿using Centurion.Abstractions;
 using Centurion.Core.Workflow.Factories;
 using Centurion.Abstractions.Providers;
 using Centurion.Core.Capabilities.Managers.Runtime;
@@ -76,5 +76,5 @@ public static class DemucsVocalSeparationProviders
         requiresGpu: true,
         latency: ProviderLatency.High,
         quality: ProviderQualityLevel.High,
-        description: "demucs-rs（htdemucs）本地人声分离，建议 GPU");
+        description: "demucs-rs (htdemucs) local vocal separation, GPU recommended");
 }

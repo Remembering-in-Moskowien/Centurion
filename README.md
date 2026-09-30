@@ -1,122 +1,137 @@
-# 🛡️⚡ Centurion — Speech In, Subtitles Out
+# Centurion
 
-> **Speech → Subtitles, done properly.** 🎬
-> Centurion is a **.NET 10** command-line powerhouse that turns audio/video into **polished ASS subtitles** — and beyond: speaker diarization, machine translation, vocal separation, and machine **dubbing** with Qwen3-TTS. Fully local by default, GPU-aware, zero manual tool installs.
+Speech in, subtitles out. Centurion is a .NET 10 command-line application that
+turns audio and video into polished ASS subtitles, and goes further: speaker
+diarization, machine translation, vocal separation, and machine dubbing with
+Qwen3-TTS / QORA-TTS / IndexTTS. Fully local by default, GPU-aware.
 
-![Pipeline](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f) ![Tests](https://img.shields.io/badge/tests-382%20passing-2ea44f) ![Status](https://img.shields.io/badge/status-early%20dev%20%F0%9F%9A%A7-yellow)
+![architecture](https://img.shields.io/badge/architecture-operator%2Dpipeline-8A2BE2)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-2ea44f)
+![tests](https://img.shields.io/badge/tests-391%20passing-2ea44f)
+![status](https://img.shields.io/badge/status-active-yellow)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # 1. Install the .NET 10 SDK + FFmpeg, then build
 dotnet build -c Release
 
-# 2. Transcribe a video → intermediate file
+# 2. Transcribe a video to an intermediate file
 Centurion asr demo.mp4 --language en
 
 # 3. Render subtitles
 Centurion build demo.centurion.json
 ```
 
-Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded on first use** — go grab a coffee ☕
+Third-party tools and models (whisper.cpp, CrispASR, Demucs, QORA-TTS weights,
+etc.) are downloaded automatically on first use.
 
 ---
 
-## ✨ Highlights
+## Highlights
 
-| | |
+| Capability | Description |
 |---|---|
-| 🗣️ **Speech recognition** | Whisper.cpp & CrispASR — plus **cloud ASR** (OpenAI / Groq / DashScope / Deepgram) |
-| 👁️ **OCR command** | GLM-OCR (cloud) / **RapidOCR** local ONNX / Ollama / llama.cpp — reads burned-in subtitles, signs & game dialogue |
-| 👥 **Speaker diarization** | Who said what, on every path; speaker labels flow into the ASS |
-| 🎙️ **Dubbing** | `dub` re-voices translations with Qwen3-TTS — voice cloning, time-aligned, mixed in |
-| 🌐 **Translation** | LLM (11+ providers), glossary & target-script alignment, karaoke timestamps |
-| 🏗️ **IR pipeline** | One versioned rich intermediate file (`*.centurion.json`) chains every command: `convert → correct → translate → dub → build`, with `validate` / `migrate` for schema upgrades |
-| 🖥️ **REST API** | `Centurion serve` runs the whole pipeline over HTTP — in-process ASP.NET Core, no separate server project |
-| 🎵 **Karaoke** | Word-level `\K` timestamps, translated karaoke included |
-| 🈶 **CJK & friends** | Chinese, Japanese, Korean, Cyrillic, Arabic… no space-joined gibberish |
-| 📊 **Quality reports** | Every command writes a `.quality.json` — coverage, drift, CPS, warnings |
+| Speech recognition | Whisper.cpp and CrispASR, plus cloud ASR (OpenAI / Groq / DashScope / Deepgram) |
+| OCR | GLM-OCR (cloud), RapidOCR (local ONNX), Ollama, llama.cpp — burned-in subtitles, signs and game dialogue |
+| Speaker diarization | Speaker labels flow into the ASS output |
+| Dubbing | Qwen3-TTS / QORA-TTS / IndexTTS voice cloning, time-aligned and mixed in |
+| Translation | 11+ LLM providers, glossary and target-script alignment, karaoke timestamps |
+| IR pipeline | One versioned intermediate file (`*.centurion.json`) chains every command |
+| REST API | `Centurion serve` exposes the pipeline over HTTP (in-process ASP.NET Core) |
+| Quality reports | Every command writes a `.quality.json` with coverage, drift, CPS and warnings |
 
 ---
 
-## 🎮 Command Family
+## Commands
 
-| Command | What it does | Usage |
-|---|---|---|
-| `init` | 🧭 Interactive setup wizard — detects files, suggests the right chain | `init` |
-| `convert` | 🔄 **Entry point**: any subtitle file → intermediate | `convert <INPUT_FILE>` |
-| `asr` | 🎬 Media → intermediate (speech recognition) | `asr <INPUT_FILE>` |
-| `ocr` | 👁️ Video/image → intermediate (visible text recognition) | `ocr <INPUT_FILE>` |
-| `from-script` | 📜 Media + script → timed intermediate | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
-| `correct` | 🛠️ Calibrate timeline & text (+ Hunspell spell check) | `correct <CENTURION_FILE>` |
-| `translate` | 🌐 Translate an intermediate file (LLM, glossary, script) | `translate <CENTURION_FILE> -t <LANG>` |
-| `dub` | 🎙️ Intermediate → dubbed WAV (Qwen3-TTS) | `dub <CENTURION_FILE> -t <LANG>` |
-| `build` | 🏗️ **Exit point**: intermediate → ASS / SRT / TXT | `build <CENTURION_FILE>` |
-| `serve` | 🖥️ REST API over the pipeline (in-process HTTP) | `serve [--port 8080]` |
-| `validate` / `migrate` | ✅/🔄 IR schema check & upgrade | `validate <FILE>` · `migrate <FILE> --to 1.0` |
-| `models` | 🧠 Manage model registry — `list` / `install` / `verify` / `remove` | `models list` |
-| `providers` | 🔌 Probe provider capabilities — `list` / `test` | `providers test` |
-| `pipeline-graph` | 🕸️ Visualize the DAG for any workflow | `pipeline-graph <FILE>` |
-| `quality` | 📊 Per-run quality report (coverage, drift, CPS, warnings) | `quality <FILE>` |
+The full command reference lives in the
+[Commands documentation](https://remembering-in-moskowien.github.io/Centurion/commands).
+Short overview:
 
-> 💡 `Centurion <command> --help` is always your best friend 🤝
-
----
-
-## 📚 Full Documentation → [Centurion Docs](https://remembering-in-moskowien.github.io/Centurion/)
-
-| Page | What's inside |
+| Command | Purpose |
 |---|---|
-| [⚡ Quick Start](https://remembering-in-moskowien.github.io/Centurion/quickstart) | Prerequisites, install & typical workflows |
-| [🎮 Commands](https://remembering-in-moskowien.github.io/Centurion/commands) | Every command & option in detail |
-| [🌐 Translate](https://remembering-in-moskowien.github.io/Centurion/translate) | LLM translation, glossary, script alignment, karaoke |
-| [🎙️ Dub](https://remembering-in-moskowien.github.io/Centurion/dub) | Qwen3-TTS dubbing — voice cloning, ducking, alignment |
-| [🖥️ Server](https://remembering-in-moskowien.github.io/Centurion/server) | `serve` — the whole pipeline over a REST API |
-| [🔬 Advanced](https://remembering-in-moskowien.github.io/Centurion/advanced) | DAG pipelines, quality reports, localization |
-| [🎨 Features](https://remembering-in-moskowien.github.io/Centurion/features) | Styles, diarization, vocal separation, GPU, non-Latin scripts |
+| `init` | Interactive setup wizard |
+| `convert` | Subtitle file to intermediate |
+| `asr` / `ocr` / `from-script` | Media to intermediate |
+| `correct` | Timeline and text calibration |
+| `translate` / `dub` | Translation and dubbing |
+| `build` | Intermediate to ASS / SRT / TXT |
+| `quality` / `validate` / `migrate` / `pipeline-graph` | QA and IR tooling |
+| `models` / `providers` | Model and provider registry |
+| `serve` | REST API |
+| `doctor` | Environment diagnostics and diagnostic log |
+
+Every command accepts `--help`. `Centurion doctor` probes the environment
+(runtime, toolchain, models, config, network, disk) and writes a diagnostic
+log suitable for issue reports.
 
 ---
 
-## 🧠 How Is It Built?
+## Documentation
 
-**Operator-pipeline (DAG) architecture** — every stage is an independent, swappable module, executed as a directed acyclic graph with parallel branches, retries and graceful degradation:
+- [Quick Start](https://remembering-in-moskowien.github.io/Centurion/quickstart)
+- [Commands](https://remembering-in-moskowien.github.io/Centurion/commands)
+- [Translate](https://remembering-in-moskowien.github.io/Centurion/translate)
+- [Dub](https://remembering-in-moskowien.github.io/Centurion/dub)
+- [Server](https://remembering-in-moskowien.github.io/Centurion/server)
+- [Advanced](https://remembering-in-moskowien.github.io/Centurion/advanced)
+- [Features](https://remembering-in-moskowien.github.io/Centurion/features)
+
+---
+
+## Architecture
+
+Operator-pipeline (DAG) architecture: every stage is an independent, swappable
+module, executed as a directed acyclic graph with parallel branches, retries
+and graceful degradation.
 
 ```
-┌─ OCR branch: VideoSubFinder frame pick ─► OcrExtract ──────────┐
-│                                                               ▼
-input ─► FFmpegConvert ─► AudioPreprocess ─► [🎤 VocalSeparation] ─► Transcribe
-   ─► [👥 Diarization] ─► SentenceSplit ─► TextCleaning ─► [📐 Alignment] ─► IR (*.centurion.json) ─► build ─► ASS / SRT / TXT
+input ─► FFmpegConvert ─► AudioPreprocess ─► [VocalSeparation] ─► Transcribe
+   ─► [Diarization] ─► SentenceSplit ─► TextCleaning ─► [Alignment]
+   ─► IR (*.centurion.json) ─► build ─► ASS / SRT / TXT
 ```
 
-All inference goes through a **Provider abstraction** (local-first with cloud fallback): ASR, OCR, LLM, TTS, diarization and vocal separation each expose `IProvider` capabilities, and `models` / `providers` commands manage the registry.
+OCR branch: VideoSubFinder frame pick to OcrExtract, parallel to the audio path.
+
+All inference goes through a provider abstraction (local-first with cloud
+fallback): ASR, OCR, LLM, TTS, diarization and vocal separation each expose
+`IProvider` capabilities; the `models` and `providers` commands manage the
+registry.
 
 | Project | Role |
 |---|---|
-| `src/Centurion.Models` | Pure data models, metadata registry, console facade |
+| `src/Centurion.Models` | Data models, metadata registry, console facade |
 | `src/Centurion.Abstractions` | Interfaces, abstract bases, DTOs |
-| `src/Centurion.Core` | The engine: DAG executor, operators, strategies, providers, DI |
+| `src/Centurion.Core` | Engine: DAG executor, operators, strategies, providers, DI |
 | `src/Centurion.Cli` | Spectre.Console CLI front-end (incl. `serve` HTTP mode) |
 | `src/Centurion.Tests` | xUnit test suite |
 
-Fully async & cancellation-aware; **non-fatal errors log a warning and keep going** — no half-baked bailouts 💪
+---
+
+## Versioning & Releases
+
+- Version identity is the build number: banners and IR provenance
+  (`generator.version`) show `build-N`, where N is the git commit count.
+- Every push to `master` is automatically published by GitHub Actions as a
+  pre-release tagged `build-N`, with asset `centurion-win64.zip`.
+- Release packages do not include third-party tool executables
+  (VideoSubFinder / RapidOCR / QORA-TTS / IndexTTS / llama.cpp); they are
+  downloaded on first use or placed by the user under `tools/`.
+- Build dates can be pinned with `-p:BuildDate=yyyy-MM-ddTHH:mm:ssZ`.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ---
 
-## 📦 Versioning & Release Naming
+## Contributing
 
-- **版本标识 = 构建号**：横幅与 IR 溯源（`generator.version`）统一显示 `build-N`（取自输出目录 `build-number.txt`，即 git 提交计数），不再暴露语义版本号；无构建文件时回退程序集 InformationalVersion。
-- **GitHub Release tag = `build-N`**（N 为 git 提交计数，与横幅/IR 溯源同源）；每次提交由 GitHub Actions 自动创建并发布一个 **pre-release**（不含语义版本号，人工可稳定复现到具体构建）。
-- **发布资产命名**：`centurion-{rid紧凑}.zip`（如 `centurion-win64.zip`）。发布包**不含第三方工具可执行文件**（VideoSubFinder / RapidOCR / QORA-TTS / IndexTTS / llama.cpp 等按需下载或由用户放置于 `tools/`）。
-- **构建日期可固定**：发布可用 `-p:BuildDate=yyyy-MM-ddTHH:mm:ssZ` 覆盖默认的当前 UTC 时间，使更新比较（远端发布时间 vs 本地构建日期）可复现。
+Issues, pull requests and feedback are welcome. Familiarize yourself with the
+pipeline/operator structure first, and keep CLI options backward-compatible
+where possible.
 
----
+## License
 
-## 🤝 Contributing & Feedback
-
-Issues, PRs, and spicy feedback are all welcome! 🔥 Get familiar with the pipeline/operator structure first, and keep CLI options backward-compatible where possible.
-
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

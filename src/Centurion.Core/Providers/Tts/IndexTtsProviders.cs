@@ -1,4 +1,4 @@
-using Centurion.Models.Providers;
+﻿using Centurion.Models.Providers;
 
 namespace Centurion.Core.Providers.Tts;
 
@@ -13,5 +13,5 @@ public static class IndexTtsProviders
         requiresGpu: false,
         latency: ProviderLatency.Medium,
         quality: ProviderQualityLevel.Normal,
-        description: "IndexTTS-Rust（ONNX）本地合成，中英混合零样本音色克隆");
+        description: "IndexTTS-Rust (ONNX) local synthesis, zero-shot voice cloning");
 }

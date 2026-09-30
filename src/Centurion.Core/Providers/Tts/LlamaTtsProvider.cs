@@ -1,4 +1,4 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Abstractions.Tts;
 using Centurion.Models.Providers;
 
@@ -52,5 +52,5 @@ public static class LlamaTtsProviders
         requiresGpu: false,
         latency: ProviderLatency.Medium,
         quality: ProviderQualityLevel.High,
-        description: "llama.cpp llama-tts（Qwen3-TTS）本地合成，支持说话人参考音色");
+        description: "llama.cpp llama-tts (Qwen3-TTS) local synthesis, speaker-reference voice cloning");
 }

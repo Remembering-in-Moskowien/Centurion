@@ -1,4 +1,4 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Abstractions.Strategy;
 using Centurion.Models;
 using Centurion.Models.Providers;
@@ -59,7 +59,7 @@ public static class WhisperCppAsrProvider
         requiresGpu: false,
         latency: ProviderLatency.Low,
         quality: ProviderQualityLevel.Normal,
-        description: "whisper.cpp 本地转录（tiny/base/small/medium/large，GPU 感知选变体）");
+        description: "whisper.cpp local transcription (tiny/base/small/medium/large, GPU-aware variant)");
 }
 
 /// <summary>CrispASR（Qwen3-ASR）本地 Provider 的注册工厂。</summary>
@@ -73,7 +73,7 @@ public static class CrispAsrQwenProvider
         requiresGpu: false,
         latency: ProviderLatency.Medium,
         quality: ProviderQualityLevel.High,
-        description: "Qwen3-ASR（CrispASR 后端）本地转录，词级时间戳，质量优先");
+        description: "Qwen3-ASR (CrispASR backend) local transcription, word-level timestamps, quality first");
 }
 
 /// <summary>CrispASR（Whisper 后端）本地 Provider 的注册工厂。</summary>
@@ -87,5 +87,5 @@ public static class CrispAsrWhisperProvider
         requiresGpu: false,
         latency: ProviderLatency.Medium,
         quality: ProviderQualityLevel.Normal,
-        description: "CrispASR（Whisper 后端）本地转录");
+        description: "CrispASR (Whisper backend) local transcription");
 }
