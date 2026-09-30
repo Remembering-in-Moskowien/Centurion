@@ -1,4 +1,4 @@
-using Spectre.Console.Cli;
+﻿using Spectre.Console.Cli;
 using System.ComponentModel;
 
 namespace Centurion.Cli.Commands.Settings;
@@ -31,9 +31,9 @@ public sealed class DubSettings : GlobalCommandSettings
     [Description("Dubbing target language (ISO 639-1, e.g. zh/en/ja/de)")]
     public string TargetLanguage { get; set; } = "zh";
 
-    /// <summary>TTS engine (currently "llama").</summary>
+    /// <summary>TTS engine ("llama" = llama.cpp Qwen3-TTS, "indextts" = IndexTTS-Rust).</summary>
     [CommandOption("--tts-engine <ENGINE>")]
-    [Description("TTS engine (currently llama)")]
+    [Description("TTS engine (llama / indextts)")]
     public string TtsEngine { get; set; } = "llama";
 
     /// <summary>TTS model name (a key registered in metadata.json Models, e.g. 1.7b-base-q4).</summary>

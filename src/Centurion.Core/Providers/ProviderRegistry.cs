@@ -1,8 +1,9 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Abstractions.Tts;
 using Centurion.Core.Capabilities.Infrastructure.Asr;
 using Centurion.Core.Capabilities.Infrastructure.Llm;
 using Centurion.Core.Capabilities.Infrastructure.Ocr;
+using Centurion.Core.Capabilities.Infrastructure.Tts;
 using Centurion.Core.Providers.Asr;
 using Centurion.Core.Providers.Diarization;
 using Centurion.Core.Providers.Llm;
@@ -98,6 +99,9 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
         providers.Add(new LlamaTtsProvider(
             LlamaTtsProviders.Name, "llama.cpp llama-tts",
             sp.GetRequiredService<ITtsEngine>(), LlamaTtsProviders.Capabilities));
+        providers.Add(new LlamaTtsProvider(
+            IndexTtsProviders.Name, "IndexTTS-Rust (ONNX)",
+            sp.GetRequiredService<IndexTtsEngine>(), IndexTtsProviders.Capabilities));
 
         // ---- 说话人分割：CrispASR / Pyannote（本地） ----
         providers.Add(new DiarizationStrategyProvider(

@@ -1,4 +1,4 @@
-using Centurion.Models.Metadata;
+﻿using Centurion.Models.Metadata;
 using Xunit;
 
 namespace Centurion.Tests.Models;
@@ -27,6 +27,8 @@ public sealed class MetadataJsonLoaderTests : IDisposable
         Assert.True(catalog.Models.Qwen3AsrModels.ContainsKey("qwen3-asr-1.7b"));
         Assert.True(catalog.Models.Qwen3ForcedAlignerModels.ContainsKey("qwen3-forced-aligner-0.6b-f16"));
         Assert.True(catalog.Models.DiarizationModels.ContainsKey("voxceleb_resnet293_LM"));
+        Assert.True(catalog.Models.Qwen3TtsModels.ContainsKey("1.7b-base-q4"));
+        Assert.True(catalog.Models.IndexTtsModels.ContainsKey("indextts2"));
     }
 
     [Fact]
@@ -108,6 +110,8 @@ public sealed class MetadataJsonLoaderTests : IDisposable
 
         Assert.True(catalog.Tools.Tools.ContainsKey("crispasr"));
         Assert.True(catalog.Models.DiarizationModels.ContainsKey("voxceleb_resnet293_LM"));
+        Assert.True(catalog.Models.Qwen3TtsModels.ContainsKey("1.7b-base-q4"));
+        Assert.True(catalog.Models.IndexTtsModels.ContainsKey("indextts2"));
     }
 
     public void Dispose()

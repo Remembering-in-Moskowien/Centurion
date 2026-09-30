@@ -1,4 +1,4 @@
-using Centurion.Abstractions;
+﻿using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Providers;
@@ -71,6 +71,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<QualityReportOperator>();
         services.AddSingleton<LlamaTtsManager>();
         services.AddSingleton<Centurion.Abstractions.Tts.ITtsEngine, LlamaTtsEngine>();
+        services.AddSingleton<IndexTtsManager>();
+        services.AddSingleton<IndexTtsEngine>();
         services.AddTransient<BilingualSubtitleParserOperator>();
         services.AddTransient<SpeakerProfilingOperator>();
         services.AddTransient<TtsSynthesisOperator>();

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Centurion.Models.Metadata;
 
@@ -179,7 +179,8 @@ public static class MetadataJsonLoader
             BuildModelDict(dtoModels, "qwen3ForcedAligner"),
             BuildModelDict(dtoModels, "diarization"),
             BuildModelDict(dtoModels, "bertOnnx"),
-            BuildModelDict(dtoModels, "qwen3Tts"));
+            BuildModelDict(dtoModels, "qwen3Tts"),
+            BuildModelDict(dtoModels, "indextts"));
     }
 
     private static Dictionary<string, ModelMeta> BuildModelDict(
@@ -271,7 +272,8 @@ public static class MetadataJsonLoader
         var diar = MergeModelDict(local.DiarizationModels, ModelRegistry.Default.DiarizationModels, ref changed);
         var bert = MergeModelDict(local.BertOnnxModels, ModelRegistry.Default.BertOnnxModels, ref changed);
         var tts = MergeModelDict(local.Qwen3TtsModels, ModelRegistry.Default.Qwen3TtsModels, ref changed);
-        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert, tts);
+        var indextts = MergeModelDict(local.IndexTtsModels, ModelRegistry.Default.IndexTtsModels, ref changed);
+        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert, tts, indextts);
     }
 
     private static Dictionary<string, ModelMeta> MergeModelDict(
