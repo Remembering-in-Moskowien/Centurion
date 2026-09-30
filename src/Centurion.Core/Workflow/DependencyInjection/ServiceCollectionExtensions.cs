@@ -73,6 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Centurion.Abstractions.Tts.ITtsEngine, LlamaTtsEngine>();
         services.AddSingleton<IndexTtsManager>();
         services.AddSingleton<IndexTtsEngine>();
+        services.AddSingleton<QoraTtsManager>();
+        services.AddSingleton<QoraTtsEngine>();
         services.AddTransient<BilingualSubtitleParserOperator>();
         services.AddTransient<SpeakerProfilingOperator>();
         services.AddTransient<TtsSynthesisOperator>();

@@ -102,6 +102,9 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
         providers.Add(new LlamaTtsProvider(
             IndexTtsProviders.Name, "IndexTTS-Rust (ONNX)",
             sp.GetRequiredService<IndexTtsEngine>(), IndexTtsProviders.Capabilities));
+        providers.Add(new LlamaTtsProvider(
+            QoraTtsProviders.Name, "QORA-TTS (Qwen3-TTS Rust)",
+            sp.GetRequiredService<QoraTtsEngine>(), QoraTtsProviders.Capabilities));
 
         // ---- 说话人分割：CrispASR / Pyannote（本地） ----
         providers.Add(new DiarizationStrategyProvider(
