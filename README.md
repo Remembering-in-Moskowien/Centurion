@@ -38,7 +38,6 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | 🎵 **Karaoke** | Word-level `\K` timestamps, translated karaoke included |
 | 🈶 **CJK & friends** | Chinese, Japanese, Korean, Cyrillic, Arabic… no space-joined gibberish |
 | 📊 **Quality reports** | Every command writes a `.quality.json` — coverage, drift, CPS, warnings |
-| 🔄 **Self-update** | One command, GitHub mirrors auto-selected (520-friendly 🌏) |
 
 ---
 
@@ -61,7 +60,6 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | `providers` | 🔌 Probe provider capabilities — `list` / `test` | `providers test` |
 | `pipeline-graph` | 🕸️ Visualize the DAG for any workflow | `pipeline-graph <FILE>` |
 | `quality` | 📊 Per-run quality report (coverage, drift, CPS, warnings) | `quality <FILE>` |
-| `update` | 🔄 Self-update from GitHub releases | `update [options]` |
 
 > 💡 `Centurion <command> --help` is always your best friend 🤝
 
@@ -76,7 +74,7 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | [🌐 Translate](https://remembering-in-moskowien.github.io/Centurion/translate) | LLM translation, glossary, script alignment, karaoke |
 | [🎙️ Dub](https://remembering-in-moskowien.github.io/Centurion/dub) | Qwen3-TTS dubbing — voice cloning, ducking, alignment |
 | [🖥️ Server](https://remembering-in-moskowien.github.io/Centurion/server) | `serve` — the whole pipeline over a REST API |
-| [🔬 Advanced](https://remembering-in-moskowien.github.io/Centurion/advanced) | DAG pipelines, quality reports, self-update, localization |
+| [🔬 Advanced](https://remembering-in-moskowien.github.io/Centurion/advanced) | DAG pipelines, quality reports, localization |
 | [🎨 Features](https://remembering-in-moskowien.github.io/Centurion/features) | Styles, diarization, vocal separation, GPU, non-Latin scripts |
 
 ---
@@ -109,8 +107,8 @@ Fully async & cancellation-aware; **non-fatal errors log a warning and keep goin
 ## 📦 Versioning & Release Naming
 
 - **版本标识 = 构建号**：横幅与 IR 溯源（`generator.version`）统一显示 `build-N`（取自输出目录 `build-number.txt`，即 git 提交计数），不再暴露语义版本号；无构建文件时回退程序集 InformationalVersion。
-- **GitHub Release tag** 保留语义版本（`v0.5.0-alpha`），供更新服务与人工识别。
-- **发布资产命名**：`centurion-{rid紧凑}.zip`（如 `centurion-win64.zip`）。`Centurion update` 的资产匹配同时兼容 RID 规范名 `Centurion-win-x64.zip`，并支持预发布（pre-release）链的自更新（仓库全为 alpha 时 `/releases/latest` 返回 404，自动回退列出 release 取最新）。
+- **GitHub Release tag = `build-N`**（N 为 git 提交计数，与横幅/IR 溯源同源）；每次提交由 GitHub Actions 自动创建并发布一个 **pre-release**（不含语义版本号，人工可稳定复现到具体构建）。
+- **发布资产命名**：`centurion-{rid紧凑}.zip`（如 `centurion-win64.zip`）。发布包**不含第三方工具可执行文件**（VideoSubFinder / RapidOCR / QORA-TTS / IndexTTS / llama.cpp 等按需下载或由用户放置于 `tools/`）。
 - **构建日期可固定**：发布可用 `-p:BuildDate=yyyy-MM-ddTHH:mm:ssZ` 覆盖默认的当前 UTC 时间，使更新比较（远端发布时间 vs 本地构建日期）可复现。
 
 ---

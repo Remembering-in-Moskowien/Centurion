@@ -1,11 +1,13 @@
-using Centurion.Cli;
+﻿using Centurion.Cli;
 using Centurion.Core.Utils.Infrastructure;
 using Centurion.Models.Console;
 using System.Globalization;
 using Centurion.Cli.Commands;
 using Centurion.Cli.Console;
 using Centurion.Abstractions;
-using Centurion.Core.Workflow.DependencyInjection;using Centurion.Core.Capabilities.Infrastructure;using Microsoft.Extensions.DependencyInjection;
+using Centurion.Core.Workflow.DependencyInjection;
+using Centurion.Core.Capabilities.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Spectre.Console;
@@ -216,8 +218,6 @@ app.Configure(config =>
         .WithDescription(ConsoleServices.T("Validate Centurion intermediate files against the IR schema"));
     config.AddCommand<MigrateCommand>("migrate")
         .WithDescription(ConsoleServices.T("IR schema migration: upgrade older intermediate files to a target version (--to)"));
-    config.AddCommand<UpdateCommand>("update")
-        .WithDescription(ConsoleServices.T("Self-update: check/download/apply new releases from GitHub Releases"));
     // ─── 模型注册表管理 + Provider 选型/探测 ───
     config.AddBranch("models", models =>
     {
