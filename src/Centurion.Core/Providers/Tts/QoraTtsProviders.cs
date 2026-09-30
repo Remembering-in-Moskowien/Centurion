@@ -1,4 +1,4 @@
-using Centurion.Models.Providers;
+﻿using Centurion.Models.Providers;
 
 namespace Centurion.Core.Providers.Tts;
 
@@ -13,5 +13,5 @@ public static class QoraTtsProviders
         requiresGpu: false,
         latency: ProviderLatency.Medium,
         quality: ProviderQualityLevel.High,
-        description: "QORA-TTS（Qwen3-TTS 纯 Rust 推理）本地合成，10 语言音色克隆");
+        description: "QORA-TTS (Qwen3-TTS pure-Rust inference) local synthesis, 10-language voice cloning");
 }

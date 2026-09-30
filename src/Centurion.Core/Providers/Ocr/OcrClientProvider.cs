@@ -1,4 +1,4 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Core.Capabilities.Infrastructure.Ocr;
 using Centurion.Models.Providers;
 
@@ -90,13 +90,13 @@ public static class OcrProviders
     public static ProviderCapabilities CapabilitiesFor(OcrBackend backend) => backend switch
     {
         OcrBackend.Zhipu => ProviderCapabilities.Cloud(0, 1.5, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "智谱 GLM-OCR（云端，需 API 密钥，字幕级 OCR 专用）"),
+            "Zhipu GLM-OCR (cloud, API key required, subtitle-grade OCR)"),
         OcrBackend.Ollama => ProviderCapabilities.Local(false, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "本地 Ollama 视觉模型（qwen2.5vl 等，免密钥）"),
+            "Local Ollama vision model (qwen2.5vl etc., keyless)"),
         OcrBackend.LlamaCpp => ProviderCapabilities.Local(false, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "本地 llama-server（GGUF 视觉模型，服务需已启动）"),
+            "Local llama-server (GGUF vision model, server must be running)"),
         OcrBackend.RapidOcr => ProviderCapabilities.Local(false, ProviderLatency.Low, ProviderQualityLevel.Normal,
-            "本地 RapidOCR（PaddleOCR ONNX，纯 CPU，多语言字幕识别）"),
+            "Local RapidOCR (PaddleOCR ONNX, CPU-only, multilingual subtitle OCR)"),
         _ => ProviderCapabilities.Local(false, ProviderLatency.Medium, ProviderQualityLevel.Normal, "Unknown OCR")
     };
 }

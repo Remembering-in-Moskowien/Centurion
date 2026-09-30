@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -151,25 +151,25 @@ public static class LlmProviders
     public static ProviderCapabilities CapabilitiesFor(LlmProvider provider) => provider switch
     {
         LlmProvider.Ollama => ProviderCapabilities.Local(false, ProviderLatency.Low, ProviderQualityLevel.Normal,
-            "本地 Ollama（llama3.2 等，免密钥）"),
+            "Local Ollama (llama3.2 etc., keyless)"),
         LlmProvider.OpenAI => ProviderCapabilities.Cloud(0, 1.5, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "OpenAI（gpt-4o-mini，按 token 计费）"),
+            "OpenAI (gpt-4o-mini, per-token billing)"),
         LlmProvider.DeepSeek => ProviderCapabilities.Cloud(0, 0.6, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "DeepSeek（deepseek-chat，低成本高质量）"),
+            "DeepSeek (deepseek-chat, low cost, high quality)"),
         LlmProvider.Moonshot => ProviderCapabilities.Cloud(0, 1.2, ProviderLatency.Medium, ProviderQualityLevel.Normal,
             "Moonshot Kimi（moonshot-v1-8k）"),
         LlmProvider.Zhipu => ProviderCapabilities.Cloud(0, 0.6, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "智谱 GLM（glm-4-flash，低成本）"),
+            "Zhipu GLM (glm-4-flash, low cost)"),
         LlmProvider.OpenRouter => ProviderCapabilities.Cloud(0, 1.0, ProviderLatency.Medium, ProviderQualityLevel.High,
-            "OpenRouter 聚合路由"),
+            "OpenRouter aggregation"),
         LlmProvider.Groq => ProviderCapabilities.Cloud(0, 0.3, ProviderLatency.Low, ProviderQualityLevel.Normal,
-            "Groq（llama-3.3-70b，超低延迟）"),
+            "Groq (llama-3.3-70b, ultra-low latency)"),
         LlmProvider.SiliconFlow => ProviderCapabilities.Cloud(0, 0.7, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "硅基流动 SiliconFlow"),
+            "SiliconFlow"),
         LlmProvider.DashScope => ProviderCapabilities.Cloud(0, 0.8, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "阿里百炼 DashScope（qwen-plus）"),
+            "Alibaba DashScope (qwen-plus)"),
         LlmProvider.Ark => ProviderCapabilities.Cloud(0, 0.8, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "火山方舟 Ark"),
+            "Volcano Ark"),
         LlmProvider.Azure => ProviderCapabilities.Cloud(0, 1.5, ProviderLatency.Medium, ProviderQualityLevel.High,
             "Azure OpenAI"),
         _ => ProviderCapabilities.Cloud(0, 1.0, ProviderLatency.Medium, ProviderQualityLevel.Normal, "Unknown LLM")

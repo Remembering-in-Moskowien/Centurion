@@ -1,4 +1,4 @@
-using Centurion.Abstractions.Providers;
+﻿using Centurion.Abstractions.Providers;
 using Centurion.Abstractions.Strategy;
 using Centurion.Models.Providers;
 
@@ -56,12 +56,12 @@ public static class DiarizationProviders
         requiresGpu: false,
         latency: ProviderLatency.Low,
         quality: ProviderQualityLevel.Normal,
-        description: "CrispASR 内置说话人分割（energy/xcorr/vad-turns/foxnose）");
+        description: "CrispASR built-in speaker segmentation (energy/xcorr/vad-turns/foxnose)");
 
     /// <summary>Pyannote 能力声明：本地、高精度。</summary>
     public static ProviderCapabilities PyannoteCapabilities => ProviderCapabilities.Local(
         requiresGpu: true,
         latency: ProviderLatency.High,
         quality: ProviderQualityLevel.High,
-        description: "Pyannote 分割 + TitaNet 嵌入（高精度，建议 GPU）");
+        description: "Pyannote segmentation + TitaNet embedding (high accuracy, GPU recommended)");
 }
