@@ -55,6 +55,7 @@ Short overview:
 |---|---|
 | `init` | Interactive setup wizard |
 | `convert` | Subtitle file to intermediate |
+| `combine` | Merge embedded and external subtitle tracks |
 | `asr` / `ocr` / `from-script` | Media to intermediate |
 | `correct` | Timeline and text calibration |
 | `translate` / `dub` | Translation and dubbing |

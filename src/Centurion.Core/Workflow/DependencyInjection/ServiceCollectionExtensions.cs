@@ -123,6 +123,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<VocalSeparationOperator>();
         services.AddTransient<TextPreprocessingOperator>();
         services.AddTransient<ScriptLoaderOperator>();
+        services.AddTransient<CombineParseOperator>();
+        services.AddTransient<CombineMergeOperator>();
+        services.AddTransient<CombineDedupeOperator>();
         services.AddTransient<ScriptTimelineMapperOperator>();
         services.AddTransient<SubtitleTextCorrectorOperator>();
         services.AddTransient<OverlapResolutionOperator>();

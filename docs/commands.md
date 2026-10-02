@@ -10,6 +10,7 @@ title: Commands
 |---|---|---|
 | `init` | Interactive setup wizard — detects files, suggests the right chain | `init` |
 | `convert` | Entry point: any subtitle file (SRT/VTT/ASS...) to intermediate file | `convert <INPUT_FILE>` |
+| `combine` | Merge embedded media subtitle tracks and external subtitle files | `combine <MEDIA_FILE> [options]` |
 | `asr` | Speech recognition: media to intermediate file | `asr <INPUT_FILE>` |
 | `ocr` | Subtitle text recognition from video or images | `ocr <INPUT_FILE>` |
 | `from-script` | Script timing: media + script to intermediate file | `from-script <INPUT_FILE> <SCRIPT_FILE>` |
@@ -46,6 +47,47 @@ Centurion convert <INPUT_FILE> [options]
 Centurion convert subtitles.srt
 Centurion convert episode.ass -o episode.centurion.json
 ```
+
+---
+
+## `combine`
+
+Merge subtitle tracks embedded in one or more media files, optionally together with external subtitle files. All selected sources are parsed and placed on one timeline; near-duplicate lines are skipped by default. The default output is a `.centurion.json` intermediate file, which can be edited or rendered later with `build`.
+
+```bash
+Centurion combine <MEDIA_FILE> [MEDIA_FILE ...] [options]
+```
+
+**Options**
+
+- `<MEDIA_FILE>` — media file(s) whose embedded subtitle tracks should be combined; without `--track`, all extractable subtitle tracks are included
+- `--subtitle <FILE>` — external ASS/SRT/TXT subtitle file to include; repeat the option for additional files
+- `--track <TRACK_ID>` — include only the selected embedded subtitle track IDs; repeat the option to select multiple tracks
+- `-o, --output <OUTPUT_FILE>` — output path; defaults to `<first input name>.combined.centurion.json`. Use an `.ass`, `.srt` or `.txt` extension to render subtitles directly instead of writing an intermediate file
+- `-f, --format <FORMAT>` — direct output format: `ass`, `srt` or `txt`; when no output path is supplied, also determines the default output extension
+- `-l, --language <LANG>` — language passed to subtitle parsing, default `en`
+- `--dedupe-tolerance-ms <MS>` — maximum time gap for comparing duplicate lines, default `500`
+- `--dedupe-similarity <VALUE>` — text similarity threshold from `0` to `1`, default `0.7`; higher values are stricter
+- `--dry-run` — preview the pipeline without processing inputs
+- `--json` — print a machine-readable result summary
+
+**Examples**
+
+```bash
+# Merge every embedded subtitle track into an intermediate file
+Centurion combine movie.mkv
+
+# Select two embedded tracks by track ID
+Centurion combine movie.mkv --track 2 --track 3 -o movie.multilingual.centurion.json
+
+# Combine embedded tracks with external subtitle files, then render directly to ASS
+Centurion combine movie.mkv --subtitle subtitles.en.srt --subtitle subtitles.zh.ass -o movie.multilingual.ass
+
+# Render an SRT directly with stricter duplicate matching
+Centurion combine movie.mkv --format srt --dedupe-similarity 0.9
+```
+
+Track IDs are the IDs reported by the media container tools, not language codes. Duplicate removal compares normalized text and nearby/overlapping time ranges; distinct translations are retained.
 
 ---
 

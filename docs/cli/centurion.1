@@ -67,6 +67,9 @@ Media dubbing: speaker profiling -> TTS -> time alignment -> mixing -> WAV.
 .B convert <INPUT_FILE>
 Parse ASS/SRT/TXT subtitles into the Centurion intermediate file.
 .TP
+.B combine <MEDIA_FILE> [options]
+Merge embedded subtitle tracks and external subtitle files into one timeline; writes a Centurion intermediate file by default or renders ASS/SRT/TXT directly.
+.TP
 .B build <CENTURION_FILE>
 Build intermediate file into ASS/SRT/TXT subtitles.
 .TP
@@ -113,6 +116,7 @@ See the samples/ directory for media, subtitles, and intermediate files.
 Centurion models list
 Centurion providers list
 Centurion convert samples/test.srt --dry-run
+Centurion combine movie.mkv --track 2 --subtitle subtitles.en.srt -o movie.combined.ass
 Centurion quality samples/sample.centurion.json --fail-on cps>20
 .fi
 .SH SEE ALSO

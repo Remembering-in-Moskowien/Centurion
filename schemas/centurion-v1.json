@@ -477,6 +477,12 @@
               "skipRender": {
                 "type": "boolean"
               },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "words": {
                 "type": "array",
                 "items": {

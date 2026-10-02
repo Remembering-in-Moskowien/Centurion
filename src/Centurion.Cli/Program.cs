@@ -203,6 +203,8 @@ app.Configure(config =>
         .WithDescription(ConsoleServices.T("Media dubbing: speaker profiling → TTS → time alignment → mixing → dubbed wav"));
     config.AddCommand<ConvertCommand>("convert")
         .WithDescription(ConsoleServices.T("Subtitle conversion: parse ASS/SRT/TXT subtitles → Centurion intermediate file"));
+    config.AddCommand<CombineCommand>("combine")
+        .WithDescription(ConsoleServices.T("Merge existing subtitle tracks from media files or subtitle inputs into one combined subtitle stream"));
     config.AddCommand<ServeCommand>("serve")
         .WithDescription(ConsoleServices.T("HTTP service: expose packaged commands via POST /commands/{name} (REST)"));
     config.AddCommand<BuildCommand>("build")
