@@ -18,6 +18,7 @@
         <ProjectReference Include="..\Centurion.Models\Centurion.Models.csproj" />
         <ProjectReference Include="..\Centurion.Abstractions\Centurion.Abstractions.csproj" />
         <ProjectReference Include="..\Centurion.Core\Centurion.Core.csproj" />
+        <ProjectReference Include="..\Centurion.Cli\Centurion.Cli.csproj" />
     </ItemGroup>
 
 </Project>

@@ -106,7 +106,14 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteMarkup(string markup)
     {
         if (SuppressHumanLines) return;
-        AnsiConsole.Write(markup);
+        try
+        {
+            AnsiConsole.Write(markup);
+        }
+        catch (Exception)
+        {
+            AnsiConsole.Write(markup.EscapeMarkup());
+        }
         _logger.LogInformation(StripMarkup(markup));
     }
 
@@ -117,7 +124,14 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteMarkupLine(string markup)
     {
         if (SuppressHumanLines) return;
-        AnsiConsole.MarkupLine($"{InfoPrefix}{markup}");
+        try
+        {
+            AnsiConsole.MarkupLine($"{InfoPrefix}{markup}");
+        }
+        catch (Exception)
+        {
+            AnsiConsole.MarkupLine($"{InfoPrefix}{markup.EscapeMarkup()}");
+        }
         _logger.LogInformation(StripMarkup(markup));
     }
 
