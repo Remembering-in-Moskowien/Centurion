@@ -7,8 +7,8 @@ using Centurion.Models.Console;
 namespace Centurion.Core.Capabilities.Managers.Media;
 
 /// <summary>
-/// 模型管理器，负责模型文件的下载、校验和路径管理。
-/// 支持单文件和目录模型。
+/// Model manager responsible for downloading, verifying, and managing paths for model files.
+/// Supports both single-file and directory models.
 /// </summary>
 public class ModelManager : IDisposable
 {
@@ -16,22 +16,22 @@ public class ModelManager : IDisposable
     private readonly string _modelName;
     private readonly ModelMeta _targetMeta;
 
-    /// <summary>模型文件路径；单文件模式为文件路径，目录模式为目录路径。</summary>
-    public string ModelFilePath { get; } // 单文件模式为文件路径，目录模式为目录路径
-    /// <summary>模型所在文件夹路径。</summary>
+    /// <summary>Path to the model file; a file path in single-file mode, a directory path in directory mode.</summary>
+    public string ModelFilePath { get; } // File path in single-file mode, directory path in directory mode
+    /// <summary>Path to the folder containing the model.</summary>
     public string ModelFolder { get; }
-    /// <summary>当前模型对应的元数据；未启用管理时为 <see langword="null"/>。</summary>
+    /// <summary>Metadata for the current model; <see langword="null"/> when management is disabled.</summary>
     public ModelMeta? TargetMeta => _targetMeta;
-    /// <summary>是否启用模型管理（模型名称为空时为 <see langword="false"/>）。</summary>
+    /// <summary>Whether model management is enabled (<see langword="false"/> when the model name is empty).</summary>
     public bool ManagementEnabled { get; }
 
     /// <summary>
-    /// 构造函数
+    /// Constructor
     /// </summary>
-    /// <param name="modelName">模型名称</param>
-    /// <param name="modelDict">模型元数据字典</param>
-    /// <param name="serviceProvider">服务提供者</param>
-    /// <param name="categoryFolder">模型分类文件夹名（如 whisper/diarization/vad）</param>
+    /// <param name="modelName">Model name</param>
+    /// <param name="modelDict">Model metadata dictionary</param>
+    /// <param name="serviceProvider">Service provider</param>
+    /// <param name="categoryFolder">Category folder name for the model (e.g. whisper/diarization/vad)</param>
     public ModelManager(string modelName,
         IReadOnlyDictionary<string, ModelMeta> modelDict,
         IServiceProvider serviceProvider,
@@ -58,27 +58,27 @@ public class ModelManager : IDisposable
 
         _targetMeta = tempMeta;
 
-        // 根据下载类型确定路径
+        // Determine the path based on the download type
         if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
         {
-            // 目录模型：子目录为 models/categoryFolder/modelName/
+            // Directory model: subdirectory is models/categoryFolder/modelName/
             ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder, _modelName);
-            ModelFilePath = ModelFolder; // 将 ModelFilePath 设为目录路径
+            ModelFilePath = ModelFolder; // Set ModelFilePath to the directory path
         }
         else
         {
-            // 单文件模型：models/categoryFolder/fileName
+            // Single-file model: models/categoryFolder/fileName
             ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder);
             ModelFilePath = Path.Combine(ModelFolder, _targetMeta.FileName!);
         }
     }
 
     /// <summary>
-    /// 检查模型完整性；缺失时抛出 <see cref="ModelMissingException"/>（提示用
-    /// <c>Centurion models install &lt;model&gt;</c> 安装），不做任何自动下载。
-    /// 未启用管理时直接返回。
+    /// Checks model integrity; throws <see cref="ModelMissingException"/> when files are missing
+    /// (prompting the user to install via <c>Centurion models install &lt;model&gt;</c>), without
+    /// any automatic download. Returns directly when management is disabled.
     /// </summary>
-    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
     public async Task CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
@@ -90,9 +90,10 @@ public class ModelManager : IDisposable
     }
 
     /// <summary>
-    /// 安装模型：缺失/不完整时下载所需文件（models install 命令专用）。
+    /// Installs the model: downloads the required files when missing/incomplete (used by the
+    /// models install command).
     /// </summary>
-    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
     public async Task EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
         if (!ManagementEnabled) return;
@@ -104,11 +105,11 @@ public class ModelManager : IDisposable
         else
         {
             if (!File.Exists(ModelFilePath)) await DownloadModelAsync(cancellationToken);
-            // 不再进行任何哈希校验
+            // No longer perform any hash verification
         }
     }
 
-    /// <summary>返回缺失的模型文件条目（空列表 = 已就绪）。</summary>
+    /// <summary>Returns the missing model file entries (empty list = ready).</summary>
     private IReadOnlyList<string> FindMissingEntries()
     {
         if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
@@ -124,7 +125,7 @@ public class ModelManager : IDisposable
         var dir = ModelFolder;
         Directory.CreateDirectory(dir);
 
-        // 检查是否所有文件都存在
+        // Check whether all files exist
         var allFilesExist = _targetMeta.Files?.All(f => File.Exists(Path.Combine(dir, f))) ?? false;
         if (!allFilesExist)
         {
@@ -142,7 +143,7 @@ public class ModelManager : IDisposable
 
         using var aria = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
 
-        // 下载所有文件
+        // Download all files
         var tasks = _targetMeta.Files.Select(async fileName =>
         {
             var fileUrl = _targetMeta.DownloadUrl!.TrimEnd('/') + "/" + fileName;
@@ -190,10 +191,10 @@ public class ModelManager : IDisposable
     }
 
     /// <summary>
-    /// 释放资源；本管理器无需释放任何非托管资源。
+    /// Releases resources; this manager holds no unmanaged resources to release.
     /// </summary>
     public void Dispose()
     {
-        // 无需释放
+        // Nothing to release
     }
 }

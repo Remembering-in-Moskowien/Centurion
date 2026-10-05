@@ -30,7 +30,7 @@ public static class DryRunHelper
         var registry = sp.GetRequiredService<ModelRegistry>();
         var domains = ModelCatalog.Domains(registry);
 
-        // 相关模型域：按节点名语义推断
+        // Infer the relevant model domains from node names.
         var relevantDomains = RelevantDomains(dag, domains);
         var models = new List<object>();
         foreach (var domain in relevantDomains)
@@ -42,7 +42,7 @@ public static class DryRunHelper
             }
         }
 
-        // 相关 Provider 单价（按接口族推断）
+        // Infer relevant provider costs from the provider families.
         var providerRegistry = sp.GetRequiredService<IProviderRegistry>();
         var families = RelevantFamilies(dag);
         var providers = providerRegistry.All

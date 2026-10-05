@@ -3,39 +3,39 @@ using Newtonsoft.Json;
 
 namespace Centurion.Core.Utils.Parsing;
 
-/// <summary>loudnorm 滤波器的 JSON 测量输出（两遍法第一遍分析结果）。</summary>
+/// <summary>The JSON measurement output of the loudnorm filter (the first-pass analysis result of the two-pass method).</summary>
 public sealed record LoudnormMeasurements(double InputIntegrated, double InputTruePeak, double InputLra, double InputThreshold, double TargetOffset);
 
-/// <summary>ffmpeg loudnorm 第一遍分析输出的 JSON 实体；字段值均为字符串形式的数值。</summary>
+/// <summary>The JSON entity of the ffmpeg loudnorm first-pass analysis output; all field values are numbers in string form.</summary>
 internal sealed class LoudnormOutputJson
 {
-    /// <summary>输入整体响度（LUFS）。</summary>
+    /// <summary>Input integrated loudness (LUFS).</summary>
     [JsonProperty("input_i")] public string? InputIntegrated { get; set; }
 
-    /// <summary>输入真实峰值（dBTP）。</summary>
+    /// <summary>Input true peak (dBTP).</summary>
     [JsonProperty("input_tp")] public string? InputTruePeak { get; set; }
 
-    /// <summary>输入响度范围（LU）。</summary>
+    /// <summary>Input loudness range (LU).</summary>
     [JsonProperty("input_lra")] public string? InputLra { get; set; }
 
-    /// <summary>输入响度阈值（LUFS）。</summary>
+    /// <summary>Input loudness threshold (LUFS).</summary>
     [JsonProperty("input_thresh")] public string? InputThreshold { get; set; }
 
-    /// <summary>目标偏移量（LU）。</summary>
+    /// <summary>Target offset (LU).</summary>
     [JsonProperty("target_offset")] public string? TargetOffset { get; set; }
 }
 
 /// <summary>
-/// 解析 ffmpeg loudnorm 第一遍（analysis）输出的 JSON 测量值
+/// Parse the JSON measurement values from the ffmpeg loudnorm first-pass (analysis) output.
 /// </summary>
 public static class LoudnormJsonParser
 {
     /// <summary>
-    /// 从 ffmpeg loudnorm 第一遍分析输出中定位 JSON 片段并解析为测量值。
+    /// Locate the JSON fragment in the ffmpeg loudnorm first-pass analysis output and parse it into measurements.
     /// </summary>
-    /// <param name="output">loudnorm 第一遍的标准输出文本。</param>
-    /// <returns>解析得到的响度测量值。</returns>
-    /// <exception cref="FormatException">未找到 JSON 或缺少所需测量项时抛出。</exception>
+    /// <param name="output">The standard output text of the loudnorm first pass.</param>
+    /// <returns>The parsed loudness measurements.</returns>
+    /// <exception cref="FormatException">Thrown when no JSON is found or a required measurement is missing.</exception>
     public static LoudnormMeasurements Parse(string output)
     {
         var start = output.LastIndexOf("{", StringComparison.Ordinal);

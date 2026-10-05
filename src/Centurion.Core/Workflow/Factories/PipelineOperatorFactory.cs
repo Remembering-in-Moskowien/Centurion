@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Centurion.Core.Workflow.Factories;
 
-/// <summary>按工作流配置预解析策略并组装对应算子，供管线启动前调用。</summary>
+/// <summary>Pre-resolves strategies from the workflow configuration and assembles the matching operators; called before the pipeline starts.</summary>
 public sealed class PipelineOperatorFactory(
     IServiceProvider serviceProvider,
     ISentenceSplitStrategyFactory sentenceSplitFactory,
@@ -20,7 +20,7 @@ public sealed class PipelineOperatorFactory(
     IProviderFactory providerFactory)
 
 {
-    /// <summary>创建已注入转录策略的算子。</summary>
+    /// <summary>Creates an operator with the transcription strategy injected.</summary>
     public TranscribeOperator CreateTranscribeOperator(WorkflowConfig config)
     {
         var asrOptions = new AsrOptions(
@@ -35,7 +35,7 @@ public sealed class PipelineOperatorFactory(
         return ActivatorUtilities.CreateInstance<TranscribeOperator>(serviceProvider, chain);
     }
 
-    /// <summary>创建已注入分句策略及分句选项的算子。</summary>
+    /// <summary>Creates an operator with the sentence-split strategy and split options injected.</summary>
     public SentenceSplitOperator CreateSentenceSplitOperator(WorkflowConfig config)
     {
         var options = CreateSplitOptions(config);
@@ -52,7 +52,7 @@ public sealed class PipelineOperatorFactory(
         return ActivatorUtilities.CreateInstance<SentenceSplitOperator>(serviceProvider, strategy, options);
     }
 
-    /// <summary>创建启用时已注入说话人分割策略的算子；关闭时不组装该阶段。</summary>
+    /// <summary>Creates an operator with the diarization strategy injected when enabled; the stage is not assembled when disabled.</summary>
     public DiarizationOperator? CreateDiarizationOperator(WorkflowConfig config)
     {
         if (string.Equals(config.DiarizationBackend, "none", StringComparison.OrdinalIgnoreCase))
@@ -67,7 +67,7 @@ public sealed class PipelineOperatorFactory(
         return ActivatorUtilities.CreateInstance<DiarizationOperator>(serviceProvider, strategy);
     }
 
-    /// <summary>创建启用时已注入对齐策略的算子；关闭时不组装该阶段。</summary>
+    /// <summary>Creates an operator with the alignment strategy injected when enabled; the stage is not assembled when disabled.</summary>
     public AlignmentOperator? CreateAlignmentOperator(WorkflowConfig config)
     {
         if (!config.EnableAlignment)

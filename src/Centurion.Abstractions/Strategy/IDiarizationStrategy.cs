@@ -4,33 +4,33 @@ using Centurion.Abstractions;
 namespace Centurion.Abstractions.Strategy;
 
 /// <summary>
-/// 说话人分割结果：一个说话人时间片段（单位：秒）。
+/// Diarization result representing one speaker segment, measured in seconds.
 /// </summary>
-/// <param name="StartSeconds">片段开始时间（秒）</param>
-/// <param name="EndSeconds">片段结束时间（秒）</param>
-/// <param name="Speaker">说话人标签（如 "A"、"B"，或 "SPEAKER_00"）</param>
+/// <param name="StartSeconds">Segment start time in seconds.</param>
+/// <param name="EndSeconds">Segment end time in seconds.</param>
+/// <param name="Speaker">Speaker label, such as "A", "B", or "SPEAKER_00".</param>
 public sealed record SpeakerSegment(double StartSeconds, double EndSeconds, string Speaker);
 
 /// <summary>
-/// 说话人分割策略：给定音频，输出说话人时间片段列表。
-/// 具体后端由实现决定（CrispASR 内置方法 / Pyannote + TitaNet 等）。
+/// Diarization strategy that returns speaker segments for input audio.
+/// The implementation selects the backend, such as CrispASR or Pyannote with TitaNet.
 /// </summary>
 public interface IDiarizationStrategy
 {
     /// <summary>
-    /// 策略名称，用于日志标识当前使用的说话人分割后端。
+    /// Strategy name used to identify the active diarization backend in logs.
     /// </summary>
     string StrategyName { get; }
 
     /// <summary>
-    /// 对音频执行说话人分割。
+    /// Performs diarization on audio.
     /// </summary>
-    /// <param name="audioPath">预处理后的音频文件路径</param>
-    /// <param name="numSpeakers">说话人数（0 = 自动检测）</param>
-    /// <param name="segmentModel">分割模型名（后端相关；可为 null 使用后端默认）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="device">推理设备偏好（默认 Auto 自动检测）</param>
-    /// <returns>说话人时间片段列表</returns>
+    /// <param name="audioPath">Path to preprocessed audio.</param>
+    /// <param name="numSpeakers">Number of speakers; 0 enables automatic detection.</param>
+    /// <param name="segmentModel">Backend-specific segmentation model; null uses the backend default.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="device">Preferred inference device; defaults to automatic detection.</param>
+    /// <returns>List of speaker segments.</returns>
     Task<IReadOnlyList<SpeakerSegment>> DiarizeAsync(
         string audioPath,
         int numSpeakers,

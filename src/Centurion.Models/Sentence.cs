@@ -1,40 +1,40 @@
 namespace Centurion.Models;
 
-/// <summary>一个句子级别的转录单元，承载原文、清洗后文本、时间轴及其词级明细。</summary>
+/// <summary>Sentence-level transcription unit containing source and cleaned text, timing, and word-level details.</summary>
 public class Sentence
 {
-    /// <summary>句子原始文本。</summary>
+    /// <summary>Original sentence text.</summary>
     public string Text { get; set; } = string.Empty;
-    /// <summary>翻译后的文本（翻译子命令填充），为空表示未翻译。</summary>
+    /// <summary>Translated text, populated by the translate command; null means untranslated.</summary>
     public string? TranslatedText { get; set; }
-    /// <summary>经过文本清洗（去标点、数字展开等）后的文本，未清洗时为 null。</summary>
+    /// <summary>Text after cleanup, such as punctuation removal or number expansion; null when not cleaned.</summary>
     public string? CleanedText { get; set; }
-    /// <summary>句子起始时间（毫秒）。</summary>
+    /// <summary>Sentence start time in milliseconds.</summary>
     public double Start { get; set; }
-    /// <summary>句子结束时间（毫秒）。</summary>
+    /// <summary>Sentence end time in milliseconds.</summary>
     public double End { get; set; }
-    /// <summary>是否在渲染字幕时跳过该句子。</summary>
+    /// <summary>Whether to skip this sentence when rendering subtitles.</summary>
     public bool SkipRender { get; set; }
-    /// <summary>该句包含的词级明细列表，无词级时间轴时为空。</summary>
+    /// <summary>Word-level details for this sentence; empty when word-level timings are unavailable.</summary>
     public List<Word> Words { get; set; } = [];
-    /// <summary>句级 ASR 置信度（0~1；词级置信度聚合而来，模型未提供时为 null）。</summary>
+    /// <summary>Sentence-level ASR confidence (0–1), aggregated from word confidence; null if not provided by the model.</summary>
     public double? Confidence { get; set; }
     /// <summary>
-    /// 绑定的 ASS 样式名（对话行 Style 列）。为空时渲染端回退到默认样式；
-    /// 由 convert 解析 ASS 时填充、build 渲染 ASS 时消费，供 Studio 前端逐行指定样式。
+    /// Bound ASS style name (the dialogue row Style column). Null uses the renderer's default style.
+    /// Populated when convert parses ASS and consumed when build renders ASS, allowing the Studio frontend to assign styles per line.
     /// </summary>
     public string? Style { get; set; }
     /// <summary>
-    /// 句子来源标识（如媒体文件名+轨道号、或裸字幕文件名）。
-    /// 由 combine 命令的合并算子填充，随 IR 持久化，供追溯每条字幕来自哪个输入源；
-    /// 其余命令产出的句子为 null。
+    /// Sentence source identifier, such as a media filename and track number or a subtitle filename.
+    /// Populated by the combine merge operator and persisted in the IR to trace each subtitle to its input source.
+    /// Sentences produced by other commands have a null source.
     /// </summary>
     public string? Source { get; set; }
 
     /// <summary>
-    /// 句子说话人：从词级 <see cref="Word.Speaker"/> 按多数投票推导。
-    /// 句子无词级数据或全部为占位标签（如未运行说话人分割）时返回 null；
-    /// 是否把结果渲染进字幕由工作流状态（IsDiarized）与显示开关决定。
+    /// Sentence speaker inferred by majority vote from word-level <see cref="Word.Speaker"/> values.
+    /// Returns null when there are no word-level details or all labels are placeholders (for example, when diarization was not run).
+    /// Whether to render this value in subtitles depends on workflow state (IsDiarized) and display options.
     /// </summary>
 [System.Text.Json.Serialization.JsonIgnore]
     public string? Speaker

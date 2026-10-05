@@ -3,45 +3,46 @@ using Centurion.Models.Workflow;
 
 namespace Centurion.Core.Utils.Reporting;
 
-/// <summary>行级质量评估的阈值选项。</summary>
+/// <summary>Threshold options for line-level quality assessment.</summary>
 public class QualityAssessmentOptions
 {
-    /// <summary>允许的最大语速（字符/秒）；默认 5.0（保守可读性标准）。</summary>
+    /// <summary>Maximum allowed speech rate (characters/second); defaults to 5.0 (conservative readability standard).</summary>
     public double MaxCps { get; init; } = 5.0;
 
-    /// <summary>单行字幕最大字符数；默认 18。</summary>
+    /// <summary>Maximum characters per subtitle line; defaults to 18.</summary>
     public int MaxCharsPerLine { get; init; } = 18;
 
-    /// <summary>最小时长阈值（毫秒）；低于此值视为过短可合并。默认 300ms。</summary>
+    /// <summary>Minimum duration threshold (milliseconds); below this a line is treated as too short and mergeable. Defaults to 300ms.</summary>
     public double MinSentenceDurationMs { get; init; } = 300;
 
-    /// <summary>最大时长阈值（毫秒）；超过此值视为过长需拆分。默认 7000ms。</summary>
+    /// <summary>Maximum duration threshold (milliseconds); above this a line is treated as too long and needs splitting. Defaults to 7000ms.</summary>
     public double MaxSentenceDurationMs { get; init; } = 7000;
 
-    /// <summary>ASR 置信度阈值（0~1）；句子置信度低于此值标 LowConfidence。默认 0.5。</summary>
+    /// <summary>ASR confidence threshold (0~1); sentences below this are flagged LowConfidence. Defaults to 0.5.</summary>
     public double ConfidenceThreshold { get; init; } = 0.5;
 
-    /// <summary>重叠判定后保留的最小句间间隙（毫秒）。默认 50ms。</summary>
+    /// <summary>Minimum inter-line gap kept after overlap detection (milliseconds). Defaults to 50ms.</summary>
     public double MinGapMs { get; init; } = 50;
 }
 
 /// <summary>
-/// 行级质量评估器：对字幕句子计算 CPS / 行宽 / 最小时长 / 最大时长 / 重叠 / 零时长 /
-/// 置信度等指标，并生成可逐行定位的问题明细（含建议修复），供 .quality.json、
-/// HTML 报告与 quality --fix 共用。
+/// Line-level quality assessor: computes CPS / line width / minimum duration / maximum duration /
+/// overlap / zero-duration / confidence and other metrics for subtitle sentences, and produces
+/// per-line locatable issue details (with suggested fixes), shared by .quality.json, the HTML
+/// report, and quality --fix.
 /// </summary>
 public static class QualityAssessor
 {
-    /// <summary>评估结果：时序统计 + 行级问题。</summary>
+    /// <summary>Assessment result: timing statistics + line-level issues.</summary>
     public sealed record Assessment(QualityTiming Timing, List<QualityLineIssue> Issues, List<QualityLineIssue> LowConfidenceFragments);
 
     /// <summary>
-    /// 对句子列表执行行级质量评估。
+    /// Runs line-level quality assessment on a list of sentences.
     /// </summary>
-    /// <param name="sentences">字幕句子（Start/End 毫秒）。</param>
-    /// <param name="options">阈值选项。</param>
-    /// <param name="confidenceMap">句级置信度（0~1），可空。</param>
-    /// <returns>时序统计与行级问题列表。</returns>
+    /// <param name="sentences">Subtitle sentences (Start/End in milliseconds).</param>
+    /// <param name="options">Threshold options.</param>
+    /// <param name="confidenceMap">Per-sentence confidence (0~1), may be null.</param>
+    /// <returns>Timing statistics and the list of line-level issues.</returns>
     public static Assessment Assess(
         List<Sentence> sentences,
         QualityAssessmentOptions options,
@@ -58,7 +59,7 @@ public static class QualityAssessor
             var text = string.IsNullOrWhiteSpace(sentence.TranslatedText) ? sentence.Text : sentence.TranslatedText;
             var charCount = text?.Count(ch => !char.IsWhiteSpace(ch)) ?? 0;
 
-            // 零时长
+            // Zero duration
             if (durationMs <= 0)
             {
                 issues.Add(MakeIssue(QualityIssueType.ZeroDuration, QualityIssueSeverity.Error, i, sentence,
@@ -81,7 +82,7 @@ public static class QualityAssessor
                 }
             }
 
-            // 行宽
+            // Line width
             if (charCount > options.MaxCharsPerLine)
             {
                 issues.Add(MakeIssue(QualityIssueType.LineTooLong, QualityIssueSeverity.Warning, i, sentence,
@@ -90,7 +91,7 @@ public static class QualityAssessor
                     charCount, options.MaxCharsPerLine));
             }
 
-            // 最小时长 / 最大时长
+            // Minimum / maximum duration
             if (durationMs > 0 && durationMs < options.MinSentenceDurationMs)
             {
                 issues.Add(MakeIssue(QualityIssueType.TooShort, QualityIssueSeverity.Warning, i, sentence,
@@ -107,7 +108,7 @@ public static class QualityAssessor
                     Math.Round(durationMs, 1), options.MaxSentenceDurationMs));
             }
 
-            // 与下一句重叠 / 句间间隙
+            // Overlap with the next line / inter-line gap
             if (i + 1 < sentences.Count)
             {
                 var gapMs = sentences[i + 1].Start - sentence.End;
@@ -136,7 +137,7 @@ public static class QualityAssessor
             MeanGapSeconds = gaps.Count > 0 ? Math.Round(gaps.Average(), 3) : 0
         };
 
-        // 低置信度片段
+        // Low-confidence fragments
         var lowConfidence = new List<QualityLineIssue>();
         var lowIndexes = new List<int>();
         if (confidenceMap is not null)

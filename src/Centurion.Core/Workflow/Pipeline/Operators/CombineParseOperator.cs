@@ -8,38 +8,41 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 合并管道的来源解析算子：把 combine 命令的全部输入（媒体容器 / 裸字幕文件）
-/// 统一解析为进程内的来源列表（<see cref="SubtitleSourceItem"/>，写入 State.Extensions），
-/// 每个来源携带自己的句子集合与 ASS 样式表。
-/// 媒体容器经 <see cref="MediaSubtitleExtractor"/> 枚举/提取内封字幕轨（按 --tracks 过滤），
-/// 裸字幕文件直接解析。单轨提取失败仅告警跳过；零来源时抛异常终止。
+/// Source-parsing operator for the combine pipeline: parses all combine-command inputs
+/// (media containers / bare subtitle files) uniformly into an in-process source list
+/// (<see cref="SubtitleSourceItem"/>, written into State.Extensions), where each source
+/// carries its own sentence set and ASS style table.
+/// Media containers have their embedded subtitle tracks enumerated/extracted via
+/// <see cref="MediaSubtitleExtractor"/> (filtered by --tracks); bare subtitle files
+/// are parsed directly. A single-track extraction failure only warns and is skipped;
+/// with zero sources an exception is thrown to abort.
 /// </summary>
 public sealed class CombineParseOperator(
     MediaSubtitleExtractor extractor,
     ILogger<CombineParseOperator> logger)
     : PipelineOperatorBase<CombineParseOperator>(logger)
 {
-    /// <summary>State.Extensions 中来源列表的键（进程内，merge 算子消费）。</summary>
+    /// <summary>Key in State.Extensions for the source list (in-process; consumed by the merge operator).</summary>
     public const string SourcesKey = "CombineSources";
 
-    /// <summary>State.Extensions 中媒体输入路径列表的键（命令装配时写入）。</summary>
+    /// <summary>Key in State.Extensions for the list of media input paths (written during command assembly).</summary>
     public const string MediaInputsKey = "CombineMediaInputs";
 
-    /// <summary>State.Extensions 中裸字幕文件列表的键（命令装配时写入）。</summary>
+    /// <summary>Key in State.Extensions for the list of bare subtitle files (written during command assembly).</summary>
     public const string SubtitleInputsKey = "CombineSubtitleInputs";
 
-    /// <summary>State.Extensions 中轨道号数组的键（null = 全部字幕轨）。</summary>
+    /// <summary>Key in State.Extensions for the track-number array (null = all subtitle tracks).</summary>
     public const string TrackFilterKey = "CombineTrackFilter";
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Combine Parse";
 
     /// <summary>
-    /// 解析全部输入为来源列表并写入工作流状态扩展槽。
+    /// Parses all inputs into a source list and writes it into the workflow state extension slot.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <exception cref="InvalidOperationException">所有输入均未解析出任何字幕来源。</exception>
+    /// <param name="context">The workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">No subtitle source could be parsed from any input.</exception>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var mediaInputs = GetExtensionsValue<string[]>(context, MediaInputsKey) ?? [];
@@ -111,7 +114,7 @@ public sealed class CombineParseOperator(
         LogInfo($"Parsed {sources.Count} subtitle source(s): {summary}");
     }
 
-    /// <summary>解析单个字幕文件为来源；解析失败仅告警返回 null（单轨损坏不阻断合并）。</summary>
+    /// <summary>Parses a single subtitle file into a source; on parse failure only warns and returns null (a corrupt track does not block the combine).</summary>
     private SubtitleSourceItem? ParseQuietly(string path, string displayName, string? language)
     {
         try
@@ -133,7 +136,7 @@ public sealed class CombineParseOperator(
         }
     }
 
-    /// <summary>来源显示名：媒体文件名 + 轨道号 +（语言/名称）。</summary>
+    /// <summary>Source display name: media file name + track number + (language/name).</summary>
     private static string BuildMediaSourceName(string mediaPath, MkvTrackInfo track)
     {
         var qualifier = !string.IsNullOrWhiteSpace(track.Name) ? track.Name
@@ -144,7 +147,7 @@ public sealed class CombineParseOperator(
         return $"{Path.GetFileName(mediaPath)} #track {track.TrackId}{suffix}";
     }
 
-    /// <summary>从 Extensions 读取强类型值（类型不符时返回 null 并告警）。</summary>
+    /// <summary>Reads a strongly typed value from Extensions (returns null and warns on a type mismatch).</summary>
     private static T? GetExtensionsValue<T>(SubtitleWorkflowContext context, string key)
     {
         if (!context.State.Extensions.TryGetValue(key, out var raw))

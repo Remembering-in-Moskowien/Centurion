@@ -3,14 +3,14 @@ using Centurion.Abstractions.Strategy;
 namespace Centurion.Abstractions.Factories;
 
 /// <summary>
-/// 说话人分割策略工厂：按后端名称创建对应的分割策略。
+/// Factory that creates a diarization strategy by backend name.
 /// </summary>
 public interface IDiarizationStrategyFactory
 {
     /// <summary>
-    /// 创建指定后端的说话人分割策略。
+    /// Creates a diarization strategy for the specified backend.
     /// </summary>
-    /// <param name="backend">"crispasr" 或 "pyannote"</param>
-    /// <returns>说话人分割策略实例</returns>
+    /// <param name="backend">"crispasr" or "pyannote".</param>
+    /// <returns>The diarization strategy instance.</returns>
     IDiarizationStrategy Create(string backend);
 }

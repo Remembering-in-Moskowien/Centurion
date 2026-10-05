@@ -12,11 +12,11 @@ public static class CliLayout
     {
         if (!OperatingSystem.IsWindows())
             return true;
-        // 现代终端标志：Windows Terminal / VS Code / ConEmu / Hyper 等
+        // Modern terminal indicators: Windows Terminal, VS Code, ConEmu, Hyper, and similar terminals.
         foreach (var v in new[] { "WT_SESSION", "TERM_PROGRAM", "ConEmuANSI", "VSCODE_PID" })
             if (Environment.GetEnvironmentVariable(v) is { Length: > 0 })
                 return true;
-        // 旧 conhost：GBK 代码页/缺字体 → 保守降级 ASCII，保证可读
+        // Legacy conhost may lack Unicode support, so fall back to ASCII for readability.
         return false;
     }
 

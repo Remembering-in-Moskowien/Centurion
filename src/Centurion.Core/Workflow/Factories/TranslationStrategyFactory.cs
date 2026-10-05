@@ -8,19 +8,20 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Factories;
 
 /// <summary>
-/// 翻译策略工厂：按策略名称创建翻译策略，目前支持基于大语言模型（各 OpenAI 兼容服务/Ollama）的 "llm" 策略。
+/// Translation strategy factory: creates the translation strategy by strategy name; currently supports the
+/// "llm" strategy backed by a large language model (any OpenAI-compatible service / Ollama).
 /// </summary>
 public class TranslationStrategyFactory(
     IServiceProvider serviceProvider,
     ILogger<TranslationStrategyFactory> logger) : ITranslationStrategyFactory
 {
     /// <summary>
-    /// 按策略名称创建翻译策略实例。
+    /// Creates the translation strategy instance for the given strategy name.
     /// </summary>
-    /// <param name="strategy">策略名称，支持 "llm"。</param>
-    /// <param name="llm">LLM 连接配置；为空时按旧行为回退（API 密钥 → OpenAI，否则 Ollama）。</param>
-    /// <returns>对应的翻译策略实例。</returns>
-    /// <exception cref="NotSupportedException">当策略名称不受支持时抛出。</exception>
+    /// <param name="strategy">The strategy name; supports "llm".</param>
+    /// <param name="llm">LLM connection options; when null the legacy fallback applies (API key present -> OpenAI, otherwise Ollama).</param>
+    /// <returns>The matching translation strategy instance.</returns>
+    /// <exception cref="NotSupportedException">Thrown when the strategy name is not supported.</exception>
     public ITranslationStrategy Create(string strategy, LlmOptions? llm = null)
     {
         return strategy.ToLowerInvariant() switch

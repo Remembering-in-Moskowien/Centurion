@@ -8,14 +8,15 @@ using Centurion.Models.Workflow;
 namespace Centurion.Core.Utils.Serialization;
 
 /// <summary>
-/// <see cref="ICenturionDocumentStore"/> 的默认实现：System.Text.Json 源生成器读写
-/// （<see cref="CenturionJsonContext"/>，无反射），并识别/兼容旧版 meta/config/state 格式。
+/// Default implementation of <see cref="ICenturionDocumentStore"/>: reads/writes via the
+/// System.Text.Json source generator (<see cref="CenturionJsonContext"/>, no reflection), and
+/// recognizes and stays compatible with the legacy meta/config/state format.
 /// </summary>
 public sealed class CenturionDocumentStore : ICenturionDocumentStore
 {
     private static readonly JsonSerializerOptions Options = CenturionJsonContext.Default.Options;
 
-    /// <summary>判断根 JSON 是否为旧版格式（含 meta 且不含 schemaVersion）。</summary>
+    /// <summary>Returns whether the root JSON is in the legacy format (has "meta" but no "schemaVersion").</summary>
     private static bool IsLegacy(JsonElement root) =>
         root.ValueKind == JsonValueKind.Object &&
         root.TryGetProperty("meta", out _) &&
@@ -53,7 +54,8 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
             if (root.ValueKind != JsonValueKind.Object)
                 return DocumentValidationResult.Fail(null, "Root must be a JSON object.");
 
-            // 旧格式：结构上可读即视为合法（迁移命令负责升级）
+            // Legacy format: readable structurally is treated as valid (the migrate command
+            // handles upgrading)
             if (IsLegacy(root))
             {
                 if (!root.TryGetProperty("config", out var cfg) || cfg.ValueKind != JsonValueKind.Object)
@@ -102,7 +104,7 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
         if (IsLegacy(root))
             return ConvertLegacy(root, path);
 
-        // 已是新格式：校验并原样返回
+        // Already the new format: validate and return as-is
         var parsed = ParseDocument(doc, path);
         if (parsed.SchemaVersion == toVersion)
             return parsed;
@@ -111,7 +113,7 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
             $"File is at version '{parsed.SchemaVersion}'; no migration path to '{toVersion}'.");
     }
 
-    /// <summary>解析 JSON 文本（严格模式：不允许尾逗号/注释，遇损坏抛 JsonException）。</summary>
+    /// <summary>Parses JSON text (strict mode: no trailing commas/comments allowed; throws JsonException on corruption).</summary>
     private static async Task<JsonDocument> ParseJsonAsync(string path, CancellationToken cancellationToken)
     {
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024,
@@ -124,7 +126,7 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
         return await JsonDocument.ParseAsync(stream, opts, cancellationToken);
     }
 
-    /// <summary>把已解析的 JSON 转成 <see cref="CenturionDocument"/>（新格式直接反序列化，旧格式走迁移）。</summary>
+    /// <summary>Converts parsed JSON into a <see cref="CenturionDocument"/> (new format deserialized directly; legacy format goes through migration).</summary>
     private static CenturionDocument ParseDocument(JsonDocument doc, string path)
     {
         var root = doc.RootElement;
@@ -156,7 +158,7 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
         return document;
     }
 
-    /// <summary>旧版 meta/config/state 格式 → 当前 <see cref="CenturionDocument"/>（内存迁移，不落盘）。</summary>
+    /// <summary>Legacy meta/config/state format → current <see cref="CenturionDocument"/> (in-memory migration; nothing written to disk).</summary>
     private static CenturionDocument ConvertLegacy(JsonElement root, string path)
     {
         WorkflowConfig config;
@@ -204,6 +206,6 @@ public sealed class CenturionDocumentStore : ICenturionDocumentStore
         };
     }
 
-    /// <summary>当前工具版本：统一为构建号（build-N），缺失回退程序集 InformationalVersion。</summary>
+    /// <summary>Current tool version: uniformly the build number (build-N); falls back to the assembly InformationalVersion when missing.</summary>
     private static string ToolVersion => Centurion.Core.Utils.Infrastructure.BuildInfo.DisplayVersion;
 }

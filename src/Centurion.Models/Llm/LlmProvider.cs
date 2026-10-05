@@ -1,12 +1,12 @@
 namespace Centurion.Models.Llm;
 
 /// <summary>
-/// LLM 服务提供商枚举。Auto 表示由 <c>LlmEndpointParser</c> 依据 BaseUrl/ApiKey 自动推断，
-/// 其余成员对应常见的 OpenAI 兼容 API 服务商（各自默认端点与默认模型见 <c>LlmProviderRegistry</c>）。
+/// LLM provider enumeration. Auto lets <c>LlmEndpointParser</c> infer the provider from BaseUrl and ApiKey.
+/// Other values represent common OpenAI-compatible API providers; see <c>LlmProviderRegistry</c> for default endpoints and models.
 /// </summary>
 public enum LlmProvider
 {
-    /// <summary>自动推断：有 BaseUrl 按主机名识别，否则有 API 密钥走 OpenAI 官方、无密钥走本地 Ollama。</summary>
+    /// <summary>Infer automatically: detect by hostname when BaseUrl is set; otherwise use official OpenAI with an API key or local Ollama without one.</summary>
     Auto,
 
     /// <summary>OpenAI 官方（https://api.openai.com/v1）。</summary>
@@ -30,15 +30,15 @@ public enum LlmProvider
     /// <summary>硅基流动 SiliconFlow（https://api.siliconflow.cn/v1），OpenAI 兼容。</summary>
     SiliconFlow,
 
-    /// <summary>阿里云百炼 DashScope 兼容模式（https://dashscope.aliyuncs.com/compatible-mode/v1）。</summary>
+    /// <summary>Alibaba Cloud DashScope compatible mode (https://dashscope.aliyuncs.com/compatible-mode/v1).</summary>
     DashScope,
 
-    /// <summary>火山方舟 Ark（https://ark.cn-beijing.volces.com/api/v3），OpenAI 兼容；模型名需为推理接入点 ID。</summary>
+    /// <summary>Volcengine Ark (https://ark.cn-beijing.volces.com/api/v3), OpenAI-compatible; model name must be an inference endpoint ID.</summary>
     Ark,
 
-    /// <summary>Azure OpenAI 兼容端点（https://{资源}.openai.azure.com/openai/v1），模型名需为部署名。</summary>
+    /// <summary>Azure OpenAI-compatible endpoint (https://{resource}.openai.azure.com/openai/v1); model name must be a deployment name.</summary>
     Azure,
 
-    /// <summary>本地 Ollama（http://localhost:11434），无需 API 密钥。</summary>
+    /// <summary>Local Ollama (http://localhost:11434); no API key required.</summary>
     Ollama
 }

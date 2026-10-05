@@ -3,15 +3,15 @@ using Centurion.Models;
 namespace Centurion.Abstractions.Strategy;
 
 /// <summary>
-/// 分句策略：将词级时间戳序列切分为适合展示的句子列表。
+/// Sentence-splitting strategy that groups word-level timestamps into display-ready sentences.
 /// </summary>
 public interface ISentenceSplitStrategy
 {
     /// <summary>
-    /// 按指定配置将单词列表切分为句子。
+    /// Splits a word list into sentences using the specified options.
     /// </summary>
-    /// <param name="words">带起止时间戳的单词列表。</param>
-    /// <param name="options">分句配置参数。</param>
-    /// <returns>切分后的句子列表。</returns>
+    /// <param name="words">Words with start and end timestamps.</param>
+    /// <param name="options">Sentence-splitting options.</param>
+    /// <returns>The resulting sentences.</returns>
     Task<List<Sentence>> Split(List<Word> words, SplitOptions options);
 }

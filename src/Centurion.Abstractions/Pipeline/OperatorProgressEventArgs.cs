@@ -1,27 +1,27 @@
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>
-/// 算子进度事件参数
+/// Event arguments for operator progress updates.
 /// </summary>
 public class OperatorProgressEventArgs : EventArgs
 {
     /// <summary>
-    /// 报告进度的算子名称。
+    /// Name of the operator reporting progress.
     /// </summary>
     public string OperatorName { get; init; } = string.Empty;
 
     /// <summary>
-    /// 当前完成百分比（0–100）。
+    /// Current completion percentage (0–100).
     /// </summary>
     public int Percentage { get; init; } // 0-100
 
     /// <summary>
-    /// 可选的状态描述文本，用于补充说明当前进展。
+    /// Optional status text describing the current progress.
     /// </summary>
     public string? StatusMessage { get; init; }
 
     /// <summary>
-    /// 进度事件产生的时间戳。
+    /// Timestamp when the progress event was raised.
     /// </summary>
     public DateTime Timestamp { get; init; } = DateTime.Now;
 }

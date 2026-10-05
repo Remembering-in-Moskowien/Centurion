@@ -10,7 +10,8 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Capabilities.Managers.Media;
 
 /// <summary>
-/// 管理 encoderfile 命令行工具：负责按需下载 CLI、依据 ONNX 模型构建编码产物并执行推理。
+/// Manages the encoderfile command-line tool: downloads the CLI on demand, builds encoding
+/// artifacts from ONNX models, and runs inference.
 /// </summary>
 public sealed class EncoderfileManager(
     IServiceProvider serviceProvider,
@@ -21,18 +22,18 @@ public sealed class EncoderfileManager(
     private readonly ILogger<EncoderfileManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly ProcessManager _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
 
-    /// <summary>encoderfile 工具所在目录（位于程序基目录下 tools/encoderfile）。</summary>
+    /// <summary>Directory holding the encoderfile tool (located at tools/encoderfile under the application base directory).</summary>
     public string ToolDirectory => Path.Combine(AppContext.BaseDirectory, "tools", "encoderfile");
-    /// <summary>encoderfile 可执行文件的完整路径，按操作系统选择 encoderfile.exe 或 encoderfile。</summary>
+    /// <summary>Full path to the encoderfile executable, choosing encoderfile.exe or encoderfile based on the OS.</summary>
     public string EncoderfileCliPath => Path.Combine(ToolDirectory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "encoderfile.exe" : "encoderfile");
 
     /// <summary>
-    /// 依据 ONNX 模型目录与模型类型构建 encoderfile 编码模型产物。
+    /// Builds the encoderfile encoding model artifact from an ONNX model directory and model type.
     /// </summary>
-    /// <param name="modelDir">ONNX 模型目录。</param>
-    /// <param name="outputPath">构建产物的输出路径。</param>
-    /// <param name="modelType">模型类型标识。</param>
-    /// <param name="ct">取消操作的取消令牌。</param>
+    /// <param name="modelDir">ONNX model directory.</param>
+    /// <param name="outputPath">Output path for the built artifact.</param>
+    /// <param name="modelType">Model type identifier.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
     public async Task BuildAsync(string modelDir, string outputPath, string modelType, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelDir);
@@ -61,12 +62,13 @@ public sealed class EncoderfileManager(
     }
 
     /// <summary>
-    /// 使用指定的 encoderfile 模型对输入文本执行推理，返回命令行标准输出结果。
+    /// Runs inference on the input text using the specified encoderfile model and returns the
+    /// command-line standard output.
     /// </summary>
-    /// <param name="encoderfilePath">已构建好的 encoderfile 模型路径。</param>
-    /// <param name="input">待推理的输入文本。</param>
-    /// <param name="ct">取消操作的取消令牌。</param>
-    /// <returns>推理命令的标准输出。</returns>
+    /// <param name="encoderfilePath">Path to the built encoderfile model.</param>
+    /// <param name="input">Input text to run inference on.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>Standard output of the inference command.</returns>
     public async Task<string> InferAsync(string encoderfilePath, string input, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(encoderfilePath);

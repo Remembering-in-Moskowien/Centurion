@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Logging;
 
 /// <summary>
-/// 文件日志提供器：把全部日志级别（含 info）以单行格式写入程序根目录下的 logs 目录，
-/// 每次运行一个独立日志文件（centurion-yyyyMMdd-HHmmss.log），不再按日期滚动。
-/// 创建时（即程序每次启动时）检查并清理超出保留天数的历史日志。
-/// 与 SimpleConsole 控制台输出共用同一日志管道，使每次运行的控制台内容都有完整的文件记录。
+/// File logger provider: writes all log levels (including info) in a single-line format
+/// to the logs directory under the app root, with one independent log file per run
+/// (centurion-yyyyMMdd-HHmmss.log) and no daily rolling. On creation (i.e. every program
+/// start) it checks and purges historical logs older than the retention window. It
+/// shares the same logging pipeline as the SimpleConsole console output, so every run's
+/// console content has a complete file record.
 /// </summary>
 public sealed class FileLoggerProvider : ILoggerProvider
 {
@@ -17,10 +19,11 @@ public sealed class FileLoggerProvider : ILoggerProvider
     private readonly string _fileName;
 
     /// <summary>
-    /// 创建文件日志提供器；文件名按当前时间生成（每次运行一个文件），并立即清理过期日志。
+    /// Creates the file logger provider; the file name is generated from the current time
+    /// (one file per run), and expired logs are purged immediately.
     /// </summary>
-    /// <param name="directory">日志目录；为 null 时使用程序根目录下的 logs。</param>
-    /// <param name="retentionDays">保留天数；超过该天数的历史日志在启动时被清理，默认 7 天。</param>
+    /// <param name="directory">Log directory; uses logs under the app root when null.</param>
+    /// <param name="retentionDays">Retention days; historical logs older than this are purged at startup, default 7 days.</param>
     public FileLoggerProvider(string? directory = null, int retentionDays = 7)
     {
         _directory = directory ?? Path.Combine(AppContext.BaseDirectory, "logs");
@@ -29,16 +32,16 @@ public sealed class FileLoggerProvider : ILoggerProvider
         CleanupOldLogs(retentionDays);
     }
 
-    /// <summary>日志目录的绝对路径。</summary>
+    /// <summary>Absolute path of the log directory.</summary>
     public string DirectoryPath => _directory;
 
-    /// <summary>本次运行对应的日志文件名。</summary>
+    /// <summary>The log file name for this run.</summary>
     public string CurrentLogFileName => _fileName;
 
-    /// <summary>创建指定类别的日志器实例。</summary>
+    /// <summary>Creates a logger instance for the given category.</summary>
     public ILogger CreateLogger(string categoryName) => new FileLogger(this);
 
-    /// <summary>释放并关闭当前日志文件。</summary>
+    /// <summary>Releases and closes the current log file.</summary>
     public void Dispose()
     {
         lock (_lock)
@@ -50,10 +53,11 @@ public sealed class FileLoggerProvider : ILoggerProvider
     }
 
     /// <summary>
-    /// 启动清理：删除 logs 目录中最后写入时间早于保留窗口的 centurion-*.log。
-    /// 清理失败只记录不影响启动（无日志器可用时静默跳过）。
+    /// Startup cleanup: deletes centurion-*.log files in the logs directory whose
+    /// last-write time is older than the retention window. Cleanup failures are only
+    /// logged and do not block startup (silently skipped when no logger is available).
     /// </summary>
-    /// <param name="retentionDays">保留天数。</param>
+    /// <param name="retentionDays">Retention days.</param>
     private void CleanupOldLogs(int retentionDays)
     {
         try
@@ -68,22 +72,22 @@ public sealed class FileLoggerProvider : ILoggerProvider
         }
         catch (IOException)
         {
-            // 日志文件可能正被其他进程占用；清理失败不阻断程序启动
+            // The log file may be held by another process; a cleanup failure does not block program startup
         }
         catch (UnauthorizedAccessException)
         {
-            // 无删除权限时跳过清理
+            // Skip cleanup when there is no delete permission
         }
     }
 
-    /// <summary>把一条日志写入本次运行的日志文件（追加模式）。</summary>
+    /// <summary>Writes one log entry to this run's log file (append mode).</summary>
     private void Write(LogLevel level, string message)
     {
         lock (_lock)
         {
             var fullPath = Path.Combine(_directory, _fileName);
 
-            // 以共享读写方式打开：多进程/残留进程同时追加时不会因文件锁抛异常
+            // Open in shared read/write mode: concurrent appends from multiple/leftover processes won't throw on file locks
             _writer ??= new StreamWriter(
                 new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
                 new UTF8Encoding(false))
@@ -103,12 +107,12 @@ public sealed class FileLoggerProvider : ILoggerProvider
         }
     }
 
-    /// <summary>单条文件日志写入器。</summary>
+    /// <summary>Single-entry file logger.</summary>
     private sealed class FileLogger(FileLoggerProvider owner) : ILogger
     {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-        /// <summary>始终启用；级别过滤由 LoggerFactory 的 provider 级规则控制（文件记录全部级别）。</summary>
+        /// <summary>Always enabled; level filtering is controlled by the LoggerFactory's provider-level rules (the file records all levels).</summary>
         public bool IsEnabled(LogLevel logLevel) => true;
 
         public void Log<TState>(

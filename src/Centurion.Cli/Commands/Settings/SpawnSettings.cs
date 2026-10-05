@@ -12,7 +12,7 @@ namespace Centurion.Cli.Commands.Settings;
 public sealed class SpawnSettings : GlobalCommandSettings
 {
 
-    // ----- 基础参数（不变）-----
+    // ----- Base options (unchanged) -----
     /// <summary>
     /// Input audio/video media file.
     /// </summary>
@@ -72,7 +72,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     public bool ShowSpeakerLabels { get; init; } = true;
 
 
-    // ----- 转录模块 (Transcriber) -----
+    // ----- Transcriber -----
     /// <summary>
     /// Transcription engine: whisper, crisp.
     /// </summary>
@@ -94,7 +94,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Initial prompt for transcription")]
     public string? InitialPrompt { get; init; }
 
-    // ----- 音频预处理模块 -----
+    // ----- Audio preprocessing -----
     /// <summary>
     /// Whether to enable conditional FFmpeg noise reduction.
     /// </summary>
@@ -130,7 +130,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Disable EBU R128 loudness normalization")]
     public bool DisableAudioLoudness { get; init; }
 
-    // ----- 人声分离模块 (Vocal Separation) -----
+    // ----- Vocal separation -----
     /// <summary>
     /// Whether to separate vocals with Demucs before transcription (only for music/BGM-heavy media).
     /// </summary>
@@ -145,7 +145,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 
-    // ----- 推理设备 (Device) -----
+    // ----- Inference device -----
     /// <summary>
     /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).
     /// </summary>
@@ -153,7 +153,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Inference device: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded)")]
     public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
 
-    // ----- 云端 ASR (Cloud ASR API) -----
+    // ----- Cloud ASR API -----
     /// <summary>
     /// Cloud ASR provider: openai / groq / dashscope / deepgram (pass the matching engine to --transcriber).
     /// </summary>
@@ -175,7 +175,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("Cloud ASR endpoint (defaults per provider)")]
     public string? AsrBaseUrl { get; init; }
 
-    // ----- 分句模块 (Splitter) -----
+    // ----- Sentence splitter -----
     /// <summary>
     /// Split strategy: rule/rule-aggressive (active rules, short dialogue; default), rule-passive (passive rules, steady speech), llm (LLM-based).
     /// </summary>
@@ -239,7 +239,7 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [Description("LLM base URL for splitting (defaults to provider endpoint)")]
     public string? LlmBaseUrl { get; init; }
 
-    // ----- 对齐模块 (Alignment) -----
+    // ----- Alignment -----
     /// <summary>
     /// Whether to enable forced alignment.
     /// </summary>

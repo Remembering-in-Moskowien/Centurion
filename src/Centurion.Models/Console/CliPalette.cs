@@ -10,8 +10,7 @@ public static class CliPalette
     /// <summary>Spectre markup color for error messages (red, bold).</summary>
     public const string Error = "red bold";
     /// <summary>
-    /// Spectre markup color for warning messages (gold, bold) — 金色而非终端/Shell 默认的
-    /// 黄色（如 PowerShell 警告色），避免语义撞衫。
+    /// Spectre markup color for warning messages (gold, bold), distinct from the terminal or shell's default yellow warning color.
     /// </summary>
     public const string Warning = "gold1 bold";
     /// <summary>Spectre markup color for critical failures (magenta, bold).</summary>
@@ -29,7 +28,7 @@ public static class CliPalette
     public const System.ConsoleColor ErrorColor = System.ConsoleColor.Red;
     /// <summary>
     /// ConsoleColor fallback for warning lines in the log-channel formatter.
-    /// ConsoleColor 无金色枚举，取最接近的暗黄（暗金）；Spectre 渲染主通道使用真金 <see cref="Warning"/>。
+    /// ConsoleColor has no gold value, so use the closest dark yellow; Spectre's primary renderer uses actual gold via <see cref="Warning"/>.
     /// </summary>
     public const System.ConsoleColor WarningColor = System.ConsoleColor.DarkYellow;
     /// <summary>ConsoleColor fallback for critical lines (custom magenta).</summary>

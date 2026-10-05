@@ -6,9 +6,10 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// IndexTTS-Rust 管理器：定位 tools/indextts/indextts.exe（Windows 平台）。
-/// 引擎为纯 Rust 预编译二进制（8b-is/IndexTTS-Rust），与 VSF 相同的捆绑策略：
-/// 由用户放置或随发布捆绑，无自动下载；缺失时返回 null 并提示构建/放置方法。
+/// IndexTTS-Rust manager: locates tools/indextts/indextts.exe (Windows platform).
+/// The engine is a pure Rust prebuilt binary (8b-is/IndexTTS-Rust), using the same bundling
+/// strategy as VSF: placed by the user or bundled with a release, with no auto-download; when
+/// missing, returns null and hints at how to build/place it.
 /// </summary>
 public sealed class IndexTtsManager(
     IBinaryLocator binaryLocator,
@@ -16,13 +17,14 @@ public sealed class IndexTtsManager(
 {
     private string? _resolvedDirectory;
 
-    /// <summary>IndexTTS 引擎是否已可用（可执行文件存在）。</summary>
+    /// <summary>Whether the IndexTTS engine is available (the executable exists).</summary>
     public bool IsInstalled => LocateExecutable() is not null;
 
     /// <summary>
-    /// 确保 IndexTTS 引擎可用，返回可执行文件路径；缺失返回 null（不自动下载）。
+    /// Ensures the IndexTTS engine is available and returns the executable path; returns null
+    /// when missing (no auto-download).
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
     {
         var exe = LocateExecutable();

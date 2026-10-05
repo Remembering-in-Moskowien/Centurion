@@ -5,8 +5,8 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Tts;
 
 /// <summary>
-/// TTS Provider：适配 <see cref="ITtsEngine"/>（llama.cpp llama-tts 本地合成）。
-/// 免密钥、无按量成本；可用性以执行结果为准。
+/// TTS provider: adapts <see cref="ITtsEngine"/> (llama.cpp llama-tts local synthesis).
+/// Keyless, no per-use cost; availability is determined by the execution result.
 /// </summary>
 public sealed class LlamaTtsProvider(
     string name,
@@ -41,13 +41,13 @@ public sealed class LlamaTtsProvider(
     }
 }
 
-/// <summary>llama-tts TTS Provider 的注册工厂。</summary>
+/// <summary>Registration factory for the llama-tts TTS provider.</summary>
 public static class LlamaTtsProviders
 {
-    /// <summary>注册名。</summary>
+    /// <summary>Registered name.</summary>
     public const string Name = "llama-tts";
 
-    /// <summary>能力声明：本地、不限语言、高质量（音色克隆）。</summary>
+    /// <summary>Capability declaration: local, language-agnostic, high quality (voice cloning).</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Medium,

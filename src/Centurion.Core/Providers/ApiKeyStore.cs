@@ -2,15 +2,16 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers;
 
 /// <summary>
-/// 统一 API 密钥读取：环境变量（CENTURION_&lt;域&gt;_API_KEY）优先，
-/// 其次显式配置值，最后本地默认。缺失返回 null（云端 Provider 不可用，链自动回退本地）。
+/// Unified API-key resolution: the environment variable (CENTURION_&lt;domain&gt;_API_KEY) takes
+/// precedence, followed by the explicit configured value, then the local default. Returns null
+/// when missing (cloud providers become unavailable and the chain automatically falls back to local).
 /// </summary>
 public static class ApiKeyStore
 {
-    /// <summary>按域读取密钥：环境变量 → 显式配置。</summary>
-    /// <param name="domain">域标识（asr/ocr/llm），用于构造环境变量名。</param>
-    /// <param name="configured">显式配置的密钥；为空时回退环境变量。</param>
-    /// <returns>密钥；未配置时返回 null。</returns>
+    /// <summary>Resolves the key for a domain: environment variable → explicit configuration.</summary>
+    /// <param name="domain">Domain identifier (asr/ocr/llm), used to build the environment variable name.</param>
+    /// <param name="configured">The explicitly configured key; falls back to the environment variable when empty.</param>
+    /// <returns>The key; returns null when not configured.</returns>
     public static string? Resolve(string domain, string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))
@@ -21,7 +22,7 @@ public static class ApiKeyStore
         return string.IsNullOrWhiteSpace(fromEnv) ? null : fromEnv;
     }
 
-    /// <summary>按域读取端点：环境变量 CENTURION_&lt;域&gt;_BASE_URL → 显式配置 → null。</summary>
+    /// <summary>Resolves the endpoint for a domain: environment variable CENTURION_&lt;domain&gt;_BASE_URL → explicit configuration → null.</summary>
     public static string? ResolveBaseUrl(string domain, string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))

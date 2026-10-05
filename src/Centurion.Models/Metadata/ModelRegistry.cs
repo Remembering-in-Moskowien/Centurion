@@ -1,40 +1,40 @@
 ﻿namespace Centurion.Models.Metadata;
 
-/// <summary>描述模型资源的下载与组织形式。</summary>
+/// <summary>Describes how a model resource is downloaded and organized.</summary>
 public enum ModelDownloadType
 {
-    /// <summary>单个模型文件（如 .bin / .gguf），直接按文件名落盘。</summary>
+    /// <summary>A single model file, such as .bin or .gguf, saved directly under its filename.</summary>
     SingleFile,
-    /// <summary>整个目录包（如 faster-whisper 目录），按文件列表下载。</summary>
+    /// <summary>A directory package, such as a Faster-Whisper model, downloaded as a list of files.</summary>
     Directory,
-    /// <summary>ONNX 模型目录包，附带 ONNX 任务类型（如 embedding、token_classification）。</summary>
+    /// <summary>An ONNX model directory package with an ONNX task type, such as embedding or token_classification.</summary>
     OnnxModelDirectory
 }
 
-/// <summary>单个模型的下载元数据，根据下载类型携带不同字段组合。</summary>
+/// <summary>Download metadata for one model; fields vary by download type.</summary>
 public record ModelMeta
 {
-    /// <summary>单文件模型的本地文件名（仅单文件类型时有值）。</summary>
+    /// <summary>Local filename for single-file models.</summary>
     public string? FileName { get; init; }
-    /// <summary>模型下载 URL。</summary>
+    /// <summary>Model download URL.</summary>
     public string? DownloadUrl { get; init; }
-    /// <summary>下载与组织形式，默认 <see cref="ModelDownloadType.SingleFile"/>。</summary>
+    /// <summary>Download and organization type; defaults to <see cref="ModelDownloadType.SingleFile"/>.</summary>
     public ModelDownloadType DownloadType { get; init; } = ModelDownloadType.SingleFile;
-    /// <summary>目录/ONNX 类型需要下载的文件相对路径列表。</summary>
+    /// <summary>Relative paths of files to download for directory and ONNX types.</summary>
     public List<string>? Files { get; init; }
-    /// <summary>ONNX 模型任务类型（如 token_classification、embedding），仅 ONNX 目录类型时有值。</summary>
+    /// <summary>ONNX task type, such as token_classification or embedding; set only for ONNX directory types.</summary>
     public string? OnnxModelType { get; init; }
-    /// <summary>模型在下载根目录中的子目录，可为空。</summary>
+    /// <summary>Optional subdirectory for the model within the download root.</summary>
     public string? Subdirectory { get; init; }
     /// <summary>
-    /// 可选：下载文件/包的 SHA256 校验值（十六进制小写）。
-    /// 为空时不校验；填写后下载完成即校验，不匹配则删除文件并报错。
+    /// Optional SHA-256 hash for the downloaded file or package, in lowercase hexadecimal.
+    /// Null disables verification; when provided, the download is verified and deleted on mismatch.
     /// </summary>
     public string? FileHash { get; init; }
 
-    /// <summary>构造单文件模型元数据。</summary>
-    /// <param name="fileName">本地文件名。</param>
-    /// <param name="downloadUrl">下载 URL。</param>
+    /// <summary>Creates metadata for a single-file model.</summary>
+    /// <param name="fileName">Local filename.</param>
+    /// <param name="downloadUrl">Download URL.</param>
     public ModelMeta(string fileName, string downloadUrl)
     {
         FileName = fileName;
@@ -42,10 +42,10 @@ public record ModelMeta
         DownloadType = ModelDownloadType.SingleFile;
     }
 
-    /// <summary>构造目录型模型元数据。</summary>
-    /// <param name="downloadUrl">下载 URL。</param>
-    /// <param name="files">需要下载的文件相对路径列表。</param>
-    /// <param name="subdirectory">模型子目录，可为空。</param>
+    /// <summary>Creates metadata for a directory-based model.</summary>
+    /// <param name="downloadUrl">Download URL.</param>
+    /// <param name="files">Relative paths of files to download.</param>
+    /// <param name="subdirectory">Optional model subdirectory.</param>
     public ModelMeta(string downloadUrl, List<string> files, string? subdirectory = null)
     {
         DownloadUrl = downloadUrl;
@@ -54,11 +54,11 @@ public record ModelMeta
         DownloadType = ModelDownloadType.Directory;
     }
 
-    /// <summary>构造 ONNX 目录型模型元数据。</summary>
-    /// <param name="downloadUrl">下载 URL。</param>
-    /// <param name="files">需要下载的文件相对路径列表。</param>
-    /// <param name="onnxModelType">ONNX 任务类型。</param>
-    /// <param name="subdirectory">模型子目录，可为空。</param>
+    /// <summary>Creates metadata for an ONNX directory-based model.</summary>
+    /// <param name="downloadUrl">Download URL.</param>
+    /// <param name="files">Relative paths of files to download.</param>
+    /// <param name="onnxModelType">ONNX task type.</param>
+    /// <param name="subdirectory">Optional model subdirectory.</param>
     public ModelMeta(string downloadUrl, List<string> files, string onnxModelType, string? subdirectory = null)
     {
         DownloadUrl = downloadUrl;
@@ -70,14 +70,14 @@ public record ModelMeta
 }
 
 /// <summary>
-/// 模型元数据注册表。
-/// 实例化对象，由 <see cref="MetadataJsonLoader"/> 在程序启动时从外部 JSON 加载；
-/// 未提供外部配置时回退到 <see cref="Default"/>（内置默认条目）。
+/// Registry of model metadata.
+/// Loaded from external JSON by <see cref="MetadataJsonLoader"/> at startup;
+/// falls back to <see cref="Default"/> when no external configuration is provided.
 /// </summary>
 public sealed class ModelRegistry
 {
     /// <summary>
-    /// 内置默认注册表（外部 JSON 缺失时的回退值，也是种子文件的内容来源）。
+    /// Built-in default registry, used when external JSON is missing and as the seed file source.
     /// </summary>
     public static ModelRegistry Default { get; } = new(
         BuildDefaultDict(BuildDefaultWhisperModels()),
@@ -89,32 +89,32 @@ public sealed class ModelRegistry
         BuildDefaultDict(BuildDefaultQwen3TtsModels()),
         BuildDefaultDict(BuildDefaultIndexTtsModels()));
 
-    /// <summary>Whisper.cpp 单文件模型字典，键为模型规格名（tiny/base/.../large）。</summary>
+    /// <summary>Whisper.cpp single-file models, keyed by model size (tiny/base/.../large).</summary>
     public IReadOnlyDictionary<string, ModelMeta> WhisperModels { get; }
-    /// <summary>Faster-Whisper 目录模型字典，键为模型规格名。</summary>
+    /// <summary>Faster-Whisper directory models, keyed by model size.</summary>
     public IReadOnlyDictionary<string, ModelMeta> FasterWhisperModels { get; }
-    /// <summary>Qwen3-ASR 模型字典（供 CrispASR 使用），键为模型规格名。</summary>
+    /// <summary>Qwen3-ASR models for CrispASR, keyed by model size.</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3AsrModels { get; }
-    /// <summary>Qwen3 强制对齐模型字典，键为模型规格名。</summary>
+    /// <summary>Qwen3 forced-alignment models, keyed by model size.</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3ForcedAlignerModels { get; }
-    /// <summary>说话人分割（diarization）模型字典，键为模型名。</summary>
+    /// <summary>Diarization models, keyed by model name.</summary>
     public IReadOnlyDictionary<string, ModelMeta> DiarizationModels { get; }
-    /// <summary>BERT ONNX 模型字典（如 NER、句向量），键为模型名。</summary>
+    /// <summary>BERT ONNX models, such as NER and sentence embeddings, keyed by model name.</summary>
     public IReadOnlyDictionary<string, ModelMeta> BertOnnxModels { get; }
-    /// <summary>Qwen3-TTS 模型字典（供 dub 命令 llama-tts 使用），键为模型规格名。</summary>
+    /// <summary>Qwen3-TTS models used by the dub command's llama-tts engine, keyed by model size.</summary>
     public IReadOnlyDictionary<string, ModelMeta> Qwen3TtsModels { get; }
-    /// <summary>IndexTTS-Rust 模型字典（供 dub 命令 --tts-engine indextts 使用），键为模型名。</summary>
+    /// <summary>IndexTTS-Rust models used by dub --tts-engine indextts, keyed by model name.</summary>
     public IReadOnlyDictionary<string, ModelMeta> IndexTtsModels { get; }
 
-    /// <summary>用六类模型字典构造注册表。</summary>
-    /// <param name="whisperModels">Whisper.cpp 模型字典。</param>
-    /// <param name="fasterWhisperModels">Faster-Whisper 模型字典。</param>
-    /// <param name="qwen3AsrModels">Qwen3-ASR 模型字典。</param>
-    /// <param name="qwen3ForcedAlignerModels">Qwen3 强制对齐模型字典。</param>
-    /// <param name="diarizationModels">说话人分割模型字典。</param>
-    /// <param name="bertOnnxModels">BERT ONNX 模型字典。</param>
-    /// <param name="qwen3TtsModels">Qwen3-TTS 模型字典。</param>
-    /// <param name="indexttsModels">IndexTTS-Rust 模型字典。</param>
+    /// <summary>Creates a registry from model dictionaries.</summary>
+    /// <param name="whisperModels">Whisper.cpp models.</param>
+    /// <param name="fasterWhisperModels">Faster-Whisper models.</param>
+    /// <param name="qwen3AsrModels">Qwen3-ASR models.</param>
+    /// <param name="qwen3ForcedAlignerModels">Qwen3 forced-alignment models.</param>
+    /// <param name="diarizationModels">Diarization models.</param>
+    /// <param name="bertOnnxModels">BERT ONNX models.</param>
+    /// <param name="qwen3TtsModels">Qwen3-TTS models.</param>
+    /// <param name="indexttsModels">IndexTTS-Rust models.</param>
     public ModelRegistry(
         IReadOnlyDictionary<string, ModelMeta> whisperModels,
         IReadOnlyDictionary<string, ModelMeta> fasterWhisperModels,
@@ -135,9 +135,9 @@ public sealed class ModelRegistry
         IndexTtsModels = indexttsModels ?? throw new ArgumentNullException(nameof(indexttsModels));
     }
 
-    // ---------- 内置默认条目（原硬编码注册数据） ----------
+    // ---------- Built-in defaults (formerly hard-coded registry data) ----------
 
-    // Whisper.cpp 模型（单文件 .bin）
+    // Whisper.cpp models (single-file .bin).
     private static Dictionary<string, ModelMeta> BuildDefaultWhisperModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -167,7 +167,7 @@ public sealed class ModelRegistry
         }
     };
 
-    // Faster‑Whisper 模型（目录）
+    // Faster-Whisper models (directory packages).
     private static Dictionary<string, ModelMeta> BuildDefaultFasterWhisperModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -197,7 +197,7 @@ public sealed class ModelRegistry
         }
     };
 
-    // Qwen3-ASR 模型（用于 CrispASR）
+    // Qwen3-ASR models for CrispASR.
     private static Dictionary<string, ModelMeta> BuildDefaultQwen3AsrModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -216,7 +216,7 @@ public sealed class ModelRegistry
         }
     };
 
-    // Qwen3 强制对齐模型（单文件 .gguf）
+    // Qwen3 forced-alignment models (single-file .gguf).
     private static Dictionary<string, ModelMeta> BuildDefaultQwen3ForcedAlignerModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -226,7 +226,7 @@ public sealed class ModelRegistry
                 downloadUrl: "https://hf-mirror.com/cstr/qwen3-forced-aligner-0.6b-GGUF/resolve/main/qwen3-forced-aligner-0.6b-q4_k.gguf"
             )
         },
-        // 可选的 Q8_0 版本（更高精度）
+        // Optional Q8_0 variant for higher precision.
         {
             "qwen3-forced-aligner-0.6b-q8_0",
             new ModelMeta(
@@ -234,7 +234,7 @@ public sealed class ModelRegistry
                 downloadUrl: "https://hf-mirror.com/cstr/qwen3-forced-aligner-0.6b-GGUF/resolve/main/qwen3-forced-aligner-0.6b-q8_0.gguf"
             )
         },
-        // 可选的 F16 版本（最高精度）
+        // Optional F16 variant for maximum precision.
         {
             "qwen3-forced-aligner-0.6b-f16",
             new ModelMeta(
@@ -244,7 +244,7 @@ public sealed class ModelRegistry
         }
     };
 
-    // 说话人分割 (sherpa-onnx)
+    // Diarization models (sherpa-onnx).
     private static Dictionary<string, ModelMeta> BuildDefaultDiarizationModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -265,7 +265,7 @@ public sealed class ModelRegistry
             onnxModelType: "embedding")
     };
 
-    // Qwen3-TTS 模型（llama-tts 使用）：1.7B Base GGUF（talker + mmproj，目录型）
+    // Qwen3-TTS model for llama-tts: 1.7B Base GGUF (talker + mmproj, directory package).
     private static Dictionary<string, ModelMeta> BuildDefaultQwen3TtsModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {
@@ -276,7 +276,7 @@ public sealed class ModelRegistry
         }
     };
 
-    // IndexTTS-Rust 模型（目录型）：官方预转换 ONNX（含外部权重 .data）；gpt/s2mel ONNX 未发布，需自行转换后放置
+    // IndexTTS-Rust directory model: official pre-converted ONNX with external .data weights; GPT/S2Mel ONNX files are unpublished and must be converted manually.
     private static Dictionary<string, ModelMeta> BuildDefaultIndexTtsModels() => new(StringComparer.OrdinalIgnoreCase)
     {
         {

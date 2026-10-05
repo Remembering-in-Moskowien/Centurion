@@ -82,7 +82,7 @@ public sealed class ModelsListCommand(
             .AddColumn(new TableColumn(ConsoleServices.T("Model")).LeftAligned())
             .AddColumn(new TableColumn(ConsoleServices.T("Type")).Centered())
             .AddColumn(new TableColumn(ConsoleServices.T("State")).LeftAligned());
-            // 全宽排版：标题居中与表格视觉统一
+            // Use the full width to align the centered title with the table.
 
         foreach (var domain in ModelCatalog.Domains(registry))
         {

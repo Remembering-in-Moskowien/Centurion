@@ -3,16 +3,16 @@ using System.Security.Cryptography;
 namespace Centurion.Core.Utils.Infrastructure;
 
 /// <summary>
-/// 文件哈希校验工具，使用 SHA256 计算实际哈希并与期望值比较。
+/// File hash verification utility: computes the actual hash with SHA256 and compares it against the expected value.
 /// </summary>
 public class HashVerifier
 {
     /// <summary>
-    /// 计算指定文件的 SHA256 哈希并与期望哈希值比较。
+    /// Computes the SHA256 hash of the given file and compares it against the expected hash.
     /// </summary>
-    /// <param name="path">待校验文件的路径。</param>
-    /// <param name="hash">期望的小写十六进制 SHA256 哈希值。</param>
-    /// <returns>包含是否匹配与实际哈希值的结果对象。</returns>
+    /// <param name="path">Path of the file to verify.</param>
+    /// <param name="hash">Expected lowercase hexadecimal SHA256 hash.</param>
+    /// <returns>A result object containing whether it matches and the actual hash.</returns>
     public static HashVerifyResult VerifyHash(string path, string hash)
     {
         using var stream = File.OpenRead(path);
@@ -26,13 +26,13 @@ public class HashVerifier
     }
 
     /// <summary>
-    /// 哈希校验结果。
+    /// Hash verification result.
     /// </summary>
     public sealed class HashVerifyResult
     {
-        /// <summary>实际哈希是否与期望哈希一致。</summary>
+        /// <summary>Whether the actual hash matches the expected hash.</summary>
         public bool IsMatch { get; init; }
-        /// <summary>计算得到的实际 SHA256 哈希（小写十六进制）。</summary>
+        /// <summary>The computed actual SHA256 hash (lowercase hexadecimal).</summary>
         public string ActualHash { get; init; } = string.Empty;
     }
 }

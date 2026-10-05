@@ -3,16 +3,16 @@ using System.Buffers;
 namespace Centurion.Core.Processing.Text;
 
 /// <summary>
-/// 基于编辑距离（Levenshtein）的文本相似度计算工具。
+/// Text-similarity utilities based on edit distance (Levenshtein).
 /// </summary>
 public static class TextSimilarity
 {
     /// <summary>
-    /// 计算两段文本的相似度，取值范围 0（完全不同）到 1（完全相同）。
+    /// Computes the similarity between two texts, ranging from 0 (completely different) to 1 (identical).
     /// </summary>
-    /// <param name="left">第一段文本，为 <see langword="null"/> 时按空串处理。</param>
-    /// <param name="right">第二段文本，为 <see langword="null"/> 时按空串处理。</param>
-    /// <returns>相似度；两串均为空时返回 1。</returns>
+    /// <param name="left">The first text; treated as an empty string when <see langword="null"/>.</param>
+    /// <param name="right">The second text; treated as an empty string when <see langword="null"/>.</param>
+    /// <returns>The similarity; returns 1 when both strings are empty.</returns>
     public static double Similarity(string? left, string? right)
     {
         left ??= string.Empty;

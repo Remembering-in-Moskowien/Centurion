@@ -8,10 +8,12 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Utils.Media;
 
 /// <summary>
-/// 媒体字幕提取器：从容器文件（MKV/MP4/TS 等）中提取内封字幕轨为独立字幕文件。
-/// 轨道枚举优先 ffprobe（通用），提取按容器类型选择 mkvextract（无损原样导出）
-/// 或 ffmpeg（转码为标准 SRT/ASS）。工具缺失或媒体无字幕轨时返回空列表（非致命）。
-/// 供 correct 命令的兜底输入与 combine 命令的多轨合并使用。
+/// Media subtitle extractor: extracts embedded subtitle tracks from container files
+/// (MKV/MP4/TS, etc.) into standalone subtitle files.
+/// Track enumeration prefers ffprobe (generic); extraction picks mkvextract by container
+/// type (lossless passthrough) or ffmpeg (transcode to standard SRT/ASS).
+/// Returns an empty list (non-fatal) when tooling is missing or the media has no subtitle track.
+/// Used by the correct command's fallback input and the combine command's multi-track merge.
 /// </summary>
 public sealed class MediaSubtitleExtractor(
     IBinaryLocator binaryLocator,
@@ -20,19 +22,20 @@ public sealed class MediaSubtitleExtractor(
     MkvtoolnixManager mkvtoolnixManager,
     ILogger<MediaSubtitleExtractor> logger)
 {
-    /// <summary>图形字幕编码（无文本可解析，跳过）。</summary>
+    /// <summary>Graphic subtitle codecs (no parseable text, skipped).</summary>
     private static readonly HashSet<string> GraphicCodecs =
     [
         "hdmv_pgs_subtitle", "pgssub", "dvd_subtitle", "dvb_teletext", "dvb_subtitle"
     ];
 
     /// <summary>
-    /// 从媒体中提取第一个字幕轨到指定目录（correct 兜底输入使用的旧语义）。
+    /// Extract the first subtitle track from the media into the given directory
+    /// (legacy semantics used by the correct command's fallback input).
     /// </summary>
-    /// <param name="mediaPath">媒体文件路径（mkv/mp4/ts 等）。</param>
-    /// <param name="outputDirectory">提取文件输出目录（建议使用管道临时目录）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>提取出的字幕文件路径；媒体无字幕轨或提取工具不可用时返回 null。</returns>
+    /// <param name="mediaPath">Path to the media file (mkv/mp4/ts, etc.).</param>
+    /// <param name="outputDirectory">Output directory for the extracted file (use the pipeline temp directory).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Path to the extracted subtitle file; null when the media has no subtitle track or extraction tooling is unavailable.</returns>
     public async Task<string?> ExtractAsync(string mediaPath, string outputDirectory, CancellationToken cancellationToken)
     {
         var tracks = await ListSubtitleTracksAsync(mediaPath, cancellationToken);
@@ -46,20 +49,21 @@ public sealed class MediaSubtitleExtractor(
     }
 
     /// <summary>
-    /// 枚举媒体中的可提取字幕轨（图形字幕除外）。
-    /// 优先 mkvmerge -i（MKV 系容器无损信息），失败/无结果时回退 ffprobe -show_streams。
+    /// Enumerate extractable subtitle tracks in the media (excluding graphic subtitles).
+    /// Prefers mkvmerge -i (lossless info for MKV-family containers); falls back to
+    /// ffprobe -show_streams on failure or when no results are found.
     /// </summary>
-    /// <param name="mediaPath">媒体文件路径。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>字幕轨列表（TrackId 为容器内可定位的流序号/轨道号）。</returns>
+    /// <param name="mediaPath">Path to the media file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Subtitle track list (TrackId is the stream/track number locatable within the container).</returns>
     public async Task<List<MkvTrackInfo>> ListSubtitleTracksAsync(string mediaPath, CancellationToken cancellationToken)
     {
-        // 1. mkvmerge 探测（mkv 容器首选，轨道号即 mkvextract 索引）
+        // 1. mkvmerge probing (preferred for mkv containers; the track number is the mkvextract index)
         var check = await checker.CheckAsync(mediaPath, cancellationToken);
         if (check.Checked && check.HasSubtitleTracks)
             return check.SubtitleTracks.Where(t => !IsGraphic(t.Codec)).ToList();
 
-        // 2. ffprobe 枚举（mp4/ts/webm 等通用容器）
+        // 2. ffprobe enumeration (generic containers such as mp4/ts/webm)
         var viaProbe = await ListViaFfprobeAsync(mediaPath, cancellationToken);
         if (viaProbe.Count > 0)
             return viaProbe;
@@ -69,20 +73,21 @@ public sealed class MediaSubtitleExtractor(
     }
 
     /// <summary>
-    /// 提取指定字幕轨到输出目录，文件名形如 media_subtitle_track_{N}{ext}。
-    /// MKV 优先 mkvextract（无损原样），其余走 ffmpeg（mov_text 等转码 SRT，ass 直通）。
+    /// Extract the given subtitle track into the output directory; the file is named like
+    /// media_subtitle_track_{N}{ext}. MKV prefers mkvextract (lossless passthrough); other
+    /// containers go through ffmpeg (mov_text etc. transcoded to SRT, ASS passed through).
     /// </summary>
-    /// <param name="mediaPath">媒体文件路径。</param>
-    /// <param name="track">目标轨道（来自 <see cref="ListSubtitleTracksAsync"/>）。</param>
-    /// <param name="outputDirectory">提取文件输出目录。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>提取出的字幕文件路径；失败时为 null。</returns>
+    /// <param name="mediaPath">Path to the media file.</param>
+    /// <param name="track">Target track (from <see cref="ListSubtitleTracksAsync"/>).</param>
+    /// <param name="outputDirectory">Output directory for the extracted file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Path to the extracted subtitle file; null on failure.</returns>
     public async Task<string?> ExtractTrackAsync(string mediaPath, MkvTrackInfo track, string outputDirectory, CancellationToken cancellationToken)
     {
         var extension = ExtensionForCodec(track.Codec);
         var outputPath = Path.Combine(outputDirectory, $"media_subtitle_track_{track.TrackId}{extension}");
 
-        // MKV 系容器优先 mkvextract（无损保留原始 ASS/SSA/SRT）
+        // MKV-family containers prefer mkvextract (losslessly keeps the original ASS/SSA/SRT)
         if (IsMkvContainer(mediaPath) && await TryMkvextractAsync(mediaPath, track, outputPath, cancellationToken))
             return File.Exists(outputPath) ? outputPath : null;
 
@@ -91,11 +96,11 @@ public sealed class MediaSubtitleExtractor(
             : null;
     }
 
-    /// <summary>编码名是否图形字幕（无文本）。</summary>
+    /// <summary>Whether the codec name is a graphic subtitle (no text).</summary>
     public static bool IsGraphic(string codec) =>
         GraphicCodecs.Contains(NormalizeCodecId(codec));
 
-    /// <summary>按字幕编码选择提取文件扩展名（PGS 等图形字幕默认 null 调用方已过滤）。</summary>
+    /// <summary>Choose the extracted file extension by subtitle codec (PGS and other graphic subtitles default to null and are filtered by the caller).</summary>
     internal static string ExtensionForCodec(string codec) => codec switch
     {
         var c when c.Contains("ASS", StringComparison.OrdinalIgnoreCase) => ".ass",
@@ -173,12 +178,12 @@ public sealed class MediaSubtitleExtractor(
             return false;
         }
 
-        // 统一映射到全局流号（ffprobe 枚举给出的是 stream index，
-        // mkvmerge 给出的 Track ID 在 MKV 中与 ffmpeg 全局流序号一致）
+        // Map to the global stream number (ffprobe enumeration gives the stream index,
+        // and the Track ID from mkvmerge matches ffmpeg's global stream ordinal in MKV)
         var map = $"0:{track.TrackId}";
 
-        // .ass/.ssa 源必为 ASS 系编码 → copy 原样保留样式；
-        // .srt 一律转码 subrip（copy 在 mov_text/变体编码与 srt muxer 间会失败）
+        // .ass/.ssa sources are always ASS-family codecs -> copy keeps the styles as-is;
+        // .srt is always transcoded to subrip (copy fails between mov_text/variant codecs and the srt muxer)
         var codecArg = extension is ".ass" or ".ssa"
             ? new[] { "-c:s", "copy" }
             : new[] { "-c:s", "subrip" };
@@ -265,7 +270,7 @@ public sealed class MediaSubtitleExtractor(
 
                 tracks.Add(new MkvTrackInfo
                 {
-                    // ffprobe 路径的 TrackId：全局流索引（ffmpeg -map 0:<i> 直接可用）
+                    // TrackId for the ffprobe path: the global stream index (usable directly as ffmpeg -map 0:<i>)
                     TrackId = stream.TryGetProperty("index", out var i) ? i.GetInt32() : subtitleOrdinal,
                     Type = "subtitles",
                     Codec = codec,

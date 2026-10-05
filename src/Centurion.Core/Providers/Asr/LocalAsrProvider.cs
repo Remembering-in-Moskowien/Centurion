@@ -6,8 +6,9 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Asr;
 
 /// <summary>
-/// 本地 ASR Provider：适配现有本地转录策略（whisper.cpp / CrispASR-Qwen / CrispASR-Whisper）。
-/// 执行形态为本地推理，免密钥、无按量成本；可用性以执行结果为准（失败由 fallback 链切换）。
+/// Local ASR provider: adapts the existing local transcription strategies (whisper.cpp /
+/// CrispASR-Qwen / CrispASR-Whisper). Runs as local inference with no key and no per-use cost;
+/// availability is determined by execution result (the fallback chain switches on failure).
 /// </summary>
 public sealed class LocalAsrProvider(
     string name,
@@ -48,13 +49,13 @@ public sealed class LocalAsrProvider(
     }
 }
 
-/// <summary>whisper.cpp 本地 Provider 的注册工厂（名称/能力固定）。</summary>
+/// <summary>Registration factory for the whisper.cpp local provider (fixed name/capabilities).</summary>
 public static class WhisperCppAsrProvider
 {
-    /// <summary>注册名。</summary>
+    /// <summary>The registration name.</summary>
     public const string Name = "whispercpp";
 
-    /// <summary>能力声明：本地、不限语言、低延迟、常规~高质量。</summary>
+    /// <summary>Capability declaration: local, language-agnostic, low latency, normal-to-high quality.</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Low,
@@ -62,13 +63,13 @@ public static class WhisperCppAsrProvider
         description: "whisper.cpp local transcription (tiny/base/small/medium/large, GPU-aware variant)");
 }
 
-/// <summary>CrispASR（Qwen3-ASR）本地 Provider 的注册工厂。</summary>
+/// <summary>Registration factory for the CrispASR (Qwen3-ASR) local provider.</summary>
 public static class CrispAsrQwenProvider
 {
-    /// <summary>注册名。</summary>
+    /// <summary>The registration name.</summary>
     public const string Name = "crispasr-qwen";
 
-    /// <summary>能力声明：本地、不限语言、中低延迟、高质量。</summary>
+    /// <summary>Capability declaration: local, language-agnostic, medium-low latency, high quality.</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Medium,
@@ -76,13 +77,13 @@ public static class CrispAsrQwenProvider
         description: "Qwen3-ASR (CrispASR backend) local transcription, word-level timestamps, quality first");
 }
 
-/// <summary>CrispASR（Whisper 后端）本地 Provider 的注册工厂。</summary>
+/// <summary>Registration factory for the CrispASR (Whisper backend) local provider.</summary>
 public static class CrispAsrWhisperProvider
 {
-    /// <summary>注册名。</summary>
+    /// <summary>The registration name.</summary>
     public const string Name = "crispasr-whisper";
 
-    /// <summary>能力声明：本地、常规质量。</summary>
+    /// <summary>Capability declaration: local, normal quality.</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Medium,

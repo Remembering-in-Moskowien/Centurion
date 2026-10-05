@@ -15,20 +15,20 @@ namespace Centurion.Core.Workflow.Factories;
 public class TranscriptionStrategyFactory(IServiceProvider serviceProvider) : ITranscriptionStrategyFactory
 {
     /// <summary>
-    /// 按语音识别引擎名称创建对应的转录策略。
+    /// Creates the transcription strategy matching the given speech-recognition engine name.
     /// </summary>
-    /// <param name="engine">转录引擎名称，如 "whispercpp"、"crispasr"/"crispasr-qwen"、"crispasr-whisper"。</param>
-    /// <param name="model">可选的模型名称，供指定模型路径或版本时使用。</param>
-    /// <param name="language">目标语言代码。</param>
-    /// <param name="initialPrompt">可选的初始提示词，用于引导转录风格或上下文。</param>
-    /// <param name="asrOptions">云端 ASR 连接配置（提供商密钥/端点）；本地引擎忽略。</param>
-    /// <returns>对应引擎的转录策略实例。</returns>
-    /// <exception cref="NotSupportedException">当引擎名称不受支持时抛出。</exception>
+    /// <param name="engine">The transcription engine name, e.g. "whispercpp", "crispasr"/"crispasr-qwen", "crispasr-whisper".</param>
+    /// <param name="model">Optional model name, used to specify a model path or version.</param>
+    /// <param name="language">The target language code.</param>
+    /// <param name="initialPrompt">Optional initial prompt used to guide the transcription style or context.</param>
+    /// <param name="asrOptions">Cloud ASR connection options (provider key/endpoint); ignored by local engines.</param>
+    /// <returns>The transcription strategy instance for the given engine.</returns>
+    /// <exception cref="NotSupportedException">Thrown when the engine name is not supported.</exception>
     public ITranscriptionStrategy Create(string engine, string? model, string language, string? initialPrompt, AsrOptions? asrOptions = null)
     {
         var engineLower = engine.ToLowerInvariant();
 
-        // 云端 ASR API 策略
+        // Cloud ASR API strategy
         var cloud = AsrEndpointParser.Resolve(engineLower);
         if (cloud is not null)
         {

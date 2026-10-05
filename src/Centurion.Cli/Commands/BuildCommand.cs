@@ -1,7 +1,8 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Models.Ass;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Abstractions.Utils;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Abstractions.Utils;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Core.Utils.Reporting;
@@ -36,7 +37,7 @@ public sealed class BuildCommand(ICenturionDocumentStore store, ILogger<BuildCom
                 throw new InvalidDataException(
                     $"'{inputPath}' is not a Centurion intermediate file. Convert subtitles first: 'Centurion convert <file>'.");
 
-            // 格式解析：--format 优先，其次 -o 扩展名，默认 ass
+            // Resolve the format from --format first, then the -o extension; default to ASS.
             var format = ResolveFormat(settings);
             var outputPath = settings.OutputFile?.FullName ?? DefaultOutputPath(inputPath, format);
 

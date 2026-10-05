@@ -1,19 +1,19 @@
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 标准化 CLI 退出码（脚本可直接依据退出码判断结果）。
+/// Standardized CLI exit codes that scripts can use to determine the result.
 /// </summary>
 public static class ExitCodes
 {
-    /// <summary>成功。</summary>
+    /// <summary>Success.</summary>
     public const int Success = 0;
 
-    /// <summary>执行失败（模型缺失、管道错误、IO 错误等）。</summary>
+    /// <summary>Execution failed, for example because of a missing model, pipeline error, or I/O error.</summary>
     public const int Failure = 1;
 
-    /// <summary>用法错误（未知命令/参数、配置非法）——Spectre 解析错误仍由 Spectre 自身处理。</summary>
+    /// <summary>Usage error, such as an unknown command or argument or invalid configuration. Spectre handles its own parsing errors.</summary>
     public const int Usage = 2;
 
-    /// <summary>用户取消（Ctrl+C）。</summary>
+    /// <summary>Cancelled by the user (Ctrl+C).</summary>
     public const int Cancelled = 130;
 }

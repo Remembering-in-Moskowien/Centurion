@@ -21,9 +21,9 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers;
 
 /// <summary>
-/// Provider 注册表：汇总全部可用的 Provider（ASR 本地 3 + 云 4、OCR 3、LLM 11、TTS 1、
-/// 说话人分割 2、人声分离 1），支持按名称/域/形态查询。
-/// 云端 Provider 的密钥/端点由 <see cref="ProviderFactory"/> 在解析时注入。
+/// Provider registry: aggregates all available providers (ASR: 3 local + 4 cloud, OCR: 3, LLM: 11,
+/// TTS: 1, speaker segmentation: 2, vocal separation: 1), queryable by name/domain/kind.
+/// Cloud-provider keys/endpoints are injected by <see cref="ProviderFactory"/> at resolution time.
 /// </summary>
 public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProviderRegistry
 {
@@ -51,7 +51,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
     {
         var providers = new List<IProvider>();
 
-        // ---- ASR：本地 3 + 云 4 ----
+        // ---- ASR: 3 local + 4 cloud ----
         providers.Add(new LocalAsrProvider(
             WhisperCppAsrProvider.Name, "Whisper.cpp",
             sp.GetRequiredService<WhisperCppStrategy>(), WhisperCppAsrProvider.Capabilities));
@@ -72,7 +72,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
                 CloudAsrProviders.CapabilitiesFor(asrProvider)));
         }
 
-        // ---- OCR：智谱（云）+ Ollama / llama.cpp / RapidOCR（本地） ----
+        // ---- OCR: Zhipu (cloud) + Ollama / llama.cpp / RapidOCR (local) ----
         var ocrClient = sp.GetRequiredService<OcrClient>();
         var rapidOcrEngine = sp.GetRequiredService<RapidOcrEngine>();
         foreach (var backend in new[] { OcrBackend.Zhipu, OcrBackend.Ollama, OcrBackend.LlamaCpp })
@@ -86,7 +86,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
             OcrProviders.NameFor(OcrBackend.RapidOcr), "RapidOCR OCR", OcrBackend.RapidOcr, ocrClient,
             OcrProviders.CapabilitiesFor(OcrBackend.RapidOcr), rapidOcrEngine));
 
-        // ---- LLM：11 提供商（Ollama 本地 + 云端） ----
+        // ---- LLM: 11 providers (Ollama local + cloud) ----
         foreach (var llmProvider in Enum.GetValues<LlmProvider>())
         {
             providers.Add(new OpenAiCompatibleLlmProvider(
@@ -95,7 +95,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
                 sp.GetRequiredService<ILogger<OpenAiCompatibleLlmProvider>>()));
         }
 
-        // ---- TTS：llama-tts（本地） ----
+        // ---- TTS: llama-tts (local) ----
         providers.Add(new LlamaTtsProvider(
             LlamaTtsProviders.Name, "llama.cpp llama-tts",
             sp.GetRequiredService<ITtsEngine>(), LlamaTtsProviders.Capabilities));
@@ -106,7 +106,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
             QoraTtsProviders.Name, "QORA-TTS (Qwen3-TTS Rust)",
             sp.GetRequiredService<QoraTtsEngine>(), QoraTtsProviders.Capabilities));
 
-        // ---- 说话人分割：CrispASR / Pyannote（本地） ----
+        // ---- Speaker segmentation: CrispASR / Pyannote (local) ----
         providers.Add(new DiarizationStrategyProvider(
             DiarizationProviders.CrispAsrName, "CrispASR Diarization",
             sp.GetRequiredService<CrispAsrDiarizationStrategy>(), DiarizationProviders.CrispAsrCapabilities));
@@ -114,7 +114,7 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
             DiarizationProviders.PyannoteName, "Pyannote + TitaNet",
             sp.GetRequiredService<PyannoteTitaNetDiarizationStrategy>(), DiarizationProviders.PyannoteCapabilities));
 
-        // ---- 人声分离：demucs-rs（本地） ----
+        // ---- Vocal separation: demucs-rs (local) ----
         providers.Add(new DemucsVocalSeparationProvider(
             DemucsVocalSeparationProviders.Name, "demucs-rs",
             sp.GetRequiredService<Centurion.Core.Workflow.Factories.IToolManagerFactory>(),

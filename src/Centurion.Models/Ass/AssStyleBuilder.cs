@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// ASS样式流式构建器，快速生成Style定义
+/// Fluent builder for quickly creating ASS Style definitions.
 /// </summary>
 public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
 {
@@ -31,195 +31,195 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
     private int _marginV;
     private int _encoding;
 
-    /// <summary>样式名称，用于在文档中引用该样式。</summary>
+    /// <summary>Style name used to reference the style in the document.</summary>
     public string Name => _name;
-    /// <summary>字体名称。</summary>
+    /// <summary>Font name.</summary>
     public string FontName => _fontName;
-    /// <summary>字号（像素）。</summary>
+    /// <summary>Font size in pixels.</summary>
     public int FontSize => _fontSize;
-    /// <summary>主文字颜色，ASS 格式如 &amp;H00FFFFFF。</summary>
+    /// <summary>Primary text color in ASS format, such as &amp;H00FFFFFF.</summary>
     public string PrimaryColour => _primaryColour;
-    /// <summary>次要填充色，卡拉OK 未演唱段使用的颜色。</summary>
+    /// <summary>Secondary fill color used for unsung karaoke text.</summary>
     public string SecondaryColour => _secondaryColour;
-    /// <summary>描边颜色。</summary>
+    /// <summary>Outline color.</summary>
     public string OutlineColour => _outlineColour;
-    /// <summary>阴影（背景）颜色。</summary>
+    /// <summary>Shadow/background color.</summary>
     public string BackColour => _backColour;
-    /// <summary>是否加粗。</summary>
+    /// <summary>Whether the text is bold.</summary>
     public bool Bold => _bold;
-    /// <summary>是否斜体。</summary>
+    /// <summary>Whether the text is italic.</summary>
     public bool Italic => _italic;
-    /// <summary>是否下划线。</summary>
+    /// <summary>Whether the text is underlined.</summary>
     public bool Underline => _underline;
-    /// <summary>是否删除线。</summary>
+    /// <summary>Whether the text is struck through.</summary>
     public bool StrikeOut => _strikeOut;
-    /// <summary>横向缩放百分比。</summary>
+    /// <summary>Horizontal scale percentage.</summary>
     public float ScaleX => _scaleX;
-    /// <summary>纵向缩放百分比。</summary>
+    /// <summary>Vertical scale percentage.</summary>
     public float ScaleY => _scaleY;
-    /// <summary>字符间距（像素）。</summary>
+    /// <summary>Character spacing in pixels.</summary>
     public float Spacing => _spacing;
-    /// <summary>文字旋转角度（度，逆时针为正）。</summary>
+    /// <summary>Text rotation angle in degrees; counterclockwise is positive.</summary>
     public float Angle => _angle;
-    /// <summary>描边渲染模式（1=描边+不透明底，3=不透明框）。</summary>
+    /// <summary>Outline rendering mode (1 = outline with opaque fill, 3 = opaque box).</summary>
     public int BorderStyle => _borderStyle;
-    /// <summary>描边粗细。</summary>
+    /// <summary>Outline width.</summary>
     public float Outline => _outline;
-    /// <summary>阴影深度。</summary>
+    /// <summary>Shadow depth.</summary>
     public float Shadow => _shadow;
-    /// <summary>对齐方式（ASS 对齐编号，1-9 对应九宫格）。</summary>
+    /// <summary>Alignment using ASS values 1–9.</summary>
     public int Alignment => _alignment;
-    /// <summary>左侧安全边距。</summary>
+    /// <summary>Left safe-area margin.</summary>
     public int MarginL => _marginL;
-    /// <summary>右侧安全边距。</summary>
+    /// <summary>Right safe-area margin.</summary>
     public int MarginR => _marginR;
-    /// <summary>垂直安全边距。</summary>
+    /// <summary>Vertical safe-area margin.</summary>
     public int MarginV => _marginV;
-    /// <summary>文本编码 ID（如 1 表示默认系统编码）。</summary>
+    /// <summary>Text encoding ID, such as 1 for the system default.</summary>
     public int Encoding => _encoding;
 
-    /// <summary>设置样式名称</summary>
+    /// <summary>Sets the style name.</summary>
     public AssStyleBuilder WithName(string value)
     {
         return Set(ref _name, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置字体名</summary>
+    /// <summary>Sets the font name.</summary>
     public AssStyleBuilder WithFontName(string value)
     {
         return Set(ref _fontName, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置字号</summary>
+    /// <summary>Sets the font size.</summary>
     public AssStyleBuilder WithFontSize(int value)
     {
         return Set(ref _fontSize, value);
     }
 
-    /// <summary>设置主文字颜色</summary>
+    /// <summary>Sets the primary text color.</summary>
     public AssStyleBuilder WithPrimaryColour(string value)
     {
         return Set(ref _primaryColour, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置次要填充色</summary>
+    /// <summary>Sets the secondary fill color.</summary>
     public AssStyleBuilder WithSecondaryColour(string value)
     {
         return Set(ref _secondaryColour, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置描边颜色</summary>
+    /// <summary>Sets the outline color.</summary>
     public AssStyleBuilder WithOutlineColour(string value)
     {
         return Set(ref _outlineColour, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置阴影颜色</summary>
+    /// <summary>Sets the shadow color.</summary>
     public AssStyleBuilder WithBackColour(string value)
     {
         return Set(ref _backColour, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>开启/关闭加粗</summary>
+    /// <summary>Enables or disables bold text.</summary>
     public AssStyleBuilder WithBold(bool value)
     {
         return Set(ref _bold, value);
     }
 
-    /// <summary>开启/关闭斜体</summary>
+    /// <summary>Enables or disables italic text.</summary>
     public AssStyleBuilder WithItalic(bool value)
     {
         return Set(ref _italic, value);
     }
 
-    /// <summary>开启/关闭下划线</summary>
+    /// <summary>Enables or disables underlining.</summary>
     public AssStyleBuilder WithUnderline(bool value)
     {
         return Set(ref _underline, value);
     }
 
-    /// <summary>开启/关闭删除线</summary>
+    /// <summary>Enables or disables strikethrough.</summary>
     public AssStyleBuilder WithStrikeOut(bool value)
     {
         return Set(ref _strikeOut, value);
     }
 
-    /// <summary>横向缩放比例</summary>
+    /// <summary>Sets the horizontal scale.</summary>
     public AssStyleBuilder WithScaleX(float value)
     {
         return Set(ref _scaleX, value);
     }
 
-    /// <summary>纵向缩放比例</summary>
+    /// <summary>Sets the vertical scale.</summary>
     public AssStyleBuilder WithScaleY(float value)
     {
         return Set(ref _scaleY, value);
     }
 
-    /// <summary>字间距</summary>
+    /// <summary>Sets the character spacing.</summary>
     public AssStyleBuilder WithSpacing(float value)
     {
         return Set(ref _spacing, value);
     }
 
-    /// <summary>文字旋转角度</summary>
+    /// <summary>Sets the text rotation angle.</summary>
     public AssStyleBuilder WithAngle(float value)
     {
         return Set(ref _angle, value);
     }
 
-    /// <summary>描边渲染模式</summary>
+    /// <summary>Sets the outline rendering mode.</summary>
     public AssStyleBuilder WithBorderStyle(int value)
     {
         return Set(ref _borderStyle, value);
     }
 
-    /// <summary>描边粗细</summary>
+    /// <summary>Sets the outline width.</summary>
     public AssStyleBuilder WithOutline(float value)
     {
         return Set(ref _outline, value);
     }
 
-    /// <summary>阴影厚度</summary>
+    /// <summary>Sets the shadow depth.</summary>
     public AssStyleBuilder WithShadow(float value)
     {
         return Set(ref _shadow, value);
     }
 
-    /// <summary>字幕对齐方式</summary>
+    /// <summary>Sets subtitle alignment.</summary>
     public AssStyleBuilder WithAlignment(int value)
     {
         return Set(ref _alignment, value);
     }
 
-    /// <summary>左侧整体边距</summary>
+    /// <summary>Sets the overall left margin.</summary>
     public AssStyleBuilder WithMarginL(int value)
     {
         return Set(ref _marginL, value);
     }
 
-    /// <summary>右侧整体边距</summary>
+    /// <summary>Sets the overall right margin.</summary>
     public AssStyleBuilder WithMarginR(int value)
     {
         return Set(ref _marginR, value);
     }
 
-    /// <summary>垂直整体边距</summary>
+    /// <summary>Sets the overall vertical margin.</summary>
     public AssStyleBuilder WithMarginV(int value)
     {
         return Set(ref _marginV, value);
     }
 
-    /// <summary>文本编码ID</summary>
+    /// <summary>Sets the text encoding ID.</summary>
     public AssStyleBuilder WithEncoding(int value)
     {
         return Set(ref _encoding, value);
     }
 
     /// <summary>
-    /// 填充一套默认主字幕样式（黑体风格，参照 Theme.ass 的视频语言 eng 样式）：
-    /// 使用 Arial 粗体（Windows/macOS 原生自带；Linux 由 Liberation Sans 度量兼容替代），
-    /// 半透明描边 + 阴影，底部居中、垂直边距 100。
+    /// Populates the default primary subtitle style (sans-serif, modeled after the English video style in Theme.ass):
+    /// uses bold Arial (available on Windows/macOS; metrically compatible Liberation Sans is used on Linux),
+    /// with a semi-transparent outline and shadow, bottom-centered with a vertical margin of 100.
     /// </summary>
     public AssStyleBuilder WithDefaultValues()
     {
@@ -249,9 +249,9 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
     }
 
     /// <summary>
-    /// 填充一套次字幕样式（中文黑体风格，参照 Theme.ass 的目标语言 chi 样式）：
-    /// 使用微软雅黑（Windows 中文系统自带；macOS 回退苹方 PingFang SC、Linux 回退 Noto Sans CJK SC，
-    /// 均为现代黑体观感接近），贴底显示（垂直边距 28），用于双语字幕的译文行。
+    /// Populates the secondary subtitle style (Chinese sans-serif, modeled after the target-language chi style in Theme.ass):
+    /// uses Microsoft YaHei on Windows, PingFang SC on macOS, and Noto Sans CJK SC on Linux,
+    /// with a bottom-aligned vertical margin of 28 for translated lines in bilingual subtitles.
     /// </summary>
     public AssStyleBuilder WithSubtitleStyle()
     {
@@ -280,10 +280,10 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
             .WithEncoding(1);
     }
 
-    /// <summary>从原始Style文本解析生成样式构建器</summary>
-    /// <param name="content">原始Style行</param>
-    /// <returns>填充完成的构建器</returns>
-    /// <exception cref="FormatException">格式非法抛出</exception>
+    /// <summary>Parses a raw Style line into a builder.</summary>
+    /// <param name="content">Raw Style line.</param>
+    /// <returns>A populated builder.</returns>
+    /// <exception cref="FormatException">Thrown when the format is invalid.</exception>
     public static AssStyleBuilder FromContent(string content)
     {
         var builder = new AssStyleBuilder();
@@ -314,11 +314,11 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
                 .WithMarginV(int.Parse(match.Groups[22].Value))
                 .WithEncoding(int.Parse(match.Groups[23].Value));
         else
-            throw new FormatException("Style行不符合ASS标准格式");
+            throw new FormatException("Style line does not match the ASS format.");
         return builder;
     }
 
-    /// <summary>生成AssStyle样式实例</summary>
+    /// <summary>Builds an AssStyle instance.</summary>
     public override AssStyle Build()
     {
         return new AssStyle(_name, _fontName, _fontSize, _primaryColour, _secondaryColour, _outlineColour, _backColour,
@@ -326,7 +326,7 @@ public partial class AssStyleBuilder : BuilderBase<AssStyleBuilder, AssStyle>
             _alignment, _marginL, _marginR, _marginV, _encoding);
     }
 
-    /// <summary>匹配ASS Style定义行正则</summary>
+    /// <summary>Regular expression matching an ASS Style definition line.</summary>
     [GeneratedRegex(
         @"^Style:\s*" +
         @"([^,]+)," +

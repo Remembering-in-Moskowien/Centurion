@@ -61,13 +61,13 @@ public sealed class QualityCommand(
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("quality_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            // 1) 质量报告（算子写出 .quality.json + .quality.html）
+            // 1) Generate the quality report (.quality.json and .quality.html).
             var stopwatch = Stopwatch.StartNew();
             await pipelineExecutor.ExecuteAsync([qualityReportOp], workflowContext, ct);
             stopwatch.Stop();
             var report = QualityReportBuilder.Build(workflowContext, outputPath, stopwatch.Elapsed.TotalSeconds);
 
-            // 2) 自动修复（重叠/过短/行宽/CPS）并写回修复后的中间文件
+            // 2) Apply automatic fixes for overlaps, short lines, line width, and CPS; persist the corrected intermediate file.
             var appliedFixes = new List<string>();
             var skippedFixes = new List<string>();
             if (settings.Fix)
@@ -80,16 +80,16 @@ public sealed class QualityCommand(
 
                 if (appliedFixes.Count > 0)
                 {
-                    // 修复改变了句子 → 重建报告（覆盖算子写出的文件）
+                    // Rebuild the report if fixes changed sentences, replacing the operator-generated files.
                     report = QualityReportBuilder.Build(workflowContext, outputPath, stopwatch.Elapsed.TotalSeconds);
                 }
             }
 
-            // 保存中间文件（修复后写回新句子；否则原样拷贝）
+            // Save the intermediate file with corrected sentences, or copy it unchanged when no fixes were applied.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "quality", outputPath);
             await store.SaveAsync(outDoc, outputPath, ct);
 
-            // 3) CI 阈值评估：Evaluate 语义为 true = 超限（问题存在），任一超限即失败
+            // 3) Evaluate CI thresholds; true means a limit was exceeded, and any exceeded limit fails the command.
             var rules = new List<QualityThresholdRule>();
             foreach (var expr in settings.FailOn)
             {
@@ -110,13 +110,13 @@ public sealed class QualityCommand(
                 }
             }
 
-            // 4) 写回最终报告（.json 含 Passed/FailedThresholds；.html 同内容）
+            // 4) Write the final report; JSON includes Passed/FailedThresholds and HTML contains the same data.
             var reportPath = BuildReportPath(inputPath, outputPath);
             File.WriteAllText(reportPath, JsonConvert.SerializeObject(report, SerializerSettings));
             var htmlPath = settings.HtmlFile?.FullName ?? Path.ChangeExtension(reportPath, ".html");
             File.WriteAllText(htmlPath, QualityHtmlReport.Render(report));
 
-            // 5) 输出摘要
+            // 5) Print a summary.
             ConsoleServices.Output.WriteSuccess(ConsoleServices.T("Quality report written to {0}", reportPath));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T(
                 "Sentences: {0}, issues: {1} (error {2} / warning {3}), HTML: {4}",

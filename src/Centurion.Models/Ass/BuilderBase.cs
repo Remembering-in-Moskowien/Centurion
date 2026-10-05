@@ -1,20 +1,20 @@
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// 构建器基础抽象类，提供流式赋值通用封装（Builder 模式基类）
+/// Base class for builders, providing a fluent assignment wrapper.
 /// </summary>
-/// <typeparam name="TBuilder">当前构建器派生类类型</typeparam>
-/// <typeparam name="TProduct">构建完成输出的实体类型</typeparam>
+/// <typeparam name="TBuilder">Concrete derived builder type.</typeparam>
+/// <typeparam name="TProduct">Product type returned by the builder.</typeparam>
 public abstract class BuilderBase<TBuilder, TProduct>
     where TBuilder : BuilderBase<TBuilder, TProduct>
 {
     /// <summary>
-    /// 为内部字段赋值，返回自身实现链式调用
+    /// Assigns a field and returns this builder for chaining.
     /// </summary>
-    /// <typeparam name="TValue">字段值类型</typeparam>
-    /// <param name="field">待赋值字段引用</param>
-    /// <param name="value">新值</param>
-    /// <returns>当前构建器实例</returns>
+    /// <typeparam name="TValue">Field value type.</typeparam>
+    /// <param name="field">Reference to the field to assign.</param>
+    /// <param name="value">New value.</param>
+    /// <returns>This builder instance.</returns>
     protected TBuilder Set<TValue>(ref TValue field, TValue value)
     {
         field = value;
@@ -22,8 +22,8 @@ public abstract class BuilderBase<TBuilder, TProduct>
     }
 
     /// <summary>
-    /// 执行构建，生成最终实体对象
+    /// Builds and returns the final product.
     /// </summary>
-    /// <returns>构建完成的模型</returns>
+    /// <returns>The built model.</returns>
     public abstract TProduct Build();
 }

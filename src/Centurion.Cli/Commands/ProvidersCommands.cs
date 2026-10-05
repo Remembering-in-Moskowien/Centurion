@@ -60,7 +60,7 @@ public sealed class ProvidersListCommand(
         AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("Legend: L=local (0 cost) · C=cloud (API), details: providers test <name>")}[/]");
         AnsiConsole.WriteLine();
 
-        // 成本对比图：每 1M token 成本（本地为 0，直观展示云/本地成本差）
+        // Compare cost per 1M tokens; local providers cost zero, making cloud/local differences clear.
         var chart = new BarChart()
             .Width(64)
             .Label(ConsoleServices.T("Cost comparison — $/1M tokens"))

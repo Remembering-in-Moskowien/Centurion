@@ -2,43 +2,43 @@ using Centurion.Models.Workflow;
 
 namespace Centurion.Abstractions.Pipeline;
 
-/// <summary>管线节点的执行状态。</summary>
+/// <summary>Execution status of a pipeline node.</summary>
 public enum PipelineStepStatus
 {
-    /// <summary>尚未开始。</summary>
+    /// <summary>Not started.</summary>
     Pending,
-    /// <summary>执行中。</summary>
+    /// <summary>Running.</summary>
     Running,
-    /// <summary>成功完成。</summary>
+    /// <summary>Completed successfully.</summary>
     Completed,
-    /// <summary>条件不满足被跳过。</summary>
+    /// <summary>Skipped because its condition was not met.</summary>
     Skipped,
-    /// <summary>首次失败后重试成功。</summary>
+    /// <summary>Retry succeeded after an initial failure.</summary>
     Retried,
-    /// <summary>重试耗尽后按降级策略跳过（任务整体继续）。</summary>
+    /// <summary>Retries were exhausted, so the node was skipped under the degradation policy and the task continued.</summary>
     Degraded,
-    /// <summary>失败且不可降级（任务终止）。</summary>
+    /// <summary>Failed without degradation; the task terminates.</summary>
     Failed
 }
 
-/// <summary>单个管线节点的执行结果（耗时、状态、重试次数等）。</summary>
+/// <summary>Execution result for one pipeline node, including elapsed time, status, and retry count.</summary>
 public sealed class PipelineStepResult
 {
-    /// <summary>节点名称。</summary>
+    /// <summary>Node name.</summary>
     public required string Name { get; init; }
 
-    /// <summary>最终状态。</summary>
+    /// <summary>Final status.</summary>
     public required PipelineStepStatus Status { get; init; }
 
-    /// <summary>累计执行耗时（含重试）。</summary>
+    /// <summary>Total execution time, including retries.</summary>
     public required TimeSpan Elapsed { get; init; }
 
-    /// <summary>实际执行尝试次数（含首次）。</summary>
+    /// <summary>Number of execution attempts, including the initial attempt.</summary>
     public required int Attempts { get; init; }
 
-    /// <summary>最后一次失败时的异常；成功或跳过时为 null。</summary>
+    /// <summary>Exception from the last failed attempt, or null on success or skip.</summary>
     public Exception? Error { get; init; }
 
-    /// <summary>被跳过（条件不满足）时的说明。</summary>
+    /// <summary>Reason the node was skipped because its condition was not met.</summary>
     public string? SkipReason { get; init; }
 }

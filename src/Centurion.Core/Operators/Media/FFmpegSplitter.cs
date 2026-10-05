@@ -6,14 +6,14 @@ using Centurion.Core.Operators.Media.Response;
 namespace Centurion.Core.Operators.Media;
 
 /// <summary>
-/// FFmpeg 音频分割算子（按时间段切割，自动在前后添加 100ms 静音）
+/// FFmpeg audio split operator (cuts by time segment, automatically padding 100ms of silence before and after).
 /// </summary>
 public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplitRequest, FFmpegSplitResponse>
 {
     private const int SilencePaddingMs = 100;
 
     /// <summary>
-    /// 健康检查，确保 FFmpeg 二进制与运行环境就绪。
+    /// Health check; ensures the FFmpeg binary and runtime environment are ready.
     /// </summary>
     public async Task CheckHealthAsync()
     {
@@ -21,11 +21,11 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
     }
 
     /// <summary>
-    /// 按请求中的时间段对音频进行分割，每段前后自动补 100ms 静音。
+    /// Splits the audio by the time segments in the request, automatically padding 100ms of silence before and after each segment.
     /// </summary>
-    /// <param name="request">包含输入文件路径与分段时间段列表的请求。</param>
-    /// <param name="cancellationToken">取消操作的取消令牌。</param>
-    /// <returns>各分段输出文件路径的列表。</returns>
+    /// <param name="request">Request containing the input file path and the list of segment time ranges.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+    /// <returns>A list of output file paths for each segment.</returns>
     public async Task<FFmpegSplitResponse> ProcessAsync(
         OperatorsRequest<FFmpegSplitRequest> request,
         CancellationToken cancellationToken = default)
@@ -41,11 +41,11 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
         if (payload.Segments == null || payload.Segments.Count == 0)
             throw new ArgumentException("Segment list cannot be empty.", nameof(payload));
 
-        // 获取总时长（使用 FFMpegCore 的 MediaInfo）
+        // Get the total duration (using FFMpegCore's MediaInfo).
         var mediaInfo = await FFProbe.AnalyseAsync(payload.InputFilePath, cancellationToken: ct);
         var totalDuration = mediaInfo.Duration.TotalSeconds;
 
-        // 生成输出文件名列表
+        // Generate the output file name list.
         List<string> outputFiles;
         if (payload.OutputFileNames != null && payload.OutputFileNames.Count == payload.Segments.Count)
         {
@@ -60,7 +60,7 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
                 outputFiles.Add(Path.Combine(outputDir, $"segment_{i + 1:D4}.wav"));
         }
 
-        // 确保输出目录存在
+        // Ensure the output directory exists.
         foreach (var file in outputFiles)
         {
             var dir = Path.GetDirectoryName(file);
@@ -76,7 +76,7 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
             var (startMs, endMs) = payload.Segments[i];
             var rawDurationSec = (endMs - startMs) / 1000.0;
 
-            // 边界检查
+            // Bounds check.
             var safeStartMs = Math.Max(0, startMs);
             var safeEndMs = Math.Min(endMs, totalDuration * 1000);
             if (safeStartMs >= safeEndMs)
@@ -86,12 +86,12 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
             var endSec = safeEndMs / 1000.0;
             var outputFile = outputFiles[i];
 
-            // 构造 filter 字符串（与原有逻辑一致）
+            // Build the filter string (consistent with the original logic).
             var totalDurationWithPad = rawDurationSec + 2.0 * SilencePaddingMs / 1000.0;
             var filterComplex =
                 $"[0:a]adelay={SilencePaddingMs}|{SilencePaddingMs},apad=pad_dur={totalDurationWithPad:0.000}[a]";
 
-            // 使用 FFMpegCore，将过滤器和裁剪参数组合
+            // Use FFMpegCore, combining the filter and cropping arguments.
             await FFMpegArguments
                 .FromFileInput(payload.InputFilePath)
                 .OutputToFile(outputFile, false, options =>
@@ -114,7 +114,7 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
     }
 
     /// <summary>
-    /// 释放资源。
+    /// Releases resources.
     /// </summary>
     public void Dispose()
     {
@@ -122,9 +122,9 @@ public class FFmpegSplitter(FFmpegManager ffmpegManager) : IOperator<FFmpegSplit
     }
 
     /// <summary>
-    /// 释放资源；本类无可释放资源。
+    /// Releases resources; this class has no resources to release.
     /// </summary>
-    /// <param name="disposing">为 <see langword="true"/> 时同时释放托管资源。</param>
+    /// <param name="disposing">Also releases managed resources when <see langword="true"/>.</param>
     protected virtual void Dispose(bool disposing)
     {
     }

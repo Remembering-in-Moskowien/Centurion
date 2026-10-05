@@ -4,20 +4,24 @@ using Centurion.Models.Text;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 字幕文本分词工具：把纯文本句子切分为词级单元（等分句内时间）。
-/// 使用混合感知分词——英文按空白拆词、中日韩逐字、中英混写共存于同一句；
-/// 韩语按空白分词。供 convert（无 \K 字幕）与 OCR 提取等没有词级时间戳来源的路径复用。
+/// Subtitle text word splitter: splits a plain-text sentence into word-level units
+/// (timing evenly distributed across the sentence).
+/// Uses mixed-aware tokenization - English splits on whitespace, CJK splits per character,
+/// and mixed Chinese-English text coexists in the same sentence; Korean tokenizes on whitespace.
+/// Reused by the convert path (subtitles without \K timing) and OCR extraction, which lack
+/// a word-level timestamp source.
 /// </summary>
 public static class SubtitleWordSplitter
 {
     /// <summary>
-    /// 按混合感知分词切分纯文本为词级单元，时间按词数等分句内时长。
+    /// Split plain text into word-level units with mixed-aware tokenization; timing is
+    /// distributed evenly across the sentence by word count.
     /// </summary>
-    /// <param name="text">纯文本句子（可含中英等多语言混写）。</param>
-    /// <param name="start">句内起始时间（毫秒）。</param>
-    /// <param name="end">句内结束时间（毫秒）。</param>
-    /// <param name="language">语言代码（保留用于兼容调用方；分词以文本实际字符为准）。</param>
-    /// <returns>词级单元列表（空文本时为空列表）。</returns>
+    /// <param name="text">A plain-text sentence (may contain mixed English, Chinese, and other scripts).</param>
+    /// <param name="start">Sentence start time (milliseconds).</param>
+    /// <param name="end">Sentence end time (milliseconds).</param>
+    /// <param name="language">Language code (kept for caller compatibility; tokenization is based on the actual characters in the text).</param>
+    /// <returns>The list of word-level units (empty list when the text is empty).</returns>
     public static List<Word> SplitPlainWords(string text, double start, double end, string? language)
     {
         var trimmed = text.Trim();

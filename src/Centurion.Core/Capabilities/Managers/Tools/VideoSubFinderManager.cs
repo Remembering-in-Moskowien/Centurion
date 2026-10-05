@@ -8,19 +8,24 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// 下载并缓存 VideoSubFinder CLI，供 OCR 字幕帧检测使用。
-/// 下载源（Windows x64，按序尝试，逐源 元数据→下载→SHA-256→解压→安装，失败自动切下一个）：
-///   1. GitHub lionc2240/autovsf 镜像的官方 VideoSubFinder_6.10_x64.zip（含 SHA-256 digest）；
-///   2. SourceForge 镜像直链（twds.dl，用户指定；同一官方包，SHA-256 已知）；
-///   3. SourceForge best_release.json 动态解析（无 SHA-256，部分网络不可达）。
-///   官方包内含 VideoSubFinderWXW.exe（支持无头命令行模式）。
-/// 安装失败（下载不可达 / 包内无可用可执行文件）返回 null，OCR 主链路降级为 FFmpeg 抽帧。
+/// Downloads and caches the VideoSubFinder CLI for OCR subtitle-frame detection.
+/// Download sources (Windows x64, tried in order; per source: metadata -> download -> SHA-256 ->
+/// extract -> install, automatically falling through to the next on failure):
+///   1. The official VideoSubFinder_6.10_x64.zip from the GitHub lionc2240/autovsf mirror
+///      (includes a SHA-256 digest);
+///   2. A direct SourceForge mirror link (twds.dl, user-specified; the same official package,
+///      SHA-256 known);
+///   3. Dynamic resolution from SourceForge best_release.json (no SHA-256, unreachable on some
+///      networks).
+///   The official package contains VideoSubFinderWXW.exe (supports headless command-line mode).
+/// On install failure (download unreachable / no usable executable in the package), returns null
+/// and the OCR main path degrades to FFmpeg frame extraction.
 /// </summary>
 public sealed class VideoSubFinderManager(
     ITempDirectoryManager tempManager,
     ILogger<VideoSubFinderManager> logger)
 {
-    /// <summary>Windows 官方包的 GitHub 镜像（SourceForge 直连在部分网络不可达，故优先走 GitHub）。</summary>
+    /// <summary>GitHub mirror of the official Windows package (direct SourceForge connections are unreachable on some networks, so GitHub is tried first).</summary>
     private const string WindowsGitHubReleaseApi =
         "https://api.github.com/repos/lionc2240/autovsf/releases/tags/VideoSubFinder_6.10_x64";
 
@@ -30,11 +35,11 @@ public sealed class VideoSubFinderManager(
     private const string SourceForgeReleaseApi =
         "https://sourceforge.net/projects/videosubfinder/best_release.json";
 
-    /// <summary>SourceForge 官方 Windows 包镜像直链（用户指定；与 GitHub autovsf 同一官方包）。</summary>
+    /// <summary>Direct mirror link for the official Windows package on SourceForge (user-specified; the same official package as the GitHub autovsf one).</summary>
     private const string WindowsSourceForgeDirectZip =
         "https://twds.dl.sourceforge.net/project/videosubfinder/VideoSubFinder_6.10_x64.zip";
 
-    /// <summary>官方 VideoSubFinder_6.10_x64.zip 的已知 SHA-256（与 autovsf 资产一致）。</summary>
+    /// <summary>The known SHA-256 of the official VideoSubFinder_6.10_x64.zip (identical to the autovsf asset).</summary>
     private const string WindowsSourceForgeZipSha256 =
         "3c0cc03793ec9753a6a4ee8a91c1d226c20b80aab901718f7c97d4fcb3580c0e";
 
@@ -42,7 +47,7 @@ public sealed class VideoSubFinderManager(
     private static readonly SemaphoreSlim InstallGate = new(1, 1);
     private static readonly string ToolsRoot = Path.Combine(AppContext.BaseDirectory, "tools", "videosubfinder");
 
-    /// <summary>确保 CLI 已安装并返回路径；平台不受支持或安装失败时返回 null。</summary>
+    /// <summary>Ensures the CLI is installed and returns its path; returns null when the platform is unsupported or the install fails.</summary>
     public async Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
     {
         var installed = FindInstalledExecutable();
@@ -153,7 +158,8 @@ public sealed class VideoSubFinderManager(
         if (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         {
             assetName = "VideoSubFinder_6.10_x64.zip";
-            // 官方包内为 VideoSubFinderWXW.exe（支持无头命令行）；若未来含 VideoSubFinderCli.exe 则优先命中。
+            // The official package ships VideoSubFinderWXW.exe (supports headless command line);
+            // if a future package includes VideoSubFinderCli.exe, it is matched first.
             executableNames = ["VideoSubFinderCli.exe", "VideoSubFinderWXW.exe"];
             return true;
         }
@@ -181,15 +187,15 @@ public sealed class VideoSubFinderManager(
         ? ["VideoSubFinderWXW_intel.exe", "VideoSubFinderWXW.exe", "VideoSubFinderCli.exe"]
         : ["VideoSubFinderCli.run", "VideoSubFinderCli"];
 
-    /// <summary>Windows 源 1：GitHub autovsf 镜像（含 SHA-256 digest）。</summary>
+    /// <summary>Windows source 1: GitHub autovsf mirror (includes a SHA-256 digest).</summary>
     private async Task<ReleaseArchive> GetWindowsGitHubReleaseAsync(CancellationToken cancellationToken)
         => await GetGitHubReleaseAsync(WindowsGitHubReleaseApi, "VideoSubFinder_6.10_x64.zip", cancellationToken);
 
-    /// <summary>Windows 源 2：SourceForge 镜像直链（twds.dl，用户指定；SHA-256 已知）。</summary>
+    /// <summary>Windows source 2: direct SourceForge mirror link (twds.dl, user-specified; SHA-256 known).</summary>
     private static Task<ReleaseArchive> GetWindowsSourceForgeDirectAsync(CancellationToken cancellationToken)
         => Task.FromResult(new ReleaseArchive(WindowsSourceForgeDirectZip, WindowsSourceForgeZipSha256));
 
-    /// <summary>按序尝试各源：元数据解析 → 下载 → SHA-256 → 解压安装；全部失败返回 null。</summary>
+    /// <summary>Tries each source in order: metadata resolution -> download -> SHA-256 -> extract/install; returns null when all fail.</summary>
     private async Task<string?> TryInstallFromSourcesAsync(
         string assetName, IReadOnlyList<string> executableNames, CancellationToken cancellationToken)
     {
@@ -232,7 +238,7 @@ public sealed class VideoSubFinderManager(
         return null;
     }
 
-    /// <summary>SourceForge 官方最佳版本（无 SHA-256，仅 URL；部分网络不可达）。</summary>
+    /// <summary>The official best release on SourceForge (no SHA-256, URL only; unreachable on some networks).</summary>
     private async Task<ReleaseArchive> GetWindowsSourceForgeReleaseAsync(CancellationToken cancellationToken)
     {
         using var response = await HttpClient.GetAsync(SourceForgeReleaseApi, cancellationToken);
@@ -301,7 +307,7 @@ public sealed class VideoSubFinderManager(
                 }
                 catch (IOException)
                 {
-                    // 忽略清理失败，下个候选覆盖写入
+                    // Ignore cleanup failures; the next candidate overwrites the file.
                 }
             }
         }

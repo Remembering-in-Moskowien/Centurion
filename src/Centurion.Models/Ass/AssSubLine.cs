@@ -3,19 +3,19 @@ using Centurion.Models.Ass;
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// 单条ASS对话/注释字幕行实体
+/// ASS dialogue or comment subtitle line.
 /// </summary>
-/// <param name="isComment">是否为注释行，true=Comment，false=Dialogue</param>
-/// <param name="layer">图层序号</param>
-/// <param name="start">起始毫秒</param>
-/// <param name="end">结束毫秒</param>
-/// <param name="style">样式名称</param>
-/// <param name="name">说话人名称</param>
-/// <param name="marginL">左边距</param>
-/// <param name="marginR">右边距</param>
-/// <param name="marginV">垂直边距</param>
-/// <param name="effect">特效标签</param>
-/// <param name="text">字幕文本</param>
+/// <param name="isComment">Whether this is a comment (true) or dialogue (false).</param>
+/// <param name="layer">Layer index.</param>
+/// <param name="start">Start time in milliseconds.</param>
+/// <param name="end">End time in milliseconds.</param>
+/// <param name="style">Style name.</param>
+/// <param name="name">Speaker name.</param>
+/// <param name="marginL">Left margin.</param>
+/// <param name="marginR">Right margin.</param>
+/// <param name="marginV">Vertical margin.</param>
+/// <param name="effect">Effect tag.</param>
+/// <param name="text">Subtitle text.</param>
 public class AssSubLine(
     bool isComment,
     int layer,
@@ -29,59 +29,59 @@ public class AssSubLine(
     string effect,
     string text)
 {
-    /// <summary>是否注释行</summary>
+    /// <summary>Whether this is a comment line.</summary>
     private readonly bool _isComment = isComment;
 
-    /// <summary>图层层级</summary>
+    /// <summary>Layer index.</summary>
     private readonly int _layer = layer;
 
-    /// <summary>起始时间(毫秒)</summary>
+    /// <summary>Start time in milliseconds.</summary>
     private readonly long _start = start;
 
-    /// <summary>结束时间(毫秒)</summary>
+    /// <summary>End time in milliseconds.</summary>
     private readonly long _end = end;
 
-    /// <summary>绑定样式名</summary>
+    /// <summary>Bound style name.</summary>
     private readonly string _style = string.IsNullOrWhiteSpace(style) ? string.Empty : style;
 
-    /// <summary>该行绑定的样式名（转换端映射到 Sentence.Style 使用）。</summary>
+    /// <summary>Style name bound to this line and mapped to Sentence.Style by the converter.</summary>
     public string Style => _style;
 
-    /// <summary>该行字幕正文（转换端读取使用）。</summary>
+    /// <summary>Subtitle text for this line, read by the converter.</summary>
     public string Text => _text;
 
-    /// <summary>角色/说话人名</summary>
+    /// <summary>Character or speaker name.</summary>
     private readonly string _name = string.IsNullOrWhiteSpace(name) ? string.Empty : name;
 
-    /// <summary>左侧留白</summary>
+    /// <summary>Left margin.</summary>
     private readonly int _marginL = marginL;
 
-    /// <summary>右侧留白</summary>
+    /// <summary>Right margin.</summary>
     private readonly int _marginR = marginR;
 
-    /// <summary>垂直留白</summary>
+    /// <summary>Vertical margin.</summary>
     private readonly int _marginV = marginV;
 
-    /// <summary>ASS特效字符串</summary>
+    /// <summary>ASS effect string.</summary>
     private readonly string _effect = string.IsNullOrWhiteSpace(effect) ? string.Empty : effect;
 
-    /// <summary>字幕正文</summary>
+    /// <summary>Subtitle text.</summary>
     private readonly string _text = string.IsNullOrWhiteSpace(text) ? string.Empty : text;
 
-    /// <summary>获取该行字幕的起始时间（毫秒）。</summary>
+    /// <summary>Gets the subtitle line start time in milliseconds.</summary>
     public long GetStart()
     {
         return _start;
     }
 
-    /// <summary>获取该行字幕的结束时间（毫秒）。</summary>
+    /// <summary>Gets the subtitle line end time in milliseconds.</summary>
     public long GetEnd()
     {
         return _end;
     }
 
     /// <summary>
-    /// 输出标准ASS行文本
+    /// Returns this line as standard ASS text.
     /// </summary>
     public override string ToString()
     {

@@ -8,12 +8,12 @@ using Centurion.Models.Workflow;
 namespace Centurion.Core.Utils.Serialization;
 
 /// <summary>
-/// 从 <see cref="SubtitleWorkflowContext"/> 构造 <see cref="CenturionDocument"/>
-/// （generator + provenance + config/state），供命令链保存 IR 时统一使用。
+/// Builds a <see cref="CenturionDocument"/> (generator + provenance + config/state) from a
+/// <see cref="SubtitleWorkflowContext"/>, used uniformly whenever the command chain saves the IR.
 /// </summary>
 public static class CenturionDocumentBuilder
 {
-    /// <summary>由工作流上下文与当前命令构造文档。</summary>
+    /// <summary>Builds a document from the workflow context and the current command.</summary>
     public static CenturionDocument Create(
         SubtitleWorkflowContext context,
         string commandName,
@@ -36,8 +36,9 @@ public static class CenturionDocumentBuilder
     }
 
     /// <summary>
-    /// 依据状态标志推导已执行的处理步骤（每个算子一条溯源记录）。
-    /// 步骤顺序与管道自然顺序一致：转换 → 人声分离 → 转录 → 分句 → 说话人分割 → 对齐 → 翻译 → 译制。
+    /// Deduces the processing steps that have run from the state flags (one provenance record per
+    /// operator). Step order follows the natural pipeline order: convert → vocal separation →
+    /// transcribe → split → diarize → align → translate → dub.
     /// </summary>
     private static List<ProvenanceEntry> BuildProvenance(WorkflowState state, WorkflowConfig config)
     {
@@ -67,8 +68,9 @@ public static class CenturionDocumentBuilder
     }
 
     /// <summary>
-    /// 工作流配置的 SHA-256 指纹（十六进制）：对配置的规范化 JSON 取哈希，
-    /// 配置一致则指纹一致，用于溯源"这份结果基于什么参数生成"。
+    /// SHA-256 fingerprint of the workflow config (hex): hashes the config's canonical JSON, so
+    /// identical configs yield identical fingerprints; used to trace "what parameters this result
+    /// was generated from".
     /// </summary>
     public static string ParametersHash(WorkflowConfig config)
     {
@@ -77,6 +79,6 @@ public static class CenturionDocumentBuilder
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    /// <summary>当前工具版本：统一为构建号（build-N），缺失回退程序集 InformationalVersion。</summary>
+    /// <summary>Current tool version: uniformly the build number (build-N); falls back to the assembly InformationalVersion when missing.</summary>
     private static string ToolVersion => Centurion.Core.Utils.Infrastructure.BuildInfo.DisplayVersion;
 }

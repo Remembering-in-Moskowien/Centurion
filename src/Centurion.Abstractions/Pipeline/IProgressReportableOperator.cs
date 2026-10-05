@@ -1,13 +1,13 @@
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>
-/// 支持进度报告的管道算子（可选实现）。
-/// 用于长耗时任务，向控制台/UI 反馈执行进度。
+/// Optional interface for pipeline operators that report progress.
+/// Use it for long-running tasks that need to update the console or UI.
 /// </summary>
 public interface IProgressReportableOperator : IPipelineOperator
 {
     /// <summary>
-    /// 进度事件。订阅方（如 CLI SubCommand）可绑定此事件以渲染进度条。
+    /// Progress event that subscribers, such as CLI commands, can use to render a progress bar.
     /// </summary>
     event EventHandler<OperatorProgressEventArgs>? Progress;
 }

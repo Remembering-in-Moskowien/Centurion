@@ -5,23 +5,24 @@ using Centurion.Core.Operators.Download.Request;
 namespace Centurion.Core.Utils.Infrastructure;
 
 /// <summary>
-/// CrispASR 说话人分割模型缓存管理器。
-/// CrispASR 的 --diarize 会按方法自动从 HuggingFace 下载嵌入/分割模型到
-/// 用户缓存目录（~/.cache/crispasr/），官方源在国内网络常不可达；
-/// 本类在运行 diarize 前把所需模型预下载到位（官方源失败自动回退 hf-mirror.com 镜像），
-/// 使 CrispASR 直接命中缓存（"using cached"），保证分割可用。
+/// Cache manager for CrispASR speaker diarization models.
+/// CrispASR's --diarize automatically downloads the embedding/segmentation models from HuggingFace
+/// into the user cache directory (~/.cache/crispasr/), which is often unreachable from networks in China;
+/// this class pre-downloads the required models before running diarize (auto-falling back to the
+/// hf-mirror.com mirror when the official source fails), so CrispASR hits the cache directly
+/// ("using cached") and diarization stays usable.
 /// </summary>
 public sealed class CrispAsrModelCache(
     Centurion.Core.Operators.Download.Downloader downloader,
     ILogger<CrispAsrModelCache> logger)
 {
-    /// <summary>官方 HuggingFace 模型基础地址。</summary>
+    /// <summary>Official HuggingFace model base URL.</summary>
     public const string DefaultModelBaseUrl = "https://huggingface.co/";
 
     private readonly Centurion.Core.Operators.Download.Downloader _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
     private readonly ILogger<CrispAsrModelCache> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    /// <summary>模型文件名 → 官方下载地址（resolve/main 直链）映射。</summary>
+    /// <summary>Mapping from model file name → official download URL (resolve/main direct link).</summary>
     private static readonly IReadOnlyDictionary<string, string> ModelUrls = new Dictionary<string, string>
     {
         ["wespeaker-resnet34-lm.gguf"] =
@@ -33,11 +34,11 @@ public sealed class CrispAsrModelCache(
     };
 
     /// <summary>
-    /// 确保给定 diarize 方法所需的模型已缓存。
+    /// Ensures the models required by the given diarize method are cached.
     /// </summary>
-    /// <param name="method">diarize 方法名（foxnose / pyannote 等）。</param>
-    /// <param name="cancellationToken">用于取消下载的取消标记。</param>
-    /// <returns>所需模型全部就绪返回 true；任一模型无法获取返回 false。</returns>
+    /// <param name="method">Diarize method name (foxnose / pyannote, etc.).</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel downloads.</param>
+    /// <returns>true when all required models are ready; false if any model cannot be obtained.</returns>
     public async Task<bool> EnsureModelsAsync(string method, CancellationToken cancellationToken = default)
     {
         var required = GetRequiredModels(method);
@@ -55,11 +56,11 @@ public sealed class CrispAsrModelCache(
     }
 
     /// <summary>
-    /// 确保单个模型已缓存：命中缓存直接返回；否则依次尝试官方源与 hf-mirror 镜像。
+    /// Ensures a single model is cached: returns immediately on a cache hit; otherwise tries the official source and the hf-mirror mirror in turn.
     /// </summary>
-    /// <param name="fileName">模型文件名（须在 <see cref="ModelUrls"/> 中登记）。</param>
-    /// <param name="cancellationToken">用于取消下载的取消标记。</param>
-    /// <returns>模型就绪返回 true，否则 false。</returns>
+    /// <param name="fileName">Model file name (must be registered in <see cref="ModelUrls"/>).</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel downloads.</param>
+    /// <returns>true when the model is ready; otherwise false.</returns>
     public async Task<bool> EnsureModelAsync(string fileName, CancellationToken cancellationToken = default)
     {
         if (!ModelUrls.TryGetValue(fileName, out var officialUrl))
@@ -117,10 +118,10 @@ public sealed class CrispAsrModelCache(
     }
 
     /// <summary>
-    /// 计算给定 diarize 方法所需预下载的模型文件名列表（internal，便于单元测试）。
+    /// Computes the list of model file names to pre-download for the given diarize method (internal, for unit testing).
     /// </summary>
-    /// <param name="method">diarize 方法名。</param>
-    /// <returns>模型文件名列表；方法无需预下载时为空。</returns>
+    /// <param name="method">Diarize method name.</param>
+    /// <returns>The list of model file names; empty when the method needs no pre-download.</returns>
     internal static IReadOnlyList<string> GetRequiredModels(string method) => method.Trim().ToLowerInvariant() switch
     {
         "foxnose" => ["wespeaker-resnet34-lm.gguf"],
@@ -129,8 +130,8 @@ public sealed class CrispAsrModelCache(
     };
 
     /// <summary>
-    /// CrispASR 的模型缓存目录（对应其 cache dir 实现）。
-    /// Windows: %USERPROFILE%\.cache\crispasr；Linux: ~/.cache/crispasr；macOS: ~/.cache/crispasr。
+    /// CrispASR's model cache directory (corresponding to its cache dir implementation).
+    /// Windows: %USERPROFILE%\.cache\crispasr; Linux: ~/.cache/crispasr; macOS: ~/.cache/crispasr.
     /// </summary>
     internal static string GetCacheDir()
     {
@@ -142,7 +143,7 @@ public sealed class CrispAsrModelCache(
     }
 
     /// <summary>
-    /// 将 HuggingFace 官方地址转换为 hf-mirror.com 镜像地址；非官方地址原样返回。
+    /// Converts an official HuggingFace URL to an hf-mirror.com mirror URL; non-official URLs are returned unchanged.
     /// </summary>
     internal static string BuildMirrorUrl(string url) =>
         url.Replace("https://huggingface.co/", "https://hf-mirror.com/", StringComparison.OrdinalIgnoreCase);
@@ -156,7 +157,7 @@ public sealed class CrispAsrModelCache(
         }
         catch
         {
-            // 忽略清理失败，不影响主流程
+            // Ignore cleanup failures; they do not affect the main flow
         }
     }
 }

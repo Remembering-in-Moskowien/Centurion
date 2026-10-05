@@ -57,13 +57,12 @@ public sealed class ServeCommand(
         }
 
         var builder = WebApplication.CreateBuilder();
-        // 拦截 ASP.NET Core 默认日志（Kestrel/Hosting.Lifetime 的 "Now listening on: ..."
-        // 等四行），启动信息改由 serve 本体式排版输出；命令执行日志沿用主程序
-        // 格式化器（plain）与文件日志，保持与 Centurion 其他命令一致
+        // Suppress ASP.NET Core startup messages such as Kestrel's "Now listening on" lines.
+        // The serve command prints its own startup banner; command logs keep the main CLI's plain formatter and file logger.
         builder.Logging.ClearProviders();
         builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
-        // 请求管线（Request starting / Executing endpoint 等）非 verbose 噪音，一并拦截；
-        // 命令执行日志（Centurion.Server.*）保留
+        // Suppress request-pipeline noise such as "Request starting" and "Executing endpoint".
+        // Keep command execution logs under Centurion.Server.*.
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.None);
         builder.Logging.AddConsole(options => options.FormatterName = "plain");
         builder.Logging.AddConsoleFormatter<Centurion.Cli.Console.PlainConsoleFormatter, ConsoleFormatterOptions>();
@@ -73,11 +72,11 @@ public sealed class ServeCommand(
         builder.WebHost.UseUrls(urls);
 
         var app = builder.Build();
-        // 命令内部的控制台输出 → 服务器日志（避免 NullConsoleOutput 吞掉执行过程）
+        // Route command output to server logs so NullConsoleOutput does not discard execution details.
         ConsoleServices.Output = new LoggerConsoleOutput(app.Logger);
         var serviceProvider = app.Services;
 
-        // ---------- 端点 ----------
+        // ---------- Endpoints ----------
         app.MapGet("/", () => Results.Ok(new
         {
             name = "Centurion",
@@ -106,7 +105,7 @@ public sealed class ServeCommand(
             }
             catch (Exception)
             {
-                // 忽略读取失败
+                // Ignore read failures.
             }
             return Results.Ok(new
             {
@@ -189,7 +188,7 @@ public sealed class ServeCommand(
             }
         });
 
-        // 本体式启动输出（替代被拦截的 ASP.NET Core 默认日志）
+        // Print the serve startup banner in place of the suppressed ASP.NET Core messages.
         AnsiConsole.MarkupLine($"[bold cyan]{CliSymbols.Play} {ConsoleServices.T("serve")}[/] {ConsoleServices.T("listening on")} [bold]{urls}[/]");
         AnsiConsole.MarkupLine($"{ConsoleServices.T("Endpoints:")}");
         foreach (var e in ServerCommandRegistry.Names)
@@ -198,8 +197,8 @@ public sealed class ServeCommand(
         AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("Press Ctrl+C to shut down")}[/]");
         logger.LogInformation("Centurion serve listening on {Urls}", urls);
 
-        // WebApplication 自身处理 Ctrl+C/SIGTERM（Program 的 CancelKeyPress 已置 e.Cancel，
-        // 不影响 ASP.NET 的停止处理）；RunAsync 返回即服务停止。
+        // WebApplication handles Ctrl+C/SIGTERM itself. Program's CancelKeyPress handler sets e.Cancel,
+        // which does not interfere with ASP.NET shutdown; returning from RunAsync means the server has stopped.
         await app.RunAsync();
         AnsiConsole.MarkupLine($"[dim]{ConsoleServices.T("serve stopped")}[/]");
         return ExitCodes.Success;

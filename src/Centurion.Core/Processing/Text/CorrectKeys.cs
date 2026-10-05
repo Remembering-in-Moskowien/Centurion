@@ -1,16 +1,16 @@
 namespace Centurion.Core.Processing.Text;
 
 /// <summary>
-/// 文本校正相关元数据在扩展数据字典中使用的键名常量。
+/// Key-name constants used in the extended-data dictionary for text-correction metadata.
 /// </summary>
 public static class CorrectKeys
 {
-    /// <summary>原始（校正前）文本来源对应的键名。</summary>
+    /// <summary>Key name for the original (pre-correction) text source.</summary>
     public const string Origin = "correct.origin";
-    /// <summary>时间漂移量（毫秒）对应的键名。</summary>
+    /// <summary>Key name for the time-drift amount (milliseconds).</summary>
     public const string DriftMs = "correct.driftMs";
-    /// <summary>所采取校正动作对应的键名。</summary>
+    /// <summary>Key name for the correction action taken.</summary>
     public const string Action = "correct.action";
-    /// <summary>文本匹配率对应的键名。</summary>
+    /// <summary>Key name for the text match ratio.</summary>
     public const string MatchRatio = "correct.matchRatio";
 }

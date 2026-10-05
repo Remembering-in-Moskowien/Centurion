@@ -3,13 +3,14 @@ using Centurion.Abstractions;
 namespace Centurion.Core.Capabilities.Managers.Runtime;
 
 /// <summary>
-/// 临时目录管理器：所有管道临时产物统一放置在程序根目录下的 temp 目录
-/// （<see cref="DefaultBasePath"/>），便于集中查看与清理。
-/// 默认模式下（未自定义根目录）首次构造时自动清除上次运行遗留的旧临时目录。
+/// Temp-directory manager: all pipeline temp artifacts are placed under the temp directory in the
+/// application root (<see cref="DefaultBasePath"/>), for centralized inspection and cleanup.
+/// In the default mode (custom root not set), stale temp directories left by previous runs are
+/// automatically cleared on first construction.
 /// </summary>
 public class TempDirectoryManager : ITempDirectoryManager
 {
-    /// <summary>程序根目录下统一临时目录的绝对路径。</summary>
+    /// <summary>Absolute path to the unified temp directory under the application root.</summary>
     public static string DefaultBasePath => Path.Combine(AppContext.BaseDirectory, "temp");
 
     private readonly string _basePath;
@@ -18,25 +19,27 @@ public class TempDirectoryManager : ITempDirectoryManager
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
-    /// 创建临时目录管理器。
+    /// Creates a temp-directory manager.
     /// </summary>
-    /// <param name="basePath">临时根目录；为 null 时使用程序根目录下的 temp（<see cref="DefaultBasePath"/>）。</param>
-    /// <param name="autoDelete">句柄释放时是否自动删除对应目录，默认开启。</param>
+    /// <param name="basePath">Temp root directory; when null, uses the temp directory under the application root (<see cref="DefaultBasePath"/>).</param>
+    /// <param name="autoDelete">Whether to automatically delete the corresponding directory when the handle is disposed; enabled by default.</param>
     public TempDirectoryManager(string? basePath = null, bool autoDelete = true)
     {
         _basePath = basePath ?? DefaultBasePath;
         _autoDelete = autoDelete;
 
-        // 默认根目录由程序独占：启动时清掉上次运行异常退出遗留的旧临时目录
+        // The default root is owned exclusively by the application: on startup, clear stale temp
+        // directories left by a previous run that exited abnormally.
         if (basePath is null)
             CleanupStaleDirectories();
     }
 
     /// <summary>
-    /// 创建一个带前缀与唯一 GUID 名称的临时目录，并返回其句柄以便后续清理。
+    /// Creates a temp directory with a prefix and a unique GUID name, and returns its handle for
+    /// later cleanup.
     /// </summary>
-    /// <param name="prefix">目录名前缀；未提供时使用 "centurion_"。</param>
-    /// <returns>指向新建临时目录的句柄。</returns>
+    /// <param name="prefix">Directory name prefix; defaults to "centurion_" when not provided.</param>
+    /// <returns>A handle pointing to the newly created temp directory.</returns>
     public async Task<TempDirectoryHandle> CreateTempDirectoryAsync(string? prefix = null)
     {
         prefix ??= "centurion_";
@@ -47,7 +50,7 @@ public class TempDirectoryManager : ITempDirectoryManager
 
         var handle = new TempDirectoryHandle(fullPath, _autoDelete);
 
-        // 注册以便全局清理（可选）
+        // Register it for global cleanup (optional)
         await _lock.WaitAsync();
         try
         {
@@ -62,7 +65,7 @@ public class TempDirectoryManager : ITempDirectoryManager
     }
 
     /// <summary>
-    /// 清理所有已注册的临时目录（在程序退出时调用）
+    /// Cleans up all registered temp directories (called when the application exits).
     /// </summary>
     public async Task CleanupAllAsync()
     {
@@ -78,7 +81,7 @@ public class TempDirectoryManager : ITempDirectoryManager
         }
     }
 
-    /// <summary>删除默认临时根目录下的全部旧子目录（均为程序自身创建的临时目录）。</summary>
+    /// <summary>Deletes all stale subdirectories under the default temp root (all are temp directories created by the application itself).</summary>
     private void CleanupStaleDirectories()
     {
         try
@@ -94,13 +97,13 @@ public class TempDirectoryManager : ITempDirectoryManager
                 }
                 catch
                 {
-                    // 被占用的目录（如并行进程）跳过，下次启动再清理
+                    // Skip directories in use (e.g. by parallel processes); they will be cleaned up on next startup.
                 }
             }
         }
         catch
         {
-            // 清理失败不影响程序启动
+            // A cleanup failure must not prevent the application from starting.
         }
     }
 }

@@ -3,13 +3,13 @@ using Centurion.Models;
 namespace Centurion.Abstractions.Strategy;
 
 /// <summary>
-/// 字幕解析器接口，每种格式实现一个
+/// Subtitle parser interface; each subtitle format provides an implementation.
 /// </summary>
 public interface ISubtitleParser
 {
-    /// <summary>支持的扩展名（如 ".srt"）</summary>
+    /// <summary>Supported extension, such as ".srt".</summary>
     string SupportedExtension { get; }
 
-    /// <summary>解析文件为字幕条目列表</summary>
+    /// <summary>Parses a file into a list of subtitle entries.</summary>
     Task<List<Sentence>> ParseAsync(string filePath, CancellationToken ct = default);
 }

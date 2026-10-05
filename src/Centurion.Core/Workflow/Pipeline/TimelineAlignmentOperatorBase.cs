@@ -6,52 +6,53 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline;
 
 /// <summary>
-/// 时间轴对齐算子的共享基类。
+/// Shared base class for timeline-alignment operators.
 ///
-/// 提供词级 NW 全局对齐、句子级聚合、空隙填充、时间单调性校验等工具，
-/// 供 ScriptTimelineMapperOperator（台本打轴）与
-/// 时间轴映射与校正算子共同使用。
+/// Provides word-level Needleman-Wunsch (NW) global alignment, sentence-level
+/// aggregation, gap filling, and time-monotonicity checks, shared by
+/// ScriptTimelineMapperOperator (script time-stamping) and the
+/// timeline mapping & correction operator.
 ///
-/// NW 打分（统一约定）：
-///   精确匹配 → 3
-///   模糊匹配（≥ 0.75）→ 2
-///   不匹配 → -1
-///   间隙 → -1
+/// NW scoring (unified convention):
+///   Exact match           -> 3
+///   Fuzzy match (>= 0.75) -> 2
+///   Mismatch              -> -1
+///   Gap                   -> -1
 ///
-/// 规模策略：完整 NW → 带状 NW → 稀疏滑动，保证大输入不 OOM。
+/// Scale strategy: full NW -> banded NW -> sparse sliding, so large inputs never OOM.
 /// </summary>
 public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOperatorBase<TSelf>
     where TSelf : TimelineAlignmentOperatorBase<TSelf>
 {
-    // ===== NW 打分 =====
-    /// <summary>两词完全相同时的 NW 对角线得分。</summary>
+    // ===== NW scoring =====
+    /// <summary>NW diagonal score when the two words are identical.</summary>
     protected const int NwExactMatch = 3;
-    /// <summary>两词相似度达到阈值但不完全相同时的 NW 对角线得分。</summary>
+    /// <summary>NW diagonal score when the two words are similar but not identical.</summary>
     protected const int NwFuzzyMatch = 2;
-    /// <summary>两词不匹配时的 NW 对角线得分。</summary>
+    /// <summary>NW diagonal score when the two words do not match.</summary>
     protected const int NwMismatch = -1;
-    /// <summary>在 NW 对齐中插入空隙（gap）时的得分。</summary>
+    /// <summary>Score for inserting a gap in the NW alignment.</summary>
     protected const int NwGap = -1;
 
-    /// <summary>判定两词"模糊匹配"的最低相似度。</summary>
+    /// <summary>Minimum similarity at which two words count as a "fuzzy match".</summary>
     protected const double WordSimilarityThreshold = 0.75;
 
-    /// <summary>完整 NW 允许的最大 DP 单元数；超出则改用带状 NW。</summary>
+    /// <summary>Max number of DP cells allowed for full NW; above this, fall back to banded NW.</summary>
     protected const long MaxDpCells = 4_000_000L;
 
-    /// <summary>带状 NW 的最小带宽；再小则退化为稀疏模式。</summary>
+    /// <summary>Minimum bandwidth for banded NW; below this, degrade to sparse mode.</summary>
     protected const int MinBandWidth = 32;
 
-    /// <summary>稀疏模式下每个脚本词的搜索窗口大小。</summary>
+    /// <summary>Search-window size per script word in sparse mode.</summary>
     protected const int SparseSearchWindow = 200;
 
     /// <summary>
-    /// 初始化基类，并将日志器传给管线算子基类。
+    /// Initializes the base class and passes the logger to the pipeline operator base.
     /// </summary>
-    /// <param name="logger">派生类使用的日志器。</param>
+    /// <param name="logger">The logger used by derived classes.</param>
     protected TimelineAlignmentOperatorBase(ILogger<TSelf> logger) : base(logger) { }
 
-    // ===== 正则（GeneratedRegex）=====
+    // ===== Regexes (GeneratedRegex) =====
 
     [GeneratedRegex(@"[\p{L}\p{N}]+|[\u4e00-\u9fff]", RegexOptions.Compiled)]
     private static partial Regex TokenPattern();
@@ -59,11 +60,11 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
     [GeneratedRegex(@"[\p{P}\p{S}]", RegexOptions.Compiled)]
     private static partial Regex PunctuationPattern();
 
-    // ================== 词级 NW 对齐主入口 ==================
+    // ================== Word-level NW alignment main entry ==================
 
     /// <summary>
-    /// 词级 NW 全局对齐。返回 scriptWordToTranscript[i] = j（脚本词 i 对齐到转录词 j），-1 表示未对齐。
-    /// 根据规模自动选择完整 NW / 带状 NW / 稀疏滑动。
+    /// Word-level NW global alignment. Returns scriptWordToTranscript[i] = j (script word i aligned to transcript word j);
+    /// -1 means unaligned. Automatically picks full NW / banded NW / sparse sliding based on size.
     /// </summary>
     protected int[] AlignByWordLevelNw(
         IReadOnlyList<string> scriptWordNorm,
@@ -94,7 +95,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return AlignNwBand(scriptWordNorm, transcriptNorm, bandWidth, cancellationToken);
     }
 
-    /// <summary>完整 NW（O(sm·n) 空间）。</summary>
+    /// <summary>Full NW (O(sm*n) space).</summary>
     protected int[] AlignNwFull(
         IReadOnlyList<string> scriptNorm,
         IReadOnlyList<string> transcriptNorm,
@@ -147,7 +148,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return mapping;
     }
 
-    /// <summary>带状 NW（O(sm·W) 空间）。</summary>
+    /// <summary>Banded NW (O(sm*W) space).</summary>
     protected int[] AlignNwBand(
         IReadOnlyList<string> scriptNorm,
         IReadOnlyList<string> transcriptNorm,
@@ -248,7 +249,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return mapping;
     }
 
-    /// <summary>稀疏对齐：每个脚本词在后续窗口中找最佳转录词。</summary>
+    /// <summary>Sparse alignment: for each script word, find the best transcript word within the following window.</summary>
     protected int[] AlignSparse(
         IReadOnlyList<string> scriptNorm,
         IReadOnlyList<string> transcriptNorm)
@@ -293,7 +294,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
     }
 
     /// <summary>
-    /// NW 对角线打分：精确 → 3，模糊（≥阈值）→ 2，不匹配 → -1。
+    /// NW diagonal scoring: exact -> 3, fuzzy (>= threshold) -> 2, mismatch -> -1.
     /// </summary>
     protected static int DiagonalScore(string a, string b)
     {
@@ -304,7 +305,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return sim >= WordSimilarityThreshold ? NwFuzzyMatch : NwMismatch;
     }
 
-    /// <summary>归一化编辑距离相似度（0~1）。</summary>
+    /// <summary>Normalized edit-distance similarity (0~1).</summary>
     protected static double EditDistanceSimilarity(string a, string b)
     {
         if (a.Length == 0 || b.Length == 0) return 0;
@@ -330,11 +331,12 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return 1.0 - (double)previous[^1] / Math.Max(a.Length, b.Length);
     }
 
-    // ================== 句子级聚合 ==================
+    // ================== Sentence-level aggregation ==================
 
     /// <summary>
-    /// 把"脚本词 → 转录词"映射聚合为"脚本句 → 转录词闭区间"。
-    /// 返回 alignment[i] = (startWordIndex, endWordIndex)，(-1, -1) 表示该句未匹配。
+    /// Aggregates the "script word -> transcript word" mapping into a
+    /// "script sentence -> transcript word closed interval".
+    /// Returns alignment[i] = (startWordIndex, endWordIndex); (-1, -1) means the sentence has no match.
     /// </summary>
     protected static (int Start, int End)[] AggregateToSentenceAlignment(
         int[] scriptWordToTranscript,
@@ -358,7 +360,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return alignment;
     }
 
-    /// <summary>收集所有被匹配的转录词索引（去重、排序）。</summary>
+    /// <summary>Collects all matched transcript word indices (deduplicated, sorted).</summary>
     protected static SortedSet<int> CollectMatchedTranscriptIndices(int[] scriptWordToTranscript)
     {
         var result = new SortedSet<int>();
@@ -367,7 +369,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return result;
     }
 
-    /// <summary>按连续段切分未被匹配的转录词索引。</summary>
+    /// <summary>Splits the unmatched transcript word indices into contiguous runs.</summary>
     protected static List<List<int>> SplitUnmatchedSegments(
         int totalWords,
         SortedSet<int> matchedIndices)
@@ -394,9 +396,9 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return segments;
     }
 
-    // ================== 后处理 ==================
+    // ================== Post-processing ==================
 
-    /// <summary>未命中的脚本句在邻居空隙内均分转录词。</summary>
+    /// <summary>Unmatched script sentences share the transcript words in the neighboring gaps evenly.</summary>
     protected static void FillUnmatchedFromGaps((int Start, int End)[] alignment, int totalWords)
     {
         var m = alignment.Length;
@@ -443,7 +445,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         }
     }
 
-    /// <summary>把残余转录词补回相邻已命中句。</summary>
+    /// <summary>Reattaches leftover transcript words to the adjacent matched sentences.</summary>
     protected static void FillRemainingGaps((int Start, int End)[] alignment, int totalWords)
     {
         if (totalWords == 0 || alignment.Length == 0) return;
@@ -481,10 +483,10 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
     }
 
     /// <summary>
-    /// 保证输出句的时间轴严格单调递增：
-    ///   • 与前句重叠的 → 从 prevEnd 起裁剪；
-    ///   • 被完全包含的 → 直接 SkipRender；
-    ///   • 零/负时长的 → SkipRender。
+    /// Ensures the output sentence timeline is strictly monotonically increasing:
+    ///   • overlapping the previous sentence -> clip from prevEnd;
+    ///   • fully contained within it -> SkipRender directly;
+    ///   • zero/negative duration -> SkipRender.
     /// </summary>
     protected static void EnforceMonotonicTime(IList<Sentence> sentences)
     {
@@ -513,9 +515,9 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         }
     }
 
-    // ================== 词处理 ==================
+    // ================== Word processing ==================
 
-    /// <summary>小写 + 去标点，用于 NW 比对。</summary>
+    /// <summary>Lowercase + strip punctuation, used for NW comparison.</summary>
     protected static string NormalizeWord(string text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
@@ -523,11 +525,11 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
         return PunctuationPattern().Replace(lowered, string.Empty).Trim();
     }
 
-    /// <summary>按 TokenPattern 提取 token 序列。</summary>
+    /// <summary>Extracts the token sequence via TokenPattern.</summary>
     protected static IEnumerable<string> ExtractTokens(string text)
         => TokenPattern().Matches(text).Select(m => m.Value);
 
-    /// <summary>取句子文本：优先 Text，回退从 Words 拼接。</summary>
+    /// <summary>Gets sentence text: prefers Text, falls back to joining Words.</summary>
     protected static string GetSentenceText(Sentence sentence)
         => !string.IsNullOrWhiteSpace(sentence.Text)
             ? sentence.Text!
@@ -535,7 +537,7 @@ public abstract partial class TimelineAlignmentOperatorBase<TSelf> : PipelineOpe
                 ? string.Join(" ", sentence.Words.Select(w => w.Text))
                 : string.Empty;
 
-    /// <summary>把原始文本切分为归一化后的 token 列表。</summary>
+    /// <summary>Splits raw text into a list of normalized tokens.</summary>
     protected static List<(string Original, string Normalized)> BuildScriptTokens(string text)
     {
         var rawTokens = TokenPattern().Matches(text).Select(m => m.Value).ToList();

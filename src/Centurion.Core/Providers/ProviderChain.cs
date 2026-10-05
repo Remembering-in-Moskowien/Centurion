@@ -5,26 +5,26 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers;
 
 /// <summary>
-/// fallback 链执行器：按序尝试主 Provider → 备用 Provider。
-/// - 不可用（无密钥/服务离线）自动跳过；
-/// - 执行失败（重试耗尽）切换到备用；
-/// - 预算上限内聚合用量（token/音频秒/缓存命中/估算成本）；
-/// - 全部失败抛 <see cref="ProviderExecutionException"/>。
+/// Fallback-chain executor: tries providers in order from primary to backup.
+/// - Unavailable providers (no key / service offline) are skipped automatically;
+/// - On execution failure (retries exhausted), it switches to the backup;
+/// - Aggregates usage (tokens / audio seconds / cache hits / estimated cost) within the budget cap;
+/// - Throws <see cref="ProviderExecutionException"/> when all providers fail.
 /// </summary>
 public static class ProviderChain
 {
     /// <summary>
-    /// 沿链执行委托。
+    /// Runs the delegate along the chain.
     /// </summary>
-    /// <typeparam name="T">结果值类型。</typeparam>
-    /// <param name="chain">按优先级排列的 Provider 链（首个为主）。</param>
-    /// <param name="invoke">执行单个 Provider 的委托。</param>
-    /// <param name="policies">横切策略（重试/熔断/限流）。</param>
-    /// <param name="budgetUsdPerRun">本次运行预算上限（0 = 不限）；超出后跳过后续云端调用。</param>
-    /// <param name="logger">日志器。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>首个成功结果；用量聚合全部已执行 Provider。</returns>
-    /// <exception cref="ProviderExecutionException">链全部不可用或全部失败时抛出。</exception>
+    /// <typeparam name="T">The result value type.</typeparam>
+    /// <param name="chain">The provider chain ordered by priority (first is primary).</param>
+    /// <param name="invoke">The delegate that executes a single provider.</param>
+    /// <param name="policies">Cross-cutting policies (retry / circuit breaker / rate limit).</param>
+    /// <param name="budgetUsdPerRun">Budget cap for this run (0 = unlimited); once exceeded, subsequent cloud calls are skipped.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The first successful result; usage aggregates across all providers that ran.</returns>
+    /// <exception cref="ProviderExecutionException">Thrown when the whole chain is unavailable or all providers fail.</exception>
     public static async Task<ProviderResult<T>> ExecuteAsync<T>(
         IReadOnlyList<IProvider> chain,
         Func<IProvider, CancellationToken, Task<ProviderResult<T>>> invoke,
@@ -51,7 +51,7 @@ public static class ProviderChain
                 continue;
             }
 
-            // 预算闸门：云 Provider 且预算已用尽 → 跳过（本地不花钱）
+            // Budget gate: cloud providers are skipped once the budget is exhausted (local calls cost nothing)
             if (provider.Capabilities.Kind == ProviderKind.Cloud
                 && budgetUsdPerRun > 0
                 && policies.BudgetSpentUsd >= budgetUsdPerRun)

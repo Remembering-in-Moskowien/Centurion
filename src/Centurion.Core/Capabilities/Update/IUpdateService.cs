@@ -1,21 +1,21 @@
 namespace Centurion.Core.Capabilities.Update;
 
 /// <summary>
-/// 描述 GitHub Release 中的一个可下载资产（zip 包等）。
+/// Describes a downloadable asset in a GitHub Release (a zip package, etc.).
 /// </summary>
-/// <param name="Name">资产文件名，如 Centurion-win-x64.zip</param>
-/// <param name="DownloadUrl">下载直链（browser_download_url）</param>
-/// <param name="SizeBytes">资产字节大小</param>
+/// <param name="Name">Asset file name, e.g. Centurion-win-x64.zip.</param>
+/// <param name="DownloadUrl">Direct download link (browser_download_url).</param>
+/// <param name="SizeBytes">Asset size in bytes.</param>
 public sealed record ReleaseAssetInfo(string Name, string DownloadUrl, long SizeBytes);
 
 /// <summary>
-/// GitHub Release 的概要信息（取自 releases/latest 接口）。
+/// Summary information of a GitHub Release (taken from the releases/latest endpoint).
 /// </summary>
-/// <param name="TagName">版本标签，如 v0.2.0</param>
-/// <param name="Name">Release 标题</param>
-/// <param name="PublishedAt">发布时间（UTC）</param>
-/// <param name="Body">Release 说明（Markdown）</param>
-/// <param name="Assets">资产列表</param>
+/// <param name="TagName">Version tag, e.g. v0.2.0.</param>
+/// <param name="Name">Release title.</param>
+/// <param name="PublishedAt">Publication time (UTC).</param>
+/// <param name="Body">Release notes (Markdown).</param>
+/// <param name="Assets">List of assets.</param>
 public sealed record GitHubReleaseInfo(
     string TagName,
     string Name,
@@ -24,20 +24,20 @@ public sealed record GitHubReleaseInfo(
     IReadOnlyList<ReleaseAssetInfo> Assets);
 
 /// <summary>
-/// 更新检查结果。
+/// Result of an update check.
 /// </summary>
-/// <param name="HasUpdate">是否存在可更新的新版本</param>
-/// <param name="Latest">最新的 Release 信息（有更新时非空）</param>
-/// <param name="Reason">无更新时的人类可读原因（如"仓库尚无 Release"）</param>
+/// <param name="HasUpdate">Whether a newer version is available to update to.</param>
+/// <param name="Latest">Information of the latest Release (non-null when an update exists).</param>
+/// <param name="Reason">Human-readable reason when there is no update (e.g. "the repository has no releases yet").</param>
 public sealed record UpdateCheckResult(bool HasUpdate, GitHubReleaseInfo? Latest, string? Reason);
 
 /// <summary>
-/// 更新暂存结果：新版本已下载并解压，更新脚本已生成。
+/// Update staging result: the new version has been downloaded and extracted, and the update script has been generated.
 /// </summary>
-/// <param name="StagingDirectory">暂存根目录</param>
-/// <param name="PayloadDirectory">解压后的新版本文件目录</param>
-/// <param name="ScriptPath">更新脚本绝对路径（运行它完成替换）</param>
-/// <param name="Asset">被下载的资产</param>
+/// <param name="StagingDirectory">Staging root directory.</param>
+/// <param name="PayloadDirectory">Directory of the extracted new-version files.</param>
+/// <param name="ScriptPath">Absolute path of the update script (run it to complete the replacement).</param>
+/// <param name="Asset">The asset that was downloaded.</param>
 public sealed record UpdateStageResult(
     string StagingDirectory,
     string PayloadDirectory,
@@ -45,24 +45,24 @@ public sealed record UpdateStageResult(
     ReleaseAssetInfo Asset);
 
 /// <summary>
-/// 自更新服务：检查 GitHub Releases、对比本地版本、下载并暂存新版本。
+/// Self-update service: check GitHub Releases, compare against the local version, and download and stage the new version.
 /// </summary>
 public interface IUpdateService
 {
-    /// <summary>本地程序的构建日期（UTC）；无法读取时为 null。</summary>
+    /// <summary>Build date of the local program (UTC); null when it cannot be read.</summary>
     DateTimeOffset? BuildDate { get; }
 
     /// <summary>
-    /// 检查 GitHub 上是否存在比本地更新的版本。
+    /// Check whether a newer version than the local one exists on GitHub.
     /// </summary>
-    /// <exception cref="HttpRequestException">无法访问 GitHub API 时抛出。</exception>
+    /// <exception cref="HttpRequestException">Thrown when the GitHub API cannot be reached.</exception>
     Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// 下载匹配当前平台的 Release 资产，解压到临时暂存目录，并生成更新脚本。
+    /// Download the Release asset matching the current platform, extract it to a temporary staging directory, and generate the update script.
     /// </summary>
-    /// <param name="check"><see cref="CheckAsync"/> 返回的、确认存在更新的结果。</param>
-    /// <param name="assetName">手动指定的资产文件名；为空时按平台自动匹配。</param>
-    /// <param name="cancellationToken">取消操作的取消令牌。</param>
+    /// <param name="check">The update-confirmed result returned by <see cref="CheckAsync"/>.</param>
+    /// <param name="assetName">Manually specified asset file name; when empty, matched automatically by platform.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
     Task<UpdateStageResult> StageAsync(UpdateCheckResult check, string? assetName, CancellationToken cancellationToken);
 }

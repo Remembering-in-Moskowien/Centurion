@@ -3,32 +3,32 @@ using Centurion.Models.Workflow;
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 设备能力检测结果：平台、GPU、内存与可用的推理后端。
+/// Detected device capabilities, including platform, GPU, memory, and available inference backends.
 /// </summary>
 public sealed record DeviceCapabilities
 {
-    /// <summary>平台标识，如 "win-x64" / "linux-x64" / "osx-arm64"。</summary>
+    /// <summary>Platform identifier, such as "win-x64", "linux-x64", or "osx-arm64".</summary>
     public required string Platform { get; init; }
 
-    /// <summary>是否存在 NVIDIA GPU（CUDA 可用）。</summary>
+    /// <summary>Whether an NVIDIA GPU is present and CUDA is available.</summary>
     public required bool HasNvidiaGpu { get; init; }
 
-    /// <summary>GPU 名称（探测不到时为 null）。</summary>
+    /// <summary>GPU name, or null if it could not be detected.</summary>
     public string? GpuName { get; init; }
 
-    /// <summary>显存字节数（探测不到时为 0）。</summary>
+    /// <summary>GPU memory in bytes, or 0 if it could not be detected.</summary>
     public long GpuMemoryBytes { get; init; }
 
-    /// <summary>系统可用内存字节数。</summary>
+    /// <summary>Available system memory in bytes.</summary>
     public required long SystemMemoryBytes { get; init; }
 
-    /// <summary>可用推理后端（按优先级排序，CPU 恒在末尾）。</summary>
+    /// <summary>Available inference backends in priority order; CPU is always last.</summary>
     public required IReadOnlyList<InferenceDevice> AvailableDevices { get; init; }
 
-    /// <summary>推荐的推理设备（自动选择时使用）。</summary>
+    /// <summary>Recommended inference device, used for automatic selection.</summary>
     public required InferenceDevice RecommendedDevice { get; init; }
 
-    /// <summary>人类可读的设备摘要（用于启动日志）。</summary>
+    /// <summary>Human-readable device summary used in startup logs.</summary>
     public string DeviceSummary =>
         $"Platform: {Platform}; " +
         (HasNvidiaGpu
@@ -41,13 +41,13 @@ public sealed record DeviceCapabilities
 }
 
 /// <summary>
-/// 设备检测器：探测 GPU（NVIDIA/CUDA、Vulkan）、内存与平台，
-/// 并给出推荐的推理设备，供工具二进制按需自动下载 GPU 变体。
+/// Detects GPUs (NVIDIA/CUDA and Vulkan), memory, and platform, then recommends
+/// an inference device so tool binaries can download a matching GPU variant when needed.
 /// </summary>
 public interface IDeviceDetector
 {
     /// <summary>
-    /// 检测当前设备能力（结果通常缓存复用）。
+    /// Detects the current device capabilities; results are typically cached.
     /// </summary>
     DeviceCapabilities Detect();
 }

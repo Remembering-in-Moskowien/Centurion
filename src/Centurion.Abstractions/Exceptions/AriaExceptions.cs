@@ -1,29 +1,29 @@
 namespace Centurion.Abstractions.Exceptions;
 
-/// <summary>Aria2 进程执行失败（非0退出码）</summary>
+/// <summary>Aria2 process execution failed with a non-zero exit code.</summary>
 public class AriaProcessExitException(string message, int exitCode) : Exception(message)
 {
     /// <summary>
-    /// Aria2 进程的退出码。
+    /// The Aria2 process exit code.
     /// </summary>
     public int ExitCode { get; } = exitCode;
 }
 
-/// <summary>文件哈希校验不匹配</summary>
+/// <summary>The file hash does not match the expected value.</summary>
 public class FileHashMismatchException(string msg, string path, string expect, string actual) : Exception(msg)
 {
     /// <summary>
-    /// 哈希校验不通过的文件路径。
+    /// The path of the file that failed hash verification.
     /// </summary>
     public string FilePath { get; } = path;
 
     /// <summary>
-    /// 期望得到的文件哈希值。
+    /// The expected file hash.
     /// </summary>
     public string ExpectHash { get; } = expect;
 
     /// <summary>
-    /// 实际计算得到的文件哈希值。
+    /// The computed file hash.
     /// </summary>
     public string ActualHash { get; } = actual;
 }

@@ -1,10 +1,12 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Core.Capabilities.Infrastructure;
-using Centurion.Core.Workflow.Pipeline;using Centurion.Abstractions;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Abstractions;
 using Centurion.Abstractions.Factories;
 using Centurion.Abstractions.Strategy;
-using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Ass;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,7 +53,7 @@ public sealed class TranslateCommand(
             var loadedDoc = await store.LoadAsync(inputPath, ct);
             var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
 
-            // 更新配置：翻译相关字段
+            // Update translation-related configuration fields.
             workflowContext.Config = new WorkflowConfig
             {
                 CommandName = "translate",
@@ -75,12 +77,12 @@ public sealed class TranslateCommand(
 
             var sentences = workflowContext.State.CurrentSentences;
 
-            // 2) 加载术语表与目标语言台本
+            // 2) Load the glossary and target-language script.
             var glossary = GlossaryLoader.Load(settings.Glossary?.FullName, logger);
             var targetScriptLines = LoadScriptLines(settings.TargetScript?.FullName, logger);
 
-            // 3) 创建翻译算子并走 DAG 管线（Translation → Quality Report；
-            //    策略内部按批并行调用 LLM，台本行数一致时 1:1 对齐采用）
+            // 3) Run the translation and quality-report operators in the DAG.
+            // The strategy translates batches in parallel and uses 1:1 alignment when script and source line counts match.
             var options = new TranslationOptions
             {
                 SourceLanguage = settings.SourceLanguage ?? "auto",
@@ -100,7 +102,7 @@ public sealed class TranslateCommand(
                 serviceProvider, strategy, options);
             var dag = BuildTranslateDag(translationOp, qualityReportOp);
 
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, workflowContext.Config, serviceProvider, settings.Json, ct);
 
@@ -109,7 +111,7 @@ public sealed class TranslateCommand(
             if (skipped.Count > 0)
                 logger.LogInformation("Skipped {Count} conditional step(s): {Names}", skipped.Count, string.Join(", ", skipped));
 
-            // 5) 保存翻译后的中间文件（译文写入各句 TranslatedText，时间轴保持不变）
+            // 5) Save the translated intermediate file; write translations to TranslatedText and preserve timings.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "translate", outputPath);
             await store.SaveAsync(outDoc, outputPath, ct);
 

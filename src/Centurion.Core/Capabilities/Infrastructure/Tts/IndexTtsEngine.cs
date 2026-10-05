@@ -9,16 +9,22 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Infrastructure.Tts;
 
 /// <summary>
-/// 基于 IndexTTS-Rust（8b-is/IndexTTS-Rust，纯 Rust + ONNX Runtime）的本地 TTS 引擎。
-/// 引擎二进制由用户放置于 tools/indextts/（与 VSF 相同捆绑策略，无自动下载）；
-/// 模型经 <see cref="ModelManager"/> 下载自动可获部分（bigvgan + speaker_encoder ONNX 及外部权重），
-/// gpt.onnx / s2mel.onnx / bpe.model 需由用户从原版 IndexTTS 检查点转换后放置于模型目录。
-/// 合成命令：indextts clone -t &lt;text&gt; -v &lt;参考音频&gt; -o &lt;输出&gt; --model-dir &lt;目录&gt; --config &lt;config.yaml&gt;。
+/// Local TTS engine based on IndexTTS-Rust (8b-is/IndexTTS-Rust, pure Rust + ONNX
+/// Runtime). The engine binary is placed by the user under tools/indextts/ (the same
+/// bundling policy as VSF; no auto-download). The model parts that are automatically
+/// available are downloaded via <see cref="ModelManager"/> (bigvgan + speaker_encoder
+/// ONNX and their external weights); gpt.onnx / s2mel.onnx / bpe.model must be converted
+/// by the user from the original IndexTTS checkpoints and placed in the model directory.
+/// Synthesis command: indextts clone -t &lt;text&gt; -v &lt;reference audio&gt; -o &lt;output&gt;
+/// --model-dir &lt;dir&gt; --config &lt;config.yaml&gt;.
 /// </summary>
 /// <remarks>
-/// 注意：上游 IndexTTS-Rust 当前 GPT 推理为占位实现（生成占位 mel），接入本引擎可跑通
-/// 完整链路（模型管理/命令路由/输出文件），但合成音频为占位内容；待上游发布完整推理后
-/// 替换引擎二进制即可获得真实合成。模型缺失时按项目惯例报错提示，不静默进入 demo 模式。
+/// Note: upstream IndexTTS-Rust's current GPT inference is a placeholder implementation
+/// (it generates a placeholder mel). Wiring up this engine runs the full pipeline
+/// end-to-end (model management / command routing / output file), but the synthesized
+/// audio is placeholder content; once upstream ships full inference, replacing the engine
+/// binary yields real synthesis. When the model is missing it reports an error per the
+/// project's convention instead of silently falling into demo mode.
 /// </remarks>
 public sealed class IndexTtsEngine(
     IndexTtsManager indexTtsManager,
@@ -30,7 +36,7 @@ public sealed class IndexTtsEngine(
     /// <inheritdoc />
     public string EngineName => "indextts";
 
-    /// <summary>模型注册表条目名（IndexTTS-Rust 2 代模型，bigvgan + speaker_encoder ONNX）。</summary>
+    /// <summary>Model registry entry name (IndexTTS-Rust 2nd-gen model, bigvgan + speaker_encoder ONNX).</summary>
     private const string ModelKey = "indextts2";
 
     /// <inheritdoc cref="ITtsEngine.SynthesizeAsync"/>
@@ -62,19 +68,20 @@ public sealed class IndexTtsEngine(
     }
 
     /// <summary>
-    /// 确保模型就绪：自动下载 bigvgan/speaker_encoder ONNX（含外部权重），
-    /// 检查用户提供的 gpt/s2mel/bpe 文件，并写入含绝对路径的 config.yaml。
+    /// Ensures the model is ready: auto-downloads the bigvgan/speaker_encoder ONNX (with
+    /// their external weights), checks the user-supplied gpt/s2mel/bpe files, and writes
+    /// a config.yaml containing absolute paths.
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>模型目录（models/indextts/indextts2/）。</returns>
-    /// <exception cref="TtsSynthesisException">模型不完整。</exception>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The model directory (models/indextts/indextts2/).</returns>
+    /// <exception cref="TtsSynthesisException">The model is incomplete.</exception>
     private async Task<string> EnsureModelAsync(CancellationToken cancellationToken)
     {
         using var manager = new ModelManager(ModelKey, modelRegistry.IndexTtsModels, serviceProvider, "indextts");
         await manager.CheckHealthAsync(cancellationToken);
         var dir = manager.ModelFolder;
 
-        // 用户提供/转换的部分（上游官方未发布 ONNX，需从原版 IndexTTS 检查点转换）
+        // User-supplied/converted parts (upstream has not published ONNX; must be converted from the original IndexTTS checkpoints)
         var userRequired = new[] { "gpt.onnx", "s2mel.onnx", "bpe.model" };
         var missing = userRequired.Where(f => !File.Exists(Path.Combine(dir, f))).ToList();
         if (missing.Count > 0)
@@ -85,7 +92,7 @@ public sealed class IndexTtsEngine(
                 "and place gpt.onnx, s2mel.onnx and bpe.model there, then retry.");
         }
 
-        // config.yaml：缺失时写入内置默认（路径全部绝对化，Rust 端按字符串直用）
+        // config.yaml: when missing, write the built-in default (all paths made absolute, since the Rust side uses them verbatim)
         var configPath = Path.Combine(dir, "config.yaml");
         if (!File.Exists(configPath))
         {
@@ -96,7 +103,7 @@ public sealed class IndexTtsEngine(
         return dir;
     }
 
-    /// <summary>生成 IndexTTS-Rust config.yaml（字段与仓库默认一致，路径替换为绝对路径）。</summary>
+    /// <summary>Generates the IndexTTS-Rust config.yaml (fields match the repo defaults, with paths replaced by absolute paths).</summary>
     private static string BuildConfig(string dir) => $$"""
         gpt:
           layers: 8

@@ -1,12 +1,12 @@
 namespace Centurion.Core.Operators.Download.Response;
 
 /// <summary>
-/// Aria2 下载结果
+/// Result of an Aria2 download.
 /// </summary>
 public class DownloaderResponse
 {
-    /// <summary>下载是否成功。</summary>
+    /// <summary>Whether the download succeeded.</summary>
     public bool Success { get; set; }
-    /// <summary>下载完成后文件的保存路径。</summary>
+    /// <summary>Path where the file was saved after the download completed.</summary>
     public string FilePath { get; set; } = string.Empty;
 }

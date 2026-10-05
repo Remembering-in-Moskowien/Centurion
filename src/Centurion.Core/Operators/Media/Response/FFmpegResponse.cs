@@ -1,15 +1,15 @@
 namespace Centurion.Core.Operators.Media.Response;
 
-/// <summary>文件输出模式返回结果</summary>
+/// <summary>Result returned by the file-output conversion mode.</summary>
 public class FFmpegConvertResponse
 {
-    /// <summary>转换后输出文件的路径。</summary>
+    /// <summary>Path of the output file after conversion.</summary>
     public string OutputPath { get; set; } = string.Empty;
 }
 
-/// <summary>FFmpeg 音频分割的返回结果。</summary>
+/// <summary>Result returned by the FFmpeg audio split operation.</summary>
 public class FFmpegSplitResponse
 {
-    /// <summary>各分段输出文件的路径列表。</summary>
+    /// <summary>List of output file paths for each segment.</summary>
     public List<string> OutputFiles { get; set; } = [];
 }

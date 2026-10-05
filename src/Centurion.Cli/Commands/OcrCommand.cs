@@ -93,12 +93,12 @@ public sealed class OcrCommand(
             };
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // OCR DAG：抽帧识别 → 分句 → 清洗 → 质量报告（pipeline-graph 命令共享同一装配）
+            // OCR DAG: extract and recognize frames, split and clean text, then generate the quality report; pipeline-graph uses the same assembly.
             var dag = BuildOcrDag(ocrExtractOp, operatorFactory, textCleaningOp, qualityReportOp, config);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("ocr_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
 
@@ -150,9 +150,9 @@ public sealed class OcrCommand(
         return builder.Build();
     }
 
-    /// <summary>校验 ROI 比例参数（0-1，视频尺寸比例）。</summary>
-    /// <param name="value">比例值，可空（空表示用默认）。</param>
-    /// <param name="option">命令行选项名，用于错误提示。</param>
+    /// <summary>Validates an ROI ratio in the range 0-1, relative to the video dimensions.</summary>
+    /// <param name="value">The optional ratio; null uses the default.</param>
+    /// <param name="option">The command-line option name used in error messages.</param>
     private static void ValidateRoi(double? value, string option)
     {
         if (value is < 0 or > 1)

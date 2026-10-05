@@ -6,12 +6,13 @@ using Centurion.Models.Schema;
 namespace Centurion.Core.Utils.Serialization;
 
 /// <summary>
-/// 从 <see cref="CenturionJsonContext"/> 的元数据导出 IR 的 JSON Schema（JSON Schema 2020-12 草案）。
-/// 导出的 schema 提交到仓库 schemas/centurion-v1.json；结构变更后重新生成即可保持同步。
+/// Exports the IR's JSON Schema (JSON Schema 2020-12 draft) from <see cref="CenturionJsonContext"/>'s
+/// metadata. The exported schema is committed to the repository at schemas/centurion-v1.json;
+/// just regenerate it after a structural change to stay in sync.
 /// </summary>
 public static class CenturionSchemaExporter
 {
-    /// <summary>导出当前版本（1.0）的完整 JSON Schema 文本。</summary>
+    /// <summary>Exports the complete JSON Schema text for the current version (1.0).</summary>
     public static string ExportV1()
     {
         var options = new JsonSchemaExporterOptions

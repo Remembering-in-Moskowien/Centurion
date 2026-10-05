@@ -43,11 +43,11 @@ public sealed class SpawnCommand(
         try
         {
             var inputPath = settings.InputFile.FullName;
-            // -o 现在写入的是 IR 中间文件；它是结构化字幕交换格式，不直接产出最终字幕 
+            // -o writes an IR intermediate file, a structured subtitle exchange format rather than a rendered subtitle.
             var outputPath = settings.OutputFile?.FullName ?? CenturionFileIO.DefaultOutputPath(inputPath, "asr");
             var intermediatePath = outputPath;
 
-            // 云端 ASR 提前校验：缺 API 密钥则在转换/转录前失败
+            // Validate cloud ASR credentials early so missing API keys fail before conversion or transcription.
             if (AsrEndpointParser.IsCloud(settings.Transcriber) && string.IsNullOrWhiteSpace(settings.AsrApiKey))
                 throw new ArgumentException(
                     $"Cloud ASR provider '{settings.Transcriber}' requires an API key. Provide --asr-api-key <KEY>.");
@@ -110,7 +110,7 @@ public sealed class SpawnCommand(
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // ─── 组装 ASR DAG：节点=算子、边=数据依赖；条件节点按配置跳过，diarization 失败可降级 ───
+            // ─── Assemble the ASR DAG: nodes are operators, edges are dependencies; conditions skip stages and diarization can degrade on failure. ───
             var dag = BuildAsrDag(
                 subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, textCleaningOp, qualityReportOp, config);
@@ -119,11 +119,11 @@ public sealed class SpawnCommand(
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
 
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
 
-            // Execute the DAG pipeline（就绪节点并行；条件跳过、重试、超时、降级由执行器统一处理）
+            // Execute the DAG; the executor handles parallel ready nodes, conditions, retries, timeouts, and degradation.
             var stepResults = await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
             var skipped = stepResults.Where(r => r.Status == PipelineStepStatus.Skipped).Select(r => r.Name).ToList();
             if (skipped.Count > 0)
@@ -132,7 +132,7 @@ public sealed class SpawnCommand(
             if (degraded.Count > 0)
                 logger.LogWarning("Degraded {Count} step(s) after retries: {Names}", degraded.Count, string.Join(", ", degraded));
 
-            // 保存为 Centurion 中间文件（含词级时间戳/说话人/各阶段句子等全部详细信息）
+            // Save a Centurion intermediate file with word timings, speakers, and all stage sentence details.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "asr", intermediatePath);
             await store.SaveAsync(outDoc, intermediatePath, ct);
 

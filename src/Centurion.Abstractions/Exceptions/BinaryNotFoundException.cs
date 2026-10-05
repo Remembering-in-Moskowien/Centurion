@@ -1,10 +1,10 @@
 namespace Centurion.Abstractions.Exceptions;
 
-/// <summary>外部二进制程序未找到统一异常</summary>
+/// <summary>Exception thrown when an external executable cannot be found.</summary>
 public class BinaryNotFoundException(string message, string binaryName) : Exception(message)
 {
     /// <summary>
-    /// 未找到的外部二进制程序名称（如 ffmpeg.exe）。
+    /// The name of the missing external executable, such as ffmpeg.exe.
     /// </summary>
     public string BinaryName { get; } = binaryName;
 }

@@ -5,8 +5,8 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Ocr;
 
 /// <summary>
-/// OCR Provider：适配 <see cref="OcrClient"/>，按后端（智谱云端 / Ollama / llama.cpp）实例化注册。
-/// 本地后端可用性经服务探测（GET /models）；云端后端检查 API 密钥。
+/// OCR provider: adapts <see cref="OcrClient"/>, instantiated and registered per backend (Zhipu cloud / Ollama / llama.cpp).
+/// Local backend availability is probed via a service probe (GET /models); cloud backends check the API key.
 /// </summary>
 public sealed class OcrClientProvider(
     string name,
@@ -27,13 +27,13 @@ public sealed class OcrClientProvider(
     /// <inheritdoc />
     public ProviderCapabilities Capabilities { get; } = capabilities;
 
-    /// <summary>API 密钥；仅云端后端（智谱）需要。</summary>
+    /// <summary>API key; only required by cloud backends (Zhipu).</summary>
     public string? ApiKey { get; set; }
 
-    /// <summary>自定义端点；为空按后端默认。</summary>
+    /// <summary>Custom endpoint; falls back to the backend default when empty.</summary>
     public string? BaseUrl { get; set; }
 
-    /// <summary>默认模型；为空按后端默认。</summary>
+    /// <summary>Default model; falls back to the backend default when empty.</summary>
     public string? DefaultModel { get; set; }
 
     /// <inheritdoc />
@@ -64,7 +64,7 @@ public sealed class OcrClientProvider(
         return new ProviderResult<string>(text, usage);
     }
 
-    /// <summary>粗略按字符数估算输出 token（4 字符 ≈ 1 token，中文按 1.5 字符/token 近似）。</summary>
+    /// <summary>Roughly estimates output tokens by character count (≈1 token per 4 chars; CJK approximated at 1.5 chars/token).</summary>
     private static int EstimateTokens(string text)
     {
         var cjk = text.Count(c => c >= 0x4E00 && c <= 0x9FFF);
@@ -73,10 +73,10 @@ public sealed class OcrClientProvider(
     }
 }
 
-/// <summary>OCR Provider 注册工厂（名称/能力固定）。</summary>
+/// <summary>OCR provider registration factory (fixed names/capabilities).</summary>
 public static class OcrProviders
 {
-    /// <summary>按后端返回注册名。</summary>
+    /// <summary>Returns the registered name per backend.</summary>
     public static string NameFor(OcrBackend backend) => backend switch
     {
         OcrBackend.Zhipu => "zhipu",
@@ -86,7 +86,7 @@ public static class OcrProviders
         _ => backend.ToString().ToLowerInvariant()
     };
 
-    /// <summary>按后端返回能力声明。</summary>
+    /// <summary>Returns the capability declaration per backend.</summary>
     public static ProviderCapabilities CapabilitiesFor(OcrBackend backend) => backend switch
     {
         OcrBackend.Zhipu => ProviderCapabilities.Cloud(0, 1.5, ProviderLatency.Medium, ProviderQualityLevel.High,

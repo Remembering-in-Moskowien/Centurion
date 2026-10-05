@@ -9,20 +9,22 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// QORA-TTS 管理器（incordlabs/QORA-TTS-12Hz-1.7B，纯 Rust 的 Qwen3-TTS 推理实现）。
-/// 与 VSF 相同的捆绑策略：工具目录 tools/qora-tts/ 自包含（exe + model.qora-tts 权重 + 配置文件），
-/// 首次使用自动下载缺失文件（含 1.56GB Q4 权重），下载走 aria（多线程分片）。
-/// 引擎要求模型文件与 exe 同目录（exe 自动发现），因此不走 models/ 注册表目录。
+/// QORA-TTS manager (incordlabs/QORA-TTS-12Hz-1.7B, a pure-Rust Qwen3-TTS inference implementation).
+/// Uses the same bundling strategy as VSF: the tools/qora-tts/ directory is self-contained
+/// (exe + model.qora-tts weights + config files); missing files (including the 1.56GB Q4
+/// weights) are auto-downloaded on first use via aria (multithreaded segmented download).
+/// The engine requires the model file in the same directory as the exe (the exe auto-discovers
+/// it), so it does not use the models/ registry directory.
 /// </summary>
 public sealed class QoraTtsManager(
     IBinaryLocator binaryLocator,
     IServiceProvider serviceProvider,
     ILogger<QoraTtsManager> logger)
 {
-    /// <summary>QORA-TTS 1.7B release 资产基址（v0.1.0）。</summary>
+    /// <summary>Base URL for QORA-TTS 1.7B release assets (v0.1.0).</summary>
     private const string ReleaseBase = "https://github.com/incordlabs/QORA-TTS-12Hz-1.7B/releases/download/v0.1.0-1.7B";
 
-    /// <summary>工具目录下需要的全部文件（含 1.56GB 模型权重）。</summary>
+    /// <summary>All files required in the tool directory (including the 1.56GB model weight).</summary>
     private static readonly string[] RequiredFiles =
     [
         "qora-tts.exe",
@@ -37,15 +39,16 @@ public sealed class QoraTtsManager(
     private string? _toolsDir;
     private string? _resolvedExe;
 
-    /// <summary>QORA-TTS 是否已可用（exe + 模型权重齐备）。</summary>
+    /// <summary>Whether QORA-TTS is available (exe + model weight present).</summary>
     public bool IsInstalled =>
         LocateExe() is not null && File.Exists(Path.Combine(ToolsDir, "model.qora-tts"));
 
     /// <summary>
-    /// 确保 QORA-TTS 可用，返回 qora-tts.exe 路径；缺失则自动下载（首次约 1.56GB）。
+    /// Ensures QORA-TTS is available and returns the qora-tts.exe path; auto-downloads when
+    /// missing (~1.56GB on first run).
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>exe 路径；下载失败返回 null。</returns>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The exe path; returns null when the download fails.</returns>
     public async Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
     {
         var existing = LocateExe();
@@ -70,7 +73,7 @@ public sealed class QoraTtsManager(
             {
                 if (file == "model.qora-tts")
                 {
-                    // 大文件走 aria 多线程分片下载
+                    // Large files go through aria's multithreaded segmented download.
                     using var downloader = serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
                     await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
                     {
@@ -110,7 +113,7 @@ public sealed class QoraTtsManager(
         return exe;
     }
 
-    /// <summary>tools/qora-tts 目录（AppContext.BaseDirectory 下）。</summary>
+    /// <summary>The tools/qora-tts directory (under AppContext.BaseDirectory).</summary>
     private string ToolsDir =>
         _toolsDir ??= Path.Combine(AppContext.BaseDirectory, "tools", "qora-tts");
 

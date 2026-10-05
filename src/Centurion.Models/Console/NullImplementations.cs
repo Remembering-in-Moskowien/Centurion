@@ -2,8 +2,8 @@
 namespace Centurion.Models.Console;
 
 /// <summary>
-/// 控制台端口的空实现（Null Object 模式）。
-/// 在未注入真实实现时提供无害的默认行为，避免空引用。
+/// No-op implementations of console ports (Null Object pattern).
+/// Provide harmless defaults and avoid null references when no concrete adapter is injected.
 /// </summary>
 public class NullConsoleOutput : IConsoleOutput
 {
@@ -48,19 +48,19 @@ public class NullConsoleOutput : IConsoleOutput
     }
 }
 
-/// <summary>不渲染任何 UI 的空进度报告器，仅同步执行传入的工作。</summary>
+/// <summary>No-op progress reporter that runs the supplied work synchronously without rendering UI.</summary>
 public class NullProgressReporter : IProgressReporter
 {
     /// <inheritdoc />
     public void StartProgress(string title, Action<IProgressContext> action)
     {
-        // 直接执行，无 UI
+        // Run directly without a UI.
         var context = new NullProgressContext();
         action(context);
     }
 }
 
-/// <summary>不渲染任何 UI 的空进度上下文。</summary>
+/// <summary>No-op progress context that does not render UI.</summary>
 public class NullProgressContext : IProgressContext
 {
     /// <inheritdoc />
@@ -75,7 +75,7 @@ public class NullProgressContext : IProgressContext
     }
 }
 
-/// <summary>不执行任何操作的空进度任务句柄。</summary>
+/// <summary>No-op progress task handle.</summary>
 public class NullProgressTask : IProgressTask
 {
     /// <inheritdoc />
@@ -104,7 +104,7 @@ public class NullProgressTask : IProgressTask
     }
 }
 
-/// <summary>自动返回 true 的空确认提示实现，用于无需交互的场景。</summary>
+/// <summary>No-op confirmation prompt that returns true automatically for non-interactive scenarios.</summary>
 public class NullConfirmPrompt : IConfirmPrompt
 {
     /// <inheritdoc />

@@ -15,8 +15,8 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers;
 
 /// <summary>
-/// Provider 工厂：按配置解析单 Provider 与 fallback 链。
-/// 密钥统一经 <see cref="ApiKeyStore"/> 解析（显式配置 → 环境变量 → null）。
+/// Provider factory: resolves a single provider and the fallback chain from configuration.
+/// Keys are resolved centrally via <see cref="ApiKeyStore"/> (explicit config → environment variable → null).
 /// </summary>
 public sealed class ProviderFactory(
     IProviderRegistry registry) : IProviderFactory
@@ -35,7 +35,7 @@ public sealed class ProviderFactory(
     {
         var engineLower = engine?.ToLowerInvariant() ?? "crispasr";
 
-        // 解析主 Provider：云提供商或本地引擎
+        // Resolve the primary provider: a cloud provider or a local engine
         IAsrProvider? primary = null;
         var cloud = AsrEndpointParser.Resolve(engineLower);
         if (cloud is not null)
@@ -52,29 +52,29 @@ public sealed class ProviderFactory(
                     => GetLocalAsr(CrispAsrWhisperProvider.Name),
                 "crispasr" or "crisp" or "crispasr-qwen" or "crisp-qwen"
                     => GetLocalAsr(CrispAsrQwenProvider.Name),
-                _ => null // 未知引擎：交给下方 NotSupportedException
+                _ => null // Unknown engine: left for the NotSupportedException below
             };
         }
 
         if (primary is null)
             throw new NotSupportedException($"ASR engine '{engine}' is not supported.");
 
-        // 备用 Provider：按 profile 与主形态决定（本地 ↔ 云互备）
+        // Backup provider: chosen by profile and the primary's kind (local and cloud back each other up)
         IAsrProvider? backup = null;
         if (primary.Capabilities.Kind == ProviderKind.Cloud)
         {
-            // 云优先：本地兜底（默认 CrispASR-Qwen）
+            // Cloud-first: local fallback (CrispASR-Qwen by default)
             backup = GetLocalAsr(CrispAsrQwenProvider.Name);
         }
         else if (ProviderProfileResolver.AllowsCloud(profile))
         {
-            // 本地优先：找第一个可用云端（有密钥）作兜底
+            // Local-first: pick the first available cloud provider (with a key) as the fallback
             backup = FindFirstAvailableCloudAsr();
         }
 
-        // profile 修正：
-        // - Offline：强制本地（忽略配置的云主 Provider）
-        // - Cheap：本地优先（配置云时本地仍为主）
+        // Profile corrections:
+        // - Offline: force local (ignore the configured cloud primary)
+        // - Cheap: local-first (local stays primary even when a cloud one is configured)
         if (profile == ProviderProfile.Offline && primary.Capabilities.Kind == ProviderKind.Cloud)
         {
             primary = GetLocalAsr(CrispAsrQwenProvider.Name);

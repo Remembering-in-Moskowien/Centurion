@@ -5,7 +5,7 @@ using Centurion.Models.Console;
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// ASS完整字幕文档构建器，组装脚本信息、样式、对话行
+/// Builder for complete ASS subtitle documents, assembling script information, styles, and dialogue lines.
 /// </summary>
 public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
 {
@@ -19,86 +19,86 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     private List<AssStyle> _styles = [];
     private List<AssSubLine> _lines = [];
 
-    /// <summary>字幕标题，写入 Script Info 的 Title 字段。</summary>
+    /// <summary>Subtitle title written to the Script Info Title field.</summary>
     public string Title => _title;
-    /// <summary>脚本版本标识（如 v4.00+）。</summary>
+    /// <summary>Script version identifier, such as v4.00+.</summary>
     public string ScriptType => _scriptType;
-    /// <summary>自动换行规则（WrapStyle 编号）。</summary>
+    /// <summary>Automatic line-wrapping mode (WrapStyle value).</summary>
     public string WrapStyle => _wrapStyle;
-    /// <summary>字幕时间重叠时的处理策略（Normal 或 Reverse）。</summary>
+    /// <summary>Handling policy for overlapping subtitles (Normal or Reverse).</summary>
     public string Collisions => _collisions;
-    /// <summary>基准播放分辨率宽度。</summary>
+    /// <summary>Reference playback resolution width.</summary>
     public string PlayResX => _playResX;
-    /// <summary>基准播放分辨率高度。</summary>
+    /// <summary>Reference playback resolution height.</summary>
     public string PlayResY => _playResY;
-    /// <summary>时间轴缩放系数（百分比，100 为正常速）。</summary>
+    /// <summary>Timeline scale percentage; 100 means normal speed.</summary>
     public float Timer => _timer;
-    /// <summary>文档中定义的样式集合。</summary>
+    /// <summary>Styles defined in the document.</summary>
     public List<AssStyle> Styles => _styles;
-    /// <summary>对话/注释字幕行集合。</summary>
+    /// <summary>Dialogue and comment subtitle lines.</summary>
     public List<AssSubLine> Lines => _lines;
 
-    /// <summary>设置字幕标题</summary>
+    /// <summary>Sets the subtitle title.</summary>
     public AssSubBuilder WithTitle(string value)
     {
         return Set(ref _title, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置脚本版本</summary>
+    /// <summary>Sets the script version.</summary>
     public AssSubBuilder WithScriptType(string value)
     {
         return Set(ref _scriptType, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置自动换行规则</summary>
+    /// <summary>Sets the automatic line-wrapping mode.</summary>
     public AssSubBuilder WithWrapStyle(string value)
     {
         return Set(ref _wrapStyle, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置字幕重叠处理策略</summary>
+    /// <summary>Sets the subtitle overlap handling policy.</summary>
     public AssSubBuilder WithCollisions(string value)
     {
         return Set(ref _collisions, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置基准分辨率宽度</summary>
+    /// <summary>Sets the reference resolution width.</summary>
     public AssSubBuilder WithPlayResX(string value)
     {
         return Set(ref _playResX, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置基准分辨率高度</summary>
+    /// <summary>Sets the reference resolution height.</summary>
     public AssSubBuilder WithPlayResY(string value)
     {
         return Set(ref _playResY, string.IsNullOrWhiteSpace(value) ? string.Empty : value);
     }
 
-    /// <summary>设置时间缩放系数</summary>
+    /// <summary>Sets the time scale.</summary>
     public AssSubBuilder WithTimer(float value)
     {
         return Set(ref _timer, value);
     }
 
-    /// <summary>批量设置样式集合</summary>
+    /// <summary>Sets the style collection.</summary>
     public AssSubBuilder WithStyles(List<AssStyle> value)
     {
         return Set(ref _styles, value ?? []);
     }
 
-    /// <summary>批量设置字幕行集合</summary>
+    /// <summary>Sets the subtitle line collection.</summary>
     public AssSubBuilder WithLines(List<AssSubLine> value)
     {
         return Set(ref _lines, value ?? []);
     }
 
-    /// <summary>是否自动添加Default默认样式</summary>
+    /// <summary>Adds the default style.</summary>
     public AssSubBuilder WithAddDefaultStyle()
     {
         return WithStyles([new AssStyleBuilder().WithDefaultValues().Build()]);
     }
 
-    /// <summary>填充一套标准ASS默认脚本配置（含主字幕 Default 与次字幕 Sub 两套样式）。</summary>
+    /// <summary>Populates standard ASS defaults, including primary Default and secondary Sub styles.</summary>
     public AssSubBuilder WithDefaultValues()
     {
         return WithTitle("Default AssSub file")
@@ -116,10 +116,10 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             .WithLines([]);
     }
 
-    /// <summary>从完整ASS文本解析生成文档构建器</summary>
-    /// <param name="content">完整ASS文件字符串</param>
-    /// <returns>填充完成的构建器</returns>
-    /// <exception cref="FormatException">文件结构非法</exception>
+    /// <summary>Parses complete ASS text into a document builder.</summary>
+    /// <param name="content">Complete ASS file text.</param>
+    /// <returns>A populated builder.</returns>
+    /// <exception cref="FormatException">Thrown when the file structure is invalid.</exception>
     public static AssSubBuilder FromContent(string content)
     {
         var builder = new AssSubBuilder();
@@ -128,7 +128,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         {
             var scriptInfoContent = scriptInfoMatch.Groups[1].Value;
             builder = builder
-                .WithTitle(SubTools.GetText(TitleRegex(), scriptInfoContent, "默认字幕"))
+                .WithTitle(SubTools.GetText(TitleRegex(), scriptInfoContent, "Default Subtitles"))
                 .WithScriptType(SubTools.GetText(ScriptTypeRegex(), scriptInfoContent, "v4.00+"))
                 .WithWrapStyle(SubTools.GetText(WrapStyleRegex(), scriptInfoContent, "0"))
                 .WithCollisions(SubTools.GetText(CollisionsRegex(), scriptInfoContent, "Normal"))
@@ -143,7 +143,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             builder = builder.WithDefaultValues();
         }
 
-        // 解析所有样式
+        // Parse all styles.
         var styles = new List<AssStyle>();
         var stylesMatch = V4StyleBlockRegex().Match(content);
         if (stylesMatch.Success)
@@ -156,10 +156,10 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             styles = [.. styles.Distinct()];
         }
 
-        // 解析出样式时保留原样；无任何样式时才补默认 Default
+        // Preserve parsed styles; add the default style only when no styles were found.
         builder = styles.Count > 0 ? builder.WithStyles(styles) : builder.WithAddDefaultStyle();
 
-        // 解析所有对话行并按起始时间排序
+        // Parse all dialogue lines and sort them by start time.
         var lines = new List<AssSubLine>();
         var eventsMatch = EventsBlockRegex().Match(content);
         if (eventsMatch.Success)
@@ -175,7 +175,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         return builder.WithLines(lines);
     }
 
-    /// <summary>直接读取ASS文件并解析为构建器</summary>
+    /// <summary>Reads an ASS file directly and parses it into a builder.</summary>
     public static AssSubBuilder FromFile(string path)
     {
         return FromContent(File.ReadAllText(path));
@@ -187,7 +187,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     /// If KaraokeMode is enabled, each word is wrapped with \k tags (centiseconds).
     /// </summary>
     /// <param name="context">The workflow context containing sentence data and configuration.</param>
-    /// <param name="output">控制台输出端口（可选；缺省时回退到全局门面）</param>
+    /// <param name="output">Optional console output port; defaults to the global facade.</param>
     /// <returns>A builder pre-populated with default script info and subtitle lines.</returns>
     public static AssSubBuilder FromWorkflow(SubtitleWorkflowContext context, IConsoleOutput? output = null)
     {
@@ -197,9 +197,9 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         if (!string.IsNullOrEmpty(context.Config.InputFilePath))
             builder = builder.WithTitle(Path.GetFileNameWithoutExtension(context.Config.InputFilePath));
 
-        // 样式表：优先使用工作流状态中的自定义样式（Studio 前端经中间文件编辑）；
-        // 为空时回退到内置默认两套（Default + Sub）。始终保证 Default 存在，
-        // 双语布局时保证 Sub 次字幕样式存在。
+        // Prefer custom styles from workflow state (edited by the Studio frontend through the intermediate file).
+        // Fall back to the built-in Default and Sub styles when empty. Always ensure Default exists,
+        // and ensure Sub exists for bilingual layouts.
         var customStyles = context.State.Styles;
         List<AssStyle> styles;
         if (customStyles is { Count: > 0 })
@@ -244,12 +244,12 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         {
             if (sentence.SkipRender || sentence.End < sentence.Start)
                 continue;
-            // 零时长句（End == Start，如对齐输出瞬间词）不再整句丢弃；
-            // 补最小 80ms 时长渲染，避免句末词丢失
+            // Keep zero-duration sentences (End == Start), such as instant words from alignment.
+            // Give them a minimum duration of 80 ms to prevent losing the final word.
             if (sentence.End <= sentence.Start)
                 sentence.End = sentence.Start + 80;
 
-            // 说话人：仅当分割已成功完成时才视为有效（未分割时词级为占位标签，不写入）
+            // Use speaker labels only when diarization completed successfully; otherwise they are placeholders and are omitted.
             var speaker = context.State.IsDiarized ? sentence.Speaker : null;
             var showLabels = context.Config.ShowSpeakerLabels;
 
@@ -266,11 +266,11 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             if (tokens.Count == 0)
                 tokens = [new DisplayToken(sentence.Text, [])];
 
-            // 翻译输出：TranslatedText 非空时优先显示译文。
-            // 单语：一行（主字幕 Default 样式）；双语：两行——主行原文（Default，上方 MarginV 100）、
-            // 次行译文（Sub 样式，贴底 MarginV 28），参照 Theme.ass 的 eng/chi 主次布局。
-            // KaraokeMode 下翻译句不再跳过：译文用时间插值 + 长音节词多分配构建词级 \K 时间戳。
-            // 说话人标签加在主行（原文/唯一行）文本前；ASS Name 字段在所有行写入。
+            // Prefer TranslatedText when it is available.
+            // Monolingual output uses one Default-style line; bilingual output uses the original on the Default-style upper line
+            // (MarginV 100) and the translation on the bottom-aligned Sub-style line (MarginV 28), matching Theme.ass.
+            // In KaraokeMode, translated sentences remain visible; interpolate timings and allocate more time to longer syllables for word-level \K tags.
+            // Prefix the main/original line with the speaker label and write the ASS Name field on every line.
             if (!string.IsNullOrWhiteSpace(sentence.TranslatedText))
             {
                 var targetLanguage = string.IsNullOrWhiteSpace(context.Config.TargetLanguage)
@@ -314,8 +314,8 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
     }
 
     /// <summary>
-    /// 构建对话行。style 为回退样式名；<paramref name="useSentenceStyle"/> 为 true 时
-    /// 优先使用句子绑定的 <see cref="Sentence.Style"/>（Studio 逐行指定）。
+    /// Builds dialogue lines. The style parameter is the fallback style name; when <paramref name="useSentenceStyle"/> is true,
+    /// prefer the style bound to <see cref="Sentence.Style"/> (assigned per line by Studio).
     /// </summary>
     private static AssSubLine BuildLine(Sentence sentence, string text, string style, string? speaker, bool showSpeakerPrefix, bool useSentenceStyle = true)
     {
@@ -353,9 +353,9 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
             var word = words[index];
             if (word.Status == MappingStatus.ScriptMissing)
             {
-                // ScriptMissing 词是真实存在的词（转录/台本未匹配），必须保留文本显示，
-                // 否则句末未匹配词会被静默丢弃造成"末尾丢词"。
-                // fillGapWithEllipsis 仅用于无词内容的间隙占位，这里不再跳过词本身。
+                // ScriptMissing words are real words from the transcription or script and must remain visible.
+                // Skipping them would silently drop unmatched words at the end of a sentence.
+                // fillGapWithEllipsis applies only to gaps with no word content; do not skip the word itself here.
                 result.Add(new DisplayToken(word.Text, [word]));
                 continue;
             }
@@ -404,7 +404,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         return prefix + string.Join(" ", words);
     }
 
-    /// <summary>组装所有配置，生成完整AssSub字幕文档</summary>
+    /// <summary>Combines all settings into a complete AssSub subtitle document.</summary>
     public override AssSub Build()
     {
         return new AssSub(
@@ -420,7 +420,7 @@ public partial class AssSubBuilder : BuilderBase<AssSubBuilder, AssSub>
         );
     }
 
-    // 脚本信息块正则
+    // Regular expressions for the Script Info block.
     [GeneratedRegex(@"Title:\s*(.*)", RegexOptions.None)]
     private static partial Regex TitleRegex();
 

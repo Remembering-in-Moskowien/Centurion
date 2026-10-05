@@ -6,8 +6,9 @@ using Newtonsoft.Json.Serialization;
 namespace Centurion.Core.Utils.Reporting;
 
 /// <summary>
-/// 将字幕工作流上下文（配置 + 各阶段状态 + 诊断信息）序列化为富上下文 JSON 文件，
-/// 供调试复盘、二次加工与自动化工具消费。
+/// Serializes the subtitle workflow context (config + per-stage state + diagnostics) into a
+/// rich-context JSON file for debugging/retrospective analysis, downstream processing, and
+/// automation tooling.
 /// </summary>
 public static class WorkflowContextDumper
 {

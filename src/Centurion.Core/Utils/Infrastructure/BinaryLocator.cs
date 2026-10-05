@@ -6,7 +6,7 @@ using Centurion.Abstractions.Exceptions;
 namespace Centurion.Core.Utils.Infrastructure;
 
 /// <summary>
-/// 跨平台二进制查找工具：本地目录 + PATH 环境变量检索，支持 DI 和本地化。
+/// Cross-platform binary locator: searches local directories and the PATH environment variable, with DI and localization support.
 /// </summary>
 public class BinaryLocator() : IBinaryLocator
 {
@@ -14,15 +14,15 @@ public class BinaryLocator() : IBinaryLocator
     private readonly Dictionary<string, string> _binaryCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 按名称查找可执行文件：先在本地相对目录与程序基目录下检索，再回退到 PATH 环境变量；命中结果会被缓存。
+    /// Locates an executable by name: first searches local relative directories and the app base directory, then falls back to the PATH environment variable; hits are cached.
     /// </summary>
-    /// <param name="binaryName">可执行文件名。</param>
-    /// <param name="localSearchRelativeDirs">相对于程序基目录优先检索的子目录。</param>
-    /// <returns>找到的可执行文件完整路径。</returns>
-    /// <exception cref="BinaryNotFoundException">在本地与 PATH 中均未找到时抛出。</exception>
+    /// <param name="binaryName">The executable file name.</param>
+    /// <param name="localSearchRelativeDirs">Subdirectories to search first, relative to the app base directory.</param>
+    /// <returns>The full path of the located executable.</returns>
+    /// <exception cref="BinaryNotFoundException">Thrown when the binary is found neither locally nor on PATH.</exception>
     public string Locate(string binaryName, params string[] localSearchRelativeDirs)
     {
-        // 命中缓存直接返回
+        // Cache hit: return directly
         if (_binaryCache.TryGetValue(binaryName, out var cached) && File.Exists(cached))
             return cached;
 
@@ -32,12 +32,12 @@ public class BinaryLocator() : IBinaryLocator
             .Select(full => Path.GetFullPath(full))
             .ToList();
 
-        // 1. 拼接本地优先检索路径
+        // 1. Build local priority search paths
         candidatePaths.Add(Path.Combine(baseDir, "tools", binaryName));
         candidatePaths.Add(Path.Combine(baseDir, binaryName));
         candidatePaths.Add(Path.GetFullPath(Path.Combine(baseDir, "..", binaryName)));
 
-        // 2. 遍历本地候选
+        // 2. Walk local candidates
         foreach (var path in candidatePaths.Distinct())
         {
             if (!File.Exists(path)) continue;
@@ -45,7 +45,7 @@ public class BinaryLocator() : IBinaryLocator
             return path;
         }
 
-        // 3. 读取 PATH 环境变量
+        // 3. Read the PATH environment variable
         var pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrWhiteSpace(pathEnv))
             throw new BinaryNotFoundException($"Binary '{binaryName}' not found.", binaryName);
@@ -68,7 +68,7 @@ public class BinaryLocator() : IBinaryLocator
     }
 
     /// <summary>
-    /// 清空已缓存的二进制查找结果。
+    /// Clears cached binary lookup results.
     /// </summary>
     public void ClearCache()
     {

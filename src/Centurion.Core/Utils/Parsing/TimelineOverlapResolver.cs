@@ -3,18 +3,22 @@ using Centurion.Models;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 时间轴重叠消解器：对字幕句列表按开始时间排序后消除相邻句的时间重叠，
-/// 保证输出时间轴严格单调（后句开始时间不小于前句结束时间）。
-/// 优先利用词级时间戳做内容边界收窄，无法判定时对称均分重叠窗口。
+/// Timeline overlap resolver: sorts a subtitle sentence list by start time and then removes
+/// time overlaps between adjacent sentences so the output timeline is strictly monotonic
+/// (a later sentence never starts before the previous one ends). It first narrows boundaries
+/// using word-level timestamps; when that cannot be determined, it splits the overlap window
+/// symmetrically.
 /// </summary>
 public static class TimelineOverlapResolver
 {
     /// <summary>
-    /// 就地消除句子列表中的时间重叠：按开始时间稳定排序后顺序扫描，
-    /// 相邻句重叠时优先按词级内容边界收窄前句窗口，否则均分重叠区间。
+    /// Resolves time overlaps in a sentence list in place: after a stable sort by start time, it
+    /// scans sequentially; when adjacent sentences overlap it first narrows the previous
+    /// sentence's window to the word-level content boundary, otherwise it splits the overlap
+    /// interval evenly.
     /// </summary>
-    /// <param name="sentences">待消解的句子列表（元素将被就地修改时间并重排）。</param>
-    /// <returns>发生时间顺序调整或时间修改的句子数；无重叠时返回 0。</returns>
+    /// <param name="sentences">The sentence list to resolve (its elements are reordered and their times modified in place).</param>
+    /// <returns>The number of sentences whose ordering or times changed; 0 when there is no overlap.</returns>
     public static int Resolve(List<Sentence> sentences)
     {
         if (sentences is null || sentences.Count < 2)
@@ -32,8 +36,9 @@ public static class TimelineOverlapResolver
             if (overlap <= 0)
                 continue;
 
-            // 1) 词级内容边界优先：前句末词与后句首词若本身不重叠，仅窗口重叠
-            //    → 把前句结束时间收窄到后句首词开始处。
+            // 1) Prefer word-level content boundaries: if the previous sentence's last word and
+            //    the next sentence's first word do not overlap in themselves (only the windows do)
+            //    → narrow the previous sentence's end time to the next sentence's first-word start.
             var prevWordEnd = TryGetWordBoundary(prev.Words, isFirst: false);
             var curWordStart = TryGetWordBoundary(cur.Words, isFirst: true);
             if (prevWordEnd is not null && curWordStart is not null && prevWordEnd.Value <= curWordStart.Value)
@@ -45,24 +50,25 @@ public static class TimelineOverlapResolver
                     changed++;
                 }
 
-                // 词级已证明内容不重叠，后句开始时间保持原值
+                // Word-level data already proves the content does not overlap; keep the next sentence's start unchanged.
                 continue;
             }
 
-            // 2) 兜底：均分重叠窗口，保证 prev.End == cur.Start
+            // 2) Fallback: split the overlap window evenly so prev.End == cur.Start
             var half = overlap / 2.0;
             prev.End -= half;
             cur.Start += half;
             changed++;
 
-            // 防御：窗口不允许为负
+            // Defense: windows must not go negative
             if (prev.End < prev.Start)
                 prev.End = prev.Start;
             if (cur.End < cur.Start)
                 cur.End = cur.Start;
         }
 
-        // 按修正后的时间重排回调用方列表（保持列表与时间顺序一致，即使无时间修改）
+        // Put the reordered list back into the caller's list (keep the list consistent with time order,
+        // even when no times were modified)
         var needsReorder = false;
         for (var i = 0; i < sentences.Count; i++)
         {
@@ -83,11 +89,12 @@ public static class TimelineOverlapResolver
     }
 
     /// <summary>
-    /// 取句子词级时间边界：首词开始时间或末词结束时间；无词时返回 null。
+    /// Gets a sentence's word-level time boundary: the first word's start time or the last
+    /// word's end time; returns null when there are no words.
     /// </summary>
-    /// <param name="words">句子的词列表。</param>
-    /// <param name="isFirst">true 取首词开始时间，false 取末词结束时间。</param>
-    /// <returns>词级时间边界；无词可参考时返回 null。</returns>
+    /// <param name="words">The sentence's word list.</param>
+    /// <param name="isFirst">true to take the first word's start time, false to take the last word's end time.</param>
+    /// <returns>The word-level time boundary; null when there are no words to reference.</returns>
     private static double? TryGetWordBoundary(IReadOnlyList<Word>? words, bool isFirst)
     {
         if (words is null || words.Count == 0)

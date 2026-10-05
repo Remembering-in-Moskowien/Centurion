@@ -4,7 +4,8 @@ using System.Text.RegularExpressions;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 标点处理工具：去除标点符号，以及根据意群边界为无标点文本重写句读标点。
+/// Punctuation utilities: strip punctuation, and rewrite sentence punctuation for
+/// punctuation-less text based on sense-group boundaries.
 /// </summary>
 public static class PunctuationHandler
 {
@@ -13,7 +14,7 @@ public static class PunctuationHandler
     private static readonly HashSet<char> InternalPunctuations = [',', ';', ':'];
 
     /// <summary>
-    /// 移除所有标点符号（保留字母、数字、空格）
+    /// Remove all punctuation (keeping letters, digits, and whitespace).
     /// </summary>
     public static string RemoveAllPunctuation(string text)
     {
@@ -21,17 +22,17 @@ public static class PunctuationHandler
     }
 
     /// <summary>
-    /// 为句子重写标点：句尾添加 . 或 ? / !，内部根据意群边界插入逗号。
+    /// Rewrite punctuation for a sentence: append . or ? / ! at the end, and insert commas at sense-group boundaries inside.
     /// </summary>
-    /// <param name="text">无标点文本</param>
-    /// <param name="phraseBoundaries">意群边界索引（字符位置）</param>
-    /// <param name="isQuestion">是否为疑问句</param>
+    /// <param name="text">Punctuation-less text.</param>
+    /// <param name="phraseBoundaries">Sense-group boundary indices (character positions).</param>
+    /// <param name="isQuestion">Whether this is a question.</param>
     public static string RewritePunctuation(string text, List<int> phraseBoundaries, bool isQuestion = false)
     {
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        // 内部标点：在边界处插入逗号（如果当前位置不是空格）
+        // Internal punctuation: insert a comma at each boundary (unless the current position is already whitespace)
         var sb = new StringBuilder(text);
         var offset = 0;
         foreach (var pos in phraseBoundaries.OrderBy(p => p))
@@ -41,9 +42,9 @@ public static class PunctuationHandler
                 offset += 2;
             }
 
-        // 句尾标点
+        // Sentence-ending punctuation
         var endPunct = isQuestion ? "?" : ".";
-        // 如果末尾已有标点则覆盖，否则追加
+        // Overwrite a trailing punctuation if one already exists; otherwise append it
         var final = sb.ToString().TrimEnd();
         if (final.Length > 0)
         {
@@ -55,5 +56,4 @@ public static class PunctuationHandler
         }
 
         return final;
-    }
-}
+    }}

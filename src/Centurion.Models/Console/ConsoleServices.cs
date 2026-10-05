@@ -5,29 +5,29 @@ using Microsoft.Extensions.Localization;
 namespace Centurion.Models.Console;
 
 /// <summary>
-/// 控制台输出端口门面（Facade）。
-/// 以静态方式向非 DI 场景（模型/工具/算子）提供统一的控制台输出、进度与确认能力，
-/// 具体实现由 CLI 入口在启动时注入（Adapter 模式）。
+/// Facade for console output ports.
+/// Provides unified console output, progress, and confirmation to non-DI components such as models, tools, and operators.
+/// The CLI entry point injects the concrete adapters at startup.
 /// </summary>
 public static class ConsoleServices
 {
-    /// <summary>控制台文本输出端口，未注入时默认为空实现。</summary>
+    /// <summary>Console text output port; defaults to a no-op implementation until an adapter is injected.</summary>
     [NotNull] public static IConsoleOutput Output { get; set; } = new NullConsoleOutput();
-    /// <summary>进度展示端口，未注入时默认为空实现。</summary>
+    /// <summary>Progress display port; defaults to a no-op implementation until an adapter is injected.</summary>
     [NotNull] public static IProgressReporter Progress { get; set; } = new NullProgressReporter();
-    /// <summary>用户确认提示端口，未注入时默认为自动确认的空实现。</summary>
+    /// <summary>User confirmation prompt port; defaults to an auto-confirming no-op implementation until an adapter is injected.</summary>
     [NotNull] public static IConfirmPrompt Confirm { get; set; } = new NullConfirmPrompt();
 
-    /// <summary>JSON 本地化器，由 CLI 入口在启动时注入；为 null 时消息按英文原文输出。</summary>
+    /// <summary>JSON localizer injected by the CLI entry point; when null, messages use their English source text.</summary>
     public static IStringLocalizer? Localizer { get; set; }
 
     /// <summary>
-    /// 取本地化文本：key 即英文默认文本，按当前语言在 JSON 资源中查找翻译；
-    /// 未配置本地化器或未命中时回退 key（含占位符格式化）。
+    /// Gets localized text by looking up the English source key in the JSON resources for the current language.
+    /// Returns the key, with placeholder formatting, when no localizer is configured or no translation is found.
     /// </summary>
-    /// <param name="key">消息 key（英文默认文本，可含 {0} 等占位符）。</param>
-    /// <param name="args">占位符参数。</param>
-    /// <returns>本地化后的文本。</returns>
+    /// <param name="key">Message key containing the English source text and optional placeholders such as {0}.</param>
+    /// <param name="args">Placeholder values.</param>
+    /// <returns>Localized text.</returns>
     public static string T(string key, params object?[] args)
     {
         if (Localizer is null)

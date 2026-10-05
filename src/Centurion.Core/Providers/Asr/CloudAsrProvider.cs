@@ -7,8 +7,9 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Asr;
 
 /// <summary>
-/// 云端 ASR Provider：适配 <see cref="CloudAsrStrategy"/>，按提供商（OpenAI/Groq/DashScope/Deepgram）
-/// 实例化注册。无 API 密钥时 <see cref="IsAvailableAsync"/> 返回 false，由 fallback 链自动切换本地。
+/// Cloud ASR provider: adapts <see cref="CloudAsrStrategy"/>, instantiated and registered per provider
+/// (OpenAI/Groq/DashScope/Deepgram). Without an API key, <see cref="IsAvailableAsync"/> returns false and
+/// the fallback chain automatically switches to local.
 /// </summary>
 public sealed class CloudAsrProvider(
     string name,
@@ -28,10 +29,10 @@ public sealed class CloudAsrProvider(
     /// <inheritdoc />
     public ProviderCapabilities Capabilities { get; } = capabilities;
 
-    /// <summary>API 密钥；由工厂在创建时经 <see cref="ApiKeyStore"/> 解析注入。</summary>
+    /// <summary>API key; resolved and injected by the factory at creation via <see cref="ApiKeyStore"/>.</summary>
     public string? ApiKey { get; set; }
 
-    /// <summary>自定义端点；为空按提供商默认。</summary>
+    /// <summary>Custom endpoint; falls back to the provider default when empty.</summary>
     public string? BaseUrl { get; set; }
 
     /// <inheritdoc />
@@ -56,10 +57,10 @@ public sealed class CloudAsrProvider(
     }
 }
 
-/// <summary>云端 ASR Provider 的注册工厂（名称/能力/端点默认值固定）。</summary>
+/// <summary>Registration factory for cloud ASR providers (fixed names/capabilities/endpoint defaults).</summary>
 public static class CloudAsrProviders
 {
-    /// <summary>按提供商返回注册名。</summary>
+    /// <summary>Returns the registration name for the given provider.</summary>
     public static string NameFor(AsrProvider provider) => provider switch
     {
         AsrProvider.OpenAI => "openai",
@@ -69,7 +70,7 @@ public static class CloudAsrProviders
         _ => provider.ToString().ToLowerInvariant()
     };
 
-    /// <summary>按提供商返回显示名。</summary>
+    /// <summary>Returns the display name for the given provider.</summary>
     public static string DisplayNameFor(AsrProvider provider) => provider switch
     {
         AsrProvider.OpenAI => "OpenAI Whisper",
@@ -79,7 +80,7 @@ public static class CloudAsrProviders
         _ => provider.ToString()
     };
 
-    /// <summary>按提供商返回能力声明（成本为估算值，供选型与成本输出）。</summary>
+    /// <summary>Returns the capability declaration for the given provider (costs are estimates, used for selection and cost reporting).</summary>
     public static ProviderCapabilities CapabilitiesFor(AsrProvider provider) => provider switch
     {
         AsrProvider.OpenAI => ProviderCapabilities.Cloud(0.006, 0, ProviderLatency.Medium, ProviderQualityLevel.High,

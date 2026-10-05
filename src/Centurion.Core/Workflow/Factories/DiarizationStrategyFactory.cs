@@ -5,16 +5,16 @@ using Centurion.Core.Workflow.Strategy.Diarization;using Microsoft.Extensions.D
 namespace Centurion.Core.Workflow.Factories;
 
 /// <summary>
-/// 说话人分割策略工厂：按后端名称分发到对应实现。
+/// Speaker diarization strategy factory: dispatches to the implementation matching the backend name.
 /// </summary>
 public class DiarizationStrategyFactory(IServiceProvider serviceProvider) : IDiarizationStrategyFactory
 {
     /// <summary>
-    /// 按后端名称创建说话人分割策略。
+    /// Creates the speaker-diarization strategy for the given backend name.
     /// </summary>
-    /// <param name="backend">说话人分割后端名称，支持 "crispasr" 或 "pyannote"。</param>
-    /// <returns>对应后端的说话人分割策略实例。</returns>
-    /// <exception cref="NotSupportedException">当后端名称不受支持时抛出。</exception>
+    /// <param name="backend">The diarization backend name; supports "crispasr" or "pyannote".</param>
+    /// <returns>The diarization strategy instance for the given backend.</returns>
+    /// <exception cref="NotSupportedException">Thrown when the backend name is not supported.</exception>
     public IDiarizationStrategy Create(string backend)
     {
         return backend.ToLowerInvariant() switch

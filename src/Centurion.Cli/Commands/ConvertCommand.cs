@@ -2,9 +2,12 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Models.Ass;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Models.Ass;
 using Centurion.Models.Workflow;
-using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Microsoft.Extensions.Logging;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using Centurion.Core.Utils.Serialization;
@@ -72,16 +75,16 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // convert DAG：解析算子 → 质量报告（pipeline-graph 命令共享同一装配）
+            // Convert DAG: parse subtitles, then generate the quality report; pipeline-graph uses the same assembly.
             var dag = BuildConvertDag(_convertOperatorsFactory().ToList(), _qualityReportOp);
 
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, config, _serviceProvider, settings.Json, cancellationToken);
 
             await _executor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
-            // 保存为 Centurion 中间文件（供后续命令继续处理）
+            // Save as a Centurion intermediate file for subsequent commands.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "convert", outputPath);
             await _store.SaveAsync(outDoc, outputPath, cancellationToken);
 
@@ -103,7 +106,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
         }
         catch (Exception ex)
         {
-            // 命令层为执行路径的最外层：此处统一输出唯一一次 fail
+            // This is the outermost execution layer, so report the single failure here.
             CliErrorPrinter.Print(_logger, ex, "Conversion pipeline execution failed.");
             return ExitCodes.Failure;
         }

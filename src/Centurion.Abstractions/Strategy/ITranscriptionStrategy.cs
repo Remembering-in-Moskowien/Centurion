@@ -5,20 +5,20 @@ using Centurion.Models;
 namespace Centurion.Abstractions.Strategy;
 
 /// <summary>
-/// Whisper 转录策略接口，支持不同的转录引擎（本地、API、CLI 等）
+/// Transcription strategy interface supporting local, API-based, CLI, and other engines.
 /// </summary>
 public interface ITranscriptionStrategy
 {
     /// <summary>
-    /// 执行转录，返回词级时间戳列表
+    /// Transcribes audio and returns word-level timestamps.
     /// </summary>
-    /// <param name="audioPath">输入音频文件路径（已转换为 WAV 16kHz 单声道）</param>
-    /// <param name="language">语言代码，如 "en", "zh"</param>
-    /// <param name="modelName">模型名称（如 tiny/base/small）</param>
-    /// <param name="initialPrompt">可选的初始提示词</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="device">推理设备偏好（默认 Auto 自动检测，GPU 可用时自动选用工具 GPU 变体）</param>
-    /// <returns>词列表，包含文本、起止时间（毫秒）</returns>
+    /// <param name="audioPath">Input audio path, converted to 16 kHz mono WAV.</param>
+    /// <param name="language">Language code, such as "en" or "zh".</param>
+    /// <param name="modelName">Model name, such as tiny, base, or small.</param>
+    /// <param name="initialPrompt">Optional initial prompt.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="device">Preferred inference device; defaults to automatic detection and selects a matching GPU tool variant when available.</param>
+    /// <returns>Words with text and start/end times in milliseconds.</returns>
     Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
@@ -28,7 +28,7 @@ public interface ITranscriptionStrategy
         InferenceDevice device = InferenceDevice.Auto);
 
     /// <summary>
-    /// 策略名称，用于日志
+    /// Strategy name used in logs.
     /// </summary>
     string StrategyName { get; }
 }

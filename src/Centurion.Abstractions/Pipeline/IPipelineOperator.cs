@@ -4,23 +4,23 @@ using Centurion.Models.Workflow;
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>
-/// 管道算子基接口。
-/// 遵循"数据驱动"原则：所有业务数据通过 SubtitleWorkflowContext 流转，
-/// 算子只负责对上下文进行变换（Transform）。
+/// Base interface for pipeline operators.
+/// Follows a data-driven design: business data flows through SubtitleWorkflowContext,
+/// and operators transform that context.
 /// </summary>
 public interface IPipelineOperator
 {
     /// <summary>
-    /// 算子名称（用于日志和进度展示）
+    /// Operator name used in logs and progress displays.
     /// </summary>
     string Name { get; }
 
     /// <summary>
-    /// 执行管道变换。
-    /// 算子内部从 context.Config 读取配置，从 context.State 读取输入，
-    /// 并将处理结果写回 context.State。
+    /// Executes the pipeline transformation.
+    /// The operator reads configuration from context.Config and input from context.State,
+    /// then writes its results back to context.State.
     /// </summary>
-    /// <param name="context">全量工作流上下文（引用传递）</param>
-    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="context">The complete workflow context, passed by reference.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken = default);
 }

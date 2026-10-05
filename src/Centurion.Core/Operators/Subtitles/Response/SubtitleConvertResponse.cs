@@ -3,10 +3,10 @@ using Centurion.Models.Ass;
 namespace Centurion.Core.Operators.Subtitles.Response;
 
 /// <summary>
-/// SRT 转换算子返回结果
+/// Result returned by the subtitle conversion operator.
 /// </summary>
 public class SubtitleConvertResponse
 {
-    /// <summary>生成的 ASS 字幕文档对象</summary>
+    /// <summary>The generated ASS subtitle document object.</summary>
     public required AssSub Document { get; init; }
 }

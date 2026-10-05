@@ -1,24 +1,24 @@
 namespace Centurion.Core.Operators.Media.Request;
 
-/// <summary>FFmpeg转换请求载荷，替代原静态方法入参</summary>
+/// <summary>FFmpeg conversion request payload, replacing the previous static-method parameters.</summary>
 public class FFmpegConvertRequest
 {
-    /// <summary>输入音频路径</summary>
+    /// <summary>Input audio path.</summary>
     public string InputFilePath { get; init; } = string.Empty;
 
-    /// <summary>必填，输出文件路径</summary>
+    /// <summary>Required: output file path.</summary>
     public string? OutputFilePath { get; init; }
 }
 
-/// <summary>FFmpeg 音频分割请求载荷，描述待切割的输入文件与分段信息。</summary>
+/// <summary>FFmpeg audio split request payload describing the input file to cut and its segment information.</summary>
 public class FFmpegSplitRequest
 {
-    /// <summary>待分割的输入音频文件路径。</summary>
+    /// <summary>Path of the input audio file to split.</summary>
     public required string InputFilePath { get; init; }
-    /// <summary>各分段的起止时间（毫秒）列表。</summary>
+    /// <summary>List of (start, end) times in milliseconds for each segment.</summary>
     public required List<(long StartMs, long EndMs)> Segments { get; init; }
-    /// <summary>可选的输出目录；未提供 OutputFileNames 时用于生成输出文件。</summary>
-    public string? OutputDirectory { get; set; } // 可选，当 OutputFileNames 为空时使用
-    /// <summary>可选的输出文件名列表；若提供则必须与 Segments 长度一致。</summary>
-    public List<string>? OutputFileNames { get; set; } // 可选，若提供则必须与 Segments 长度一致
+    /// <summary>Optional output directory; used to generate output files when OutputFileNames is not provided.</summary>
+    public string? OutputDirectory { get; set; } // Optional; used when OutputFileNames is empty.
+    /// <summary>Optional list of output file names; if provided, its length must match Segments.</summary>
+    public List<string>? OutputFileNames { get; set; } // Optional; if provided, its length must match Segments.
 }

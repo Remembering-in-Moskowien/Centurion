@@ -11,9 +11,9 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Llm;
 
 /// <summary>
-/// LLM Provider：统一 OpenAI 兼容 chat/completions 调用。
-/// 云端提供商（OpenAI/Groq/DashScope/DeepSeek 等）走注册表默认端点；本地 Ollama 免密钥。
-/// token 数与成本为估算值，供统计输出与预算控制。
+/// LLM provider: unified OpenAI-compatible chat/completions calls.
+/// Cloud providers (OpenAI/Groq/DashScope/DeepSeek, etc.) use the registry default endpoint; local Ollama is keyless.
+/// Token counts and cost are estimates used for stats output and budget control.
 /// </summary>
 public sealed class OpenAiCompatibleLlmProvider(
     string name,
@@ -22,7 +22,7 @@ public sealed class OpenAiCompatibleLlmProvider(
     ProviderCapabilities capabilities,
     ILogger<OpenAiCompatibleLlmProvider> logger) : ILlmProvider
 {
-    /// <summary>共享 HttpClient（标准单例模式；调用级超时经 linked CTS 控制）。</summary>
+    /// <summary>Shared HttpClient (standard singleton pattern; per-call timeout controlled via a linked CTS).</summary>
     private static readonly HttpClient SharedHttp = new() { Timeout = TimeSpan.FromSeconds(TimeoutSeconds) };
     private const int TimeoutSeconds = 300;
 
@@ -32,13 +32,13 @@ public sealed class OpenAiCompatibleLlmProvider(
     /// <inheritdoc />
     public string DisplayName { get; } = displayName;
 
-    /// <summary>API 密钥；本地 Ollama 可空。</summary>
+    /// <summary>API key; may be null for local Ollama.</summary>
     public string? ApiKey { get; set; }
 
-    /// <summary>自定义端点；为空用注册表默认。</summary>
+    /// <summary>Custom endpoint; falls back to the registry default when empty.</summary>
     public string? BaseUrl { get; set; }
 
-    /// <summary>默认模型；为空用注册表默认。</summary>
+    /// <summary>Default model; falls back to the registry default when empty.</summary>
     public string? DefaultModel { get; set; }
 
     /// <inheritdoc />
@@ -47,7 +47,7 @@ public sealed class OpenAiCompatibleLlmProvider(
     /// <inheritdoc />
     public Task<bool> IsAvailableAsync(CancellationToken cancellationToken)
     {
-        // 本地 Ollama 无需密钥；云端需密钥。
+        // Local Ollama needs no key; cloud providers require one.
         if (Capabilities.Kind == ProviderKind.Cloud && string.IsNullOrWhiteSpace(ApiKey))
             return Task.FromResult(false);
         return Task.FromResult(true);
@@ -127,10 +127,10 @@ public sealed class OpenAiCompatibleLlmProvider(
         value.Length <= max ? value : value[..max] + "…";
 }
 
-/// <summary>LLM Provider 注册工厂（名称/能力映射）。</summary>
+/// <summary>LLM provider registration factory (name/capability mapping).</summary>
 public static class LlmProviders
 {
-    /// <summary>提供商 → 注册名。</summary>
+    /// <summary>Provider → registered name.</summary>
     public static string NameFor(LlmProvider provider) => provider switch
     {
         LlmProvider.OpenAI => "openai",
@@ -147,7 +147,7 @@ public static class LlmProviders
         _ => provider.ToString().ToLowerInvariant()
     };
 
-    /// <summary>提供商 → 能力声明（成本为估算值）。</summary>
+    /// <summary>Provider → capability declaration (costs are estimates).</summary>
     public static ProviderCapabilities CapabilitiesFor(LlmProvider provider) => provider switch
     {
         LlmProvider.Ollama => ProviderCapabilities.Local(false, ProviderLatency.Low, ProviderQualityLevel.Normal,
@@ -157,7 +157,7 @@ public static class LlmProviders
         LlmProvider.DeepSeek => ProviderCapabilities.Cloud(0, 0.6, ProviderLatency.Medium, ProviderQualityLevel.High,
             "DeepSeek (deepseek-chat, low cost, high quality)"),
         LlmProvider.Moonshot => ProviderCapabilities.Cloud(0, 1.2, ProviderLatency.Medium, ProviderQualityLevel.Normal,
-            "Moonshot Kimi（moonshot-v1-8k）"),
+            "Moonshot Kimi (moonshot-v1-8k)"),
         LlmProvider.Zhipu => ProviderCapabilities.Cloud(0, 0.6, ProviderLatency.Medium, ProviderQualityLevel.Normal,
             "Zhipu GLM (glm-4-flash, low cost)"),
         LlmProvider.OpenRouter => ProviderCapabilities.Cloud(0, 1.0, ProviderLatency.Medium, ProviderQualityLevel.High,

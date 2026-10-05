@@ -10,9 +10,9 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Capabilities.Update;
 
 /// <summary>
-/// 基于 GitHub Releases API 的自更新实现。
-/// 流程：查询 latest release → 语义化版本对比 → 按平台匹配资产 →
-/// 下载解压到暂存目录 → 生成更新脚本（进程退出后完成替换）。
+/// Self-update implementation based on the GitHub Releases API.
+/// Flow: query the latest release -> semver comparison -> match asset by platform ->
+/// download and extract into a staging directory -> generate the update script (which performs the replacement after the process exits).
 /// </summary>
 public sealed class GitHubUpdateService : IUpdateService
 {
@@ -23,9 +23,9 @@ public sealed class GitHubUpdateService : IUpdateService
     private readonly DateTimeOffset? _buildDate;
 
     /// <summary>
-    /// 创建服务实例，初始化 GitHub HTTP 客户端并读取本地构建日期。
+    /// Creates a service instance, initializes the GitHub HTTP client, and reads the local build date.
     /// </summary>
-    /// <param name="logger">用于记录更新过程的日志器。</param>
+    /// <param name="logger">The logger used to record the update process.</param>
     public GitHubUpdateService(ILogger<GitHubUpdateService> logger)
     {
         _logger = logger;
@@ -36,7 +36,7 @@ public sealed class GitHubUpdateService : IUpdateService
         _buildDate = ReadBuildDate();
     }
 
-    /// <summary>当前本地程序的构建日期（UTC）；无法读取时为 null。</summary>
+    /// <summary>Build date of the current local program (UTC); null when it cannot be read.</summary>
     public DateTimeOffset? BuildDate => _buildDate;
 
     /// <inheritdoc />
@@ -46,7 +46,7 @@ public sealed class GitHubUpdateService : IUpdateService
         if (release is null)
             return new UpdateCheckResult(false, null, "No GitHub releases found yet — nothing to update to. 📭");
 
-        // 以构建日期与 Release 发布时间比较；日期信息缺失时回退语义化版本比较
+        // Compare the build date against the release publication time; fall back to semver comparison when date info is missing.
         if (!IsNewer(BuildDate, release.PublishedAt, release.TagName))
             return new UpdateCheckResult(false, release, null);
 
@@ -72,7 +72,7 @@ public sealed class GitHubUpdateService : IUpdateService
         var tagDir = string.Concat(release.TagName.Where(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_'));
         if (tagDir.Length == 0) tagDir = "latest";
 
-        // 更新暂存目录：放在程序根目录下的 staging（跨运行保留，用户运行应用脚本前不可被自动清理）
+        // Update staging directory: placed under the program root in staging (retained across runs; not auto-cleaned before the user runs the apply script).
         var stagingDir = Path.Combine(AppContext.BaseDirectory, "staging", "CenturionUpdate", tagDir);
         if (Directory.Exists(stagingDir))
             Directory.Delete(stagingDir, recursive: true);
@@ -97,8 +97,8 @@ public sealed class GitHubUpdateService : IUpdateService
 
     private async Task<GitHubReleaseInfo?> GetLatestReleaseAsync(CancellationToken cancellationToken)
     {
-        // 仓库 release 全部为 pre-release 时，/releases/latest 返回 404（GitHub 仅在该端点返回正式版）；
-        // 回退列出最近的 release，取最新一个非草稿条目（含 pre-release），保证 alpha/beta 链也能自更新。
+        // When all repository releases are pre-releases, /releases/latest returns 404 (GitHub only serves stable releases at that endpoint);
+        // fall back to listing recent releases and take the newest non-draft entry (including pre-releases), so the alpha/beta chain can also self-update.
         var latest = await TryGetReleaseAsync($"/repos/{Repository}/releases/latest", cancellationToken);
         if (latest is not null)
             return latest;
@@ -156,12 +156,12 @@ public sealed class GitHubUpdateService : IUpdateService
 
 
     // ------------------------------------------------------------------
-    // 版本比较
+    // Version comparison
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// 读取本地构建日期：优先取编译时嵌入的 <c>BuildDate</c> 元数据（UTC），
-    /// 缺失时回退为程序集文件的写入时间（转 UTC）。
+    /// Reads the local build date: prefers the <c>BuildDate</c> metadata embedded at compile time (UTC),
+    /// falling back to the assembly file's last-write time (converted to UTC) when missing.
     /// </summary>
     private static DateTimeOffset? ReadBuildDate()
     {
@@ -178,7 +178,7 @@ public sealed class GitHubUpdateService : IUpdateService
         }
         catch
         {
-            // 忽略并尝试文件时间戳回退
+            // Ignore and try the file-timestamp fallback.
         }
 
         try
@@ -189,14 +189,14 @@ public sealed class GitHubUpdateService : IUpdateService
         }
         catch
         {
-            // 忽略
+            // Ignore.
         }
 
         return null;
     }
 
     /// <summary>
-    /// 解析语义化版本标签（容忍 v 前缀、+build 元数据、-prerelease 后缀）。
+    /// Parses a semantic version tag (tolerates the v prefix, +build metadata, and -prerelease suffix).
     /// </summary>
     internal static bool TryParseVersion(string? raw, out Version version)
     {
@@ -216,8 +216,8 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     /// <summary>
-    /// 判断远端是否比本地新：本地构建日期与远端发布时间均已知时按日期比较；
-    /// 任一缺失时回退语义化版本比较（<see cref="IsNewer(string, string)"/>）。
+    /// Determines whether the remote is newer than local: compares by date when both the local build date and remote publication time are known;
+    /// falls back to semver comparison (<see cref="IsNewer(string, string)"/>) when either is missing.
     /// </summary>
     internal static bool IsNewer(DateTimeOffset? localBuild, DateTimeOffset? remotePublished, string remoteTag)
     {
@@ -229,7 +229,7 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     /// <summary>
-    /// 判断远端版本是否比本地版本新（语义化版本优先，回退字符串比较）。
+    /// Determines whether the remote version is newer than the local version (semver first, falling back to string comparison).
     /// </summary>
     internal static bool IsNewer(string localRaw, string remoteRaw)
     {
@@ -243,10 +243,10 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     // ------------------------------------------------------------------
-    // 平台与资产匹配
+    // Platform and asset matching
     // ------------------------------------------------------------------
 
-    /// <summary>当前运行时平台标识（win-x64 / linux-x64 / osx-arm64 等）。</summary>
+    /// <summary>Current runtime identifier (win-x64 / linux-x64 / osx-arm64, etc.).</summary>
     public static string GetRuntimeIdentifier()
     {
         var arch = RuntimeInformation.ProcessArchitecture switch
@@ -263,9 +263,9 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     /// <summary>
-    /// 在资产列表中匹配当前平台的发布包。
-    /// 匹配优先级：手动指定名 → 精确 <c>Centurion-{rid}.zip</c> →
-    /// 名称包含 rid 且以 .zip 结尾的最大文件。
+    /// Matches the release package for the current platform in the asset list.
+    /// Match priority: manually specified name -> exact <c>Centurion-{rid}.zip</c> ->
+    /// the largest file whose name contains the rid and ends with .zip.
     /// </summary>
     internal static string? MatchAsset(IReadOnlyList<ReleaseAssetInfo> assets, string rid, string? preferredName)
     {
@@ -280,7 +280,7 @@ public sealed class GitHubUpdateService : IUpdateService
         if (exact is not null)
             return exact.Name;
 
-        // 兼容紧凑变体（win-x64 -> win64），覆盖 centurion-win64.zip 这类命名
+        // Support compact variants (win-x64 -> win64), covering names like centurion-win64.zip.
         var compactRid = rid.Replace("-x64", "64", StringComparison.Ordinal)
             .Replace("-arm64", "arm64", StringComparison.Ordinal)
             .Replace("-", "", StringComparison.Ordinal);
@@ -295,11 +295,11 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     // ------------------------------------------------------------------
-    // 解压与更新脚本
+    // Extraction and update script
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// 安全解压 zip 到目标目录，防止 zip-slip（entry 路径逃逸）。
+    /// Safely extracts a zip to the target directory, preventing zip-slip (entry path escape).
     /// </summary>
     internal static void ExtractZipSafely(string zipPath, string destinationDirectory)
     {
@@ -328,9 +328,9 @@ public sealed class GitHubUpdateService : IUpdateService
     }
 
     /// <summary>
-    /// 生成延迟应用的更新脚本：等待旧进程退出 → 拷贝新文件 → 清理 → 重启。
-    /// Windows 生成 .cmd，其他平台生成 .sh。
-    /// 仅接受已净化（仅字母/数字/.-_）的版本标识，避免远程标签注入脚本命令。
+    /// Generates a deferred-apply update script: wait for the old process to exit -> copy new files -> clean up -> restart.
+    /// Windows generates .cmd; other platforms generate .sh.
+    /// Accepts only a sanitized version identifier (letters/digits/.-_), preventing remote tags from injecting script commands.
     /// </summary>
     private string CreateApplyScript(string stagingDir, string payloadDir, string tagDir)
     {

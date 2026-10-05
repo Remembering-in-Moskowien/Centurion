@@ -73,7 +73,7 @@ internal static class PipelineGraphRenderer
         foreach (var node in dag.Nodes.Where(n => n.DependsOn.Count == 0))
             Visit(node.Name, 0);
 
-        // 保护：环或孤立节点仍全量展示
+        // Ensure cycles and isolated nodes are still shown.
         foreach (var node in dag.Nodes)
         {
             if (!visited.Contains(node.Name))
@@ -114,7 +114,7 @@ internal static class PipelineGraphRenderer
 
         foreach (var node in dag.Nodes.Where(n => n.DependsOn.Count == 0))
             AddChildren(null, node.Name);
-        // 保护：环或孤立节点仍全量展示
+        // Ensure cycles and isolated nodes are still shown.
         foreach (var node in dag.Nodes)
         {
             if (!visited.Contains(node.Name))
@@ -131,7 +131,7 @@ internal static class PipelineGraphRenderer
         var safeText = System.Net.WebUtility.HtmlEncode(text).Replace("\n", "<br/>");
         return $$"""
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <title>Centurion Pipeline DAG</title>
@@ -145,7 +145,7 @@ internal static class PipelineGraphRenderer
 <body>
 <h1>Centurion Pipeline DAG</h1>
 <div class="mermaid">{{mermaid}}</div>
-<h2>拓扑摘要</h2>
+<h2>Topology Summary</h2>
 <pre>{{safeText}}</pre>
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";

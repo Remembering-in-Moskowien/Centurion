@@ -9,17 +9,20 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Infrastructure;
 
 /// <summary>
-/// 设备检测器：探测 GPU（NVIDIA CUDA / Vulkan 候选）、系统内存与平台，
-/// 推荐用于自动下载 GPU 变体工具（如 whisper.cpp CUDA 版）的推理设备。
+/// Device detector: probes the GPU (NVIDIA CUDA / Vulkan candidates), system memory
+/// and platform, and recommends an inference device for auto-downloading GPU-variant
+/// tools (e.g. the CUDA build of whisper.cpp).
 /// </summary>
 public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDetector
 {
     private DeviceCapabilities? _cached;
 
     /// <summary>
-    /// 探测本机 GPU、系统内存与平台能力并推荐推理设备；首次探测后结果会被缓存，后续调用直接返回缓存值。
+    /// Probes the local GPU, system memory and platform capabilities and recommends an
+    /// inference device; the result is cached after the first probe, and subsequent calls
+    /// return the cached value.
     /// </summary>
-    /// <returns>描述本机设备能力与推荐推理设备的对象。</returns>
+    /// <returns>An object describing the local device capabilities and the recommended inference device.</returns>
     public DeviceCapabilities Detect()
     {
         if (_cached is not null)
@@ -35,7 +38,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         if (hasNvidia)
             devices.Add(InferenceDevice.Cuda);
         if (hasOtherGpu && OperatingSystem.IsWindows())
-            devices.Add(InferenceDevice.Vulkan); // 现代 Windows 驱动基本均支持 Vulkan
+            devices.Add(InferenceDevice.Vulkan); // Modern Windows drivers essentially all support Vulkan
         if (OperatingSystem.IsWindows())
             devices.Add(InferenceDevice.DirectMl);
         devices.Add(InferenceDevice.Cpu);
@@ -57,7 +60,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return _cached;
     }
 
-    // ---------- 探测实现 ----------
+    // ---------- Probe implementations ----------
 
     private static string BuildPlatform()
     {
@@ -75,7 +78,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return $"{os}-{arch}";
     }
 
-    /// <summary>通过 nvidia-smi 探测 NVIDIA GPU（名称 + 显存，2s 超时）。</summary>
+    /// <summary>Probes for an NVIDIA GPU via nvidia-smi (name + VRAM, 2s timeout).</summary>
     private bool TryProbeNvidia(out string? gpuName, out long gpuMemoryBytes)
     {
         gpuName = null;
@@ -96,11 +99,12 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         }
         catch
         {
-            // 不记录系统异常消息（非 UTF-8 系统文本会乱码污染日志），仅标记探测失败
+            // Do not log system exception messages (non-UTF-8 system text would pollute the
+            // log with mojibake); just mark the probe as failed
             logger.LogDebug("nvidia-smi probe failed; NVIDIA GPU detection skipped.");
         }
 
-        // 兜底：CUDA 工具链已安装但 nvidia-smi 不在 PATH
+        // Fallback: the CUDA toolchain is installed but nvidia-smi is not on PATH
         if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CUDA_PATH"))
             || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CUDA_HOME")))
         {
@@ -111,7 +115,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return false;
     }
 
-    /// <summary>探测非 NVIDIA GPU（AMD/Intel 等，Vulkan 候选）。</summary>
+    /// <summary>Probes for a non-NVIDIA GPU (AMD/Intel, etc.; Vulkan candidates).</summary>
     private bool TryProbeOtherGpu(out string? gpuName)
     {
         gpuName = null;
@@ -144,7 +148,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return false;
     }
 
-    /// <summary>探测系统可用物理内存。</summary>
+    /// <summary>Probes available physical system memory.</summary>
     private static long ProbeSystemMemory()
     {
         if (OperatingSystem.IsWindows())
@@ -167,7 +171,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return GlobalMemoryStatusEx(status) ? (long)status.ullAvailPhys : 0;
     }
 
-    /// <summary>运行探测命令并返回标准输出（超时自动终止）。</summary>
+    /// <summary>Runs a probe command and returns its standard output (killed automatically on timeout).</summary>
     private static string? RunProbe(string fileName, string arguments, int timeoutMs)
     {
         using var process = new Process
@@ -193,7 +197,7 @@ public sealed class DeviceDetector(ILogger<DeviceDetector> logger) : IDeviceDete
         return process.StandardOutput.ReadToEnd();
     }
 
-    // ---------- Windows 内存 P/Invoke ----------
+    // ---------- Windows memory P/Invoke ----------
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     private sealed class MemoryStatusEx

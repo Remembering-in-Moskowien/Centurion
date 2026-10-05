@@ -1,30 +1,30 @@
 namespace Centurion.Models.Console;
 
-/// <summary>控制台文本输出端口，抽象对命令行的各类写入操作。</summary>
+/// <summary>Console text output port abstracting command-line write operations.</summary>
 public interface IConsoleOutput
 {
-    /// <summary>写入一段文本，不换行。</summary>
-    /// <param name="message">要写入的文本。</param>
+    /// <summary>Writes text without a newline.</summary>
+    /// <param name="message">Text to write.</param>
     void Write(string message);
-    /// <summary>写入一行文本并换行。</summary>
-    /// <param name="message">要写入的文本。</param>
+    /// <summary>Writes a line of text.</summary>
+    /// <param name="message">Text to write.</param>
     void WriteLine(string message);
-    /// <summary>以错误样式（通常为红色）输出一行文本。</summary>
-    /// <param name="message">要输出的错误文本。</param>
+    /// <summary>Writes an error line, usually styled in red.</summary>
+    /// <param name="message">Error text to write.</param>
     void WriteError(string message);
-    /// <summary>以警告样式（通常为黄色）输出一行文本。</summary>
-    /// <param name="message">要输出的警告文本。</param>
+    /// <summary>Writes a warning line, usually styled in yellow.</summary>
+    /// <param name="message">Warning text to write.</param>
     void WriteWarning(string message);
-    /// <summary>以成功样式（通常为绿色）输出一行文本。</summary>
-    /// <param name="message">要输出的成功文本。</param>
+    /// <summary>Writes a success line, usually styled in green.</summary>
+    /// <param name="message">Success text to write.</param>
     void WriteSuccess(string message);
-    /// <summary>以普通信息样式输出一行文本。</summary>
-    /// <param name="message">要输出的信息文本。</param>
+    /// <summary>Writes an information line in the standard style.</summary>
+    /// <param name="message">Information text to write.</param>
     void WriteInfo(string message);
-    /// <summary>写入支持颜色/样式标记的富文本，不换行。</summary>
-    /// <param name="markup">含样式标记的文本。</param>
-    void WriteMarkup(string markup); // 支持颜色标记
-    /// <summary>写入支持颜色/样式标记的富文本，并换行。</summary>
-    /// <param name="markup">含样式标记的文本。</param>
+    /// <summary>Writes rich text with color/style markup without a newline.</summary>
+    /// <param name="markup">Text containing style markup.</param>
+    void WriteMarkup(string markup);
+    /// <summary>Writes rich text with color/style markup and a newline.</summary>
+    /// <param name="markup">Text containing style markup.</param>
     void WriteMarkupLine(string markup);
 }

@@ -54,7 +54,7 @@ public sealed class FromScriptSettings : GlobalCommandSettings
     [Description("Transcription model")]
     public string? TranscriberModel { get; init; } = "base";
 
-    // ----- 音频预处理模块 -----
+    // ----- Audio preprocessing -----
     /// <summary>
     /// Whether to enable conditional FFmpeg noise reduction.
     /// </summary>
@@ -90,7 +90,7 @@ public sealed class FromScriptSettings : GlobalCommandSettings
     [Description("Disable EBU R128 loudness normalization")]
     public bool DisableAudioLoudness { get; init; }
 
-    // ----- 人声分离模块 (Vocal Separation) -----
+    // ----- Vocal separation -----
     /// <summary>
     /// Whether to separate vocals with Demucs before transcription (only for music/BGM-heavy media).
     /// </summary>
@@ -105,7 +105,7 @@ public sealed class FromScriptSettings : GlobalCommandSettings
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 
-    // ----- 推理设备 (Device) -----
+    // ----- Inference device -----
     /// <summary>
     /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).
     /// </summary>

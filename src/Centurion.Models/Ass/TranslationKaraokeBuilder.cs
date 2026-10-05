@@ -4,22 +4,22 @@ using Centurion.Models.Text;
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// 翻译句词级时间戳构建器：在缺少源语言词级对齐信息时，
-/// 通过时间插值为译文构建卡拉OK时间戳（ASS \K 标签，单位厘秒）。
-/// 分配策略：行首保留一段空拍（lead），剩余时长按"词权重"比例分配给各词——
-/// 明显长音节（字符更多/音节更多）的词分得更多时间，与参考字幕（Theme.ass）的 \K 节奏风格一致。
-/// 输出格式：{\K空拍}{\K词1时长}词1{\K词2时长}词2...
+/// Builds word-level karaoke timings for translated sentences when source-language word alignment is unavailable.
+/// Interpolates ASS \K karaoke tags (centiseconds) across the translation.
+/// Reserves a lead-in pause at the start, then distributes the remaining duration by token weight;
+/// longer syllables receive more time, matching the \K rhythm used in Theme.ass.
+/// Output format: {\Klead-in}{\Kduration1}token1{\Kduration2}token2...
 /// </summary>
 public static class TranslationKaraokeBuilder
 {
     /// <summary>
-    /// 为译文构建词级 \K 时间戳文本。
+    /// Builds word-level \K timing text for a translation.
     /// </summary>
-    /// <param name="text">译文文本。</param>
-    /// <param name="startMs">句子起始时间（毫秒）。</param>
-    /// <param name="endMs">句子结束时间（毫秒）。</param>
-    /// <param name="language">目标语言代码（保留用于兼容；分词以文本实际字符为准）。</param>
-    /// <returns>带 \K 标签的 ASS 文本。</returns>
+    /// <param name="text">Translated text.</param>
+    /// <param name="startMs">Sentence start time in milliseconds.</param>
+    /// <param name="endMs">Sentence end time in milliseconds.</param>
+    /// <param name="language">Target language code, retained for compatibility; tokenization follows the actual text characters.</param>
+    /// <returns>ASS text with \K tags.</returns>
     public static string Build(string? text, double startMs, double endMs, string? language)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -49,25 +49,25 @@ public static class TranslationKaraokeBuilder
     }
 
     /// <summary>
-    /// 混合感知分词：中日韩表意/假名逐字拆分，拉丁语按空白拆词，中英混写共存；
-    /// CJK 标点附着到前一词。例如 "hello 世界" → hello / 世 / 界。
+    /// Mixed-script-aware tokenization: split CJK ideographs and kana character by character, split Latin text on whitespace, and support code-switching.
+    /// Attach CJK punctuation to the preceding token.
     /// </summary>
-    /// <param name="text">译文文本。</param>
-    /// <returns>分词结果列表。</returns>
+    /// <param name="text">Translated text.</param>
+    /// <returns>Token list.</returns>
     internal static List<string> Tokenize(string text) => LanguageSupport.TokenizeMixed(text);
 
     /// <summary>
-    /// 词权重：含中日韩表意/假名的词（或单字符）每字符权重 1；
-    /// 拉丁语系按音节估算（元音字母串计数，至少 1）。长音节词因此获得更多时间分配。
+    /// Token weight: each CJK ideograph or kana character has weight 1;
+    /// Latin text is estimated by syllables (vowel-group count, minimum 1), giving longer words more time.
     /// </summary>
-    /// <param name="token">单个词或字符。</param>
-    /// <returns>权重值（≥1）。</returns>
+    /// <param name="token">A token or character.</param>
+    /// <returns>Weight, at least 1.</returns>
     internal static int WeightOf(string token)
     {
         if (token.Any(LanguageSupport.IsCjkIdeograph))
             return Math.Max(1, token.Length);
 
-        // 音节粗估：连续元音字母串的数量（"adventure" → 4，"strength" → 1）
+        // Estimate syllables by counting vowel groups ("adventure" -> 4, "strength" -> 1).
         var syllableCount = 0;
         var inVowelRun = false;
         foreach (var c in token)

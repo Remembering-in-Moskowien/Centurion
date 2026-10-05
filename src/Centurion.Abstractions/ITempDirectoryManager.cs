@@ -1,14 +1,14 @@
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 临时目录管理器，负责创建和清理临时目录
+/// Manager responsible for creating and cleaning up temporary directories.
 /// </summary>
 public interface ITempDirectoryManager
 {
     /// <summary>
-    /// 创建一个新的临时目录，并返回一个可释放句柄
+    /// Creates a temporary directory and returns a disposable handle.
     /// </summary>
-    /// <param name="prefix">目录名前缀（可选）</param>
-    /// <returns>临时目录句柄，释放时自动删除目录</returns>
+    /// <param name="prefix">Optional directory name prefix.</param>
+    /// <returns>A handle that deletes the temporary directory when disposed.</returns>
     Task<TempDirectoryHandle> CreateTempDirectoryAsync(string? prefix = null);
 }

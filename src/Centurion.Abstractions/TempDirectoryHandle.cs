@@ -2,12 +2,12 @@ using Centurion.Models.Console;
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 临时目录句柄，实现 IDisposable 和 IAsyncDisposable
+/// Handle for a temporary directory, implementing IDisposable and IAsyncDisposable.
 /// </summary>
 public class TempDirectoryHandle : IDisposable, IAsyncDisposable
 {
     /// <summary>
-    /// 临时目录的完整路径。
+    /// Full path to the temporary directory.
     /// </summary>
     public string Path { get; }
     private readonly bool _autoDelete;
@@ -19,7 +19,7 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// 释放句柄：若开启自动删除，则同步删除临时目录。
+    /// Disposes the handle and synchronously deletes the directory when auto-delete is enabled.
     /// </summary>
     public void Dispose()
     {
@@ -29,7 +29,7 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// 异步释放句柄：若开启自动删除，则异步删除临时目录。
+    /// Asynchronously disposes the handle and deletes the directory when auto-delete is enabled.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
@@ -47,7 +47,7 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            // 记录日志但不抛出，避免中断流程
+            // Log the error without throwing so the workflow can continue.
             ConsoleServices.Output?.WriteWarning($"Failed to delete temp directory {Path}: {ex.Message}");
         }
     }
@@ -57,7 +57,7 @@ public class TempDirectoryHandle : IDisposable, IAsyncDisposable
         if (!Directory.Exists(Path)) return;
         try
         {
-            // 异步删除（实际上 Directory.Delete 是同步的，这里封装为 Task）
+            // Wrap the synchronous Directory.Delete call in a task.
             await Task.Run(() => Directory.Delete(Path, true));
         }
         catch (Exception ex)

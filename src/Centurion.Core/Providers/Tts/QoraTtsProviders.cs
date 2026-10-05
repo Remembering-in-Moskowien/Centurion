@@ -2,13 +2,13 @@
 
 namespace Centurion.Core.Providers.Tts;
 
-/// <summary>QORA-TTS TTS Provider 的注册工厂。</summary>
+/// <summary>Registration factory for the QORA-TTS TTS provider.</summary>
 public static class QoraTtsProviders
 {
-    /// <summary>注册名。</summary>
+    /// <summary>Registered name.</summary>
     public const string Name = "qora-tts";
 
-    /// <summary>能力声明：本地、10 语言、音色克隆、CPU 推理。</summary>
+    /// <summary>Capability declaration: local, 10 languages, voice cloning, CPU inference.</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Medium,

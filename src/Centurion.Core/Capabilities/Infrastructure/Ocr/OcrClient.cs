@@ -5,48 +5,49 @@ using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Capabilities.Infrastructure.Ocr;
 
-/// <summary>OCR 推理后端。</summary>
+/// <summary>OCR inference backend.</summary>
 public enum OcrBackend
 {
-    /// <summary>智谱开放平台 GLM-OCR（云端，需 API 密钥）。</summary>
+    /// <summary>Zhipu open-platform GLM-OCR (cloud, requires an API key).</summary>
     Zhipu,
 
-    /// <summary>本地 Ollama 视觉模型（qwen2.5vl / llava 等，免密钥）。</summary>
+    /// <summary>Local Ollama vision model (qwen2.5vl / llava, etc.; no key required).</summary>
     Ollama,
 
-    /// <summary>本地 llama-server（GGUF 视觉模型，免密钥，服务需已启动）。</summary>
+    /// <summary>Local llama-server (GGUF vision model, no key required; the service must already be running).</summary>
     LlamaCpp,
 
-    /// <summary>本地 RapidOCR（RapidOcrNet，PaddleOCR ONNX，纯 CPU，多语言）。</summary>
+    /// <summary>Local RapidOCR (RapidOcrNet, PaddleOCR ONNX, CPU-only, multilingual).</summary>
     RapidOcr
 }
 
 /// <summary>
-/// 多后端 OCR 客户端：通过 OpenAI 兼容的 chat/completions 端点，
-/// 以多模态消息（文本指令 + 图片 base64）对单张图片做字幕级 OCR。
-/// 支持云端（智谱 GLM-OCR）与本地推理（Ollama / llama-server）两种路径。
+/// Multi-backend OCR client: performs subtitle-level OCR on a single image via an
+/// OpenAI-compatible chat/completions endpoint, using a multimodal message (text
+/// instruction + base64 image). Supports both cloud (Zhipu GLM-OCR) and local
+/// inference (Ollama / llama-server) paths.
 /// </summary>
 public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
 {
-    /// <summary>智谱开放平台默认 chat/completions 端点。</summary>
+    /// <summary>Zhipu open-platform default chat/completions endpoint.</summary>
     public const string ZhipuBaseUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
-    /// <summary>智谱默认 OCR 模型（账号未开通时可换 glm-4v-plus 等视觉模型）。</summary>
+    /// <summary>Zhipu default OCR model (switch to a vision model such as glm-4v-plus if your account has not enabled this one).</summary>
     public const string ZhipuDefaultModel = "glm-ocr";
 
-    /// <summary>本地 Ollama 默认端点（OpenAI 兼容）。</summary>
+    /// <summary>Local Ollama default endpoint (OpenAI-compatible).</summary>
     public const string OllamaBaseUrl = "http://localhost:11434/v1/chat/completions";
 
-    /// <summary>Ollama 默认视觉模型。</summary>
+    /// <summary>Ollama default vision model.</summary>
     public const string OllamaDefaultModel = "qwen2.5vl:7b";
 
-    /// <summary>本地 llama-server 默认端点（OpenAI 兼容）。</summary>
+    /// <summary>Local llama-server default endpoint (OpenAI-compatible).</summary>
     public const string LlamaCppBaseUrl = "http://127.0.0.1:8080/v1/chat/completions";
 
-    /// <summary>llama-server 默认模型占位（OpenAI 兼容实现忽略 model 内容）。</summary>
+    /// <summary>llama-server default model placeholder (the OpenAI-compatible implementation ignores the model content).</summary>
     public const string LlamaCppDefaultModel = "local-model";
 
-    /// <summary>OCR 指令：只输出字幕文本，每行一条，不做任何解释。</summary>
+    /// <summary>OCR instruction: output only the subtitle text, one entry per line, with no explanation.</summary>
     private const string SystemPrompt =
         "You are a subtitle OCR engine. Extract ALL visible subtitle/caption text from the image. " +
         "Output ONLY the subtitle lines, one subtitle per line, preserving the original language exactly. " +
@@ -54,12 +55,13 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
         "If there is no subtitle text, output exactly: [NO_TEXT]";
 
     /// <summary>
-    /// 按后端解析最终端点与模型：显式配置优先，否则使用后端默认值。
+    /// Resolves the final endpoint and model by backend: explicit configuration wins,
+    /// otherwise the backend defaults are used.
     /// </summary>
-    /// <param name="backend">OCR 后端。</param>
-    /// <param name="model">显式模型；为空时用后端默认。</param>
-    /// <param name="baseUrl">显式端点；为空时用后端默认。</param>
-    /// <returns>（端点, 模型）。</returns>
+    /// <param name="backend">OCR backend.</param>
+    /// <param name="model">Explicit model; uses the backend default when empty.</param>
+    /// <param name="baseUrl">Explicit endpoint; uses the backend default when empty.</param>
+    /// <returns>(endpoint, model).</returns>
     public static (string Endpoint, string Model) ResolveBackend(
         OcrBackend backend, string? model, string? baseUrl) => backend switch
     {
@@ -77,13 +79,14 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
     };
 
     /// <summary>
-    /// 探测本地 OCR 服务是否在线（GET /models，兼容 Ollama 与 llama-server 的 OpenAI 兼容接口）。
-    /// 云端后端返回 true（不预先探测，失败由请求自然报错）。
+    /// Probes whether the local OCR service is online (GET /models, compatible with the
+    /// OpenAI-compatible endpoints of Ollama and llama-server). Cloud backends return
+    /// true (no pre-probe; failures surface naturally from the request).
     /// </summary>
-    /// <param name="backend">OCR 后端。</param>
-    /// <param name="baseUrl">显式端点；为空时按后端默认。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>服务是否可访问。</returns>
+    /// <param name="backend">OCR backend.</param>
+    /// <param name="baseUrl">Explicit endpoint; uses the backend default when empty.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Whether the service is reachable.</returns>
     public async Task<bool> ProbeAsync(OcrBackend backend, string? baseUrl, CancellationToken cancellationToken)
     {
         if (backend == OcrBackend.Zhipu)
@@ -108,16 +111,17 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
     }
 
     /// <summary>
-    /// 对单张图片执行 OCR，返回提取的字幕文本（可能多行；无字幕时为 "[NO_TEXT]"）。
+    /// Runs OCR on a single image and returns the extracted subtitle text (may span
+    /// multiple lines; "[NO_TEXT]" when there are no subtitles).
     /// </summary>
-    /// <param name="imagePath">图片文件路径（jpg/png 等）。</param>
-    /// <param name="backend">OCR 后端（云端/本地）。</param>
-    /// <param name="model">OCR 模型名；为空时按后端默认。</param>
-    /// <param name="apiKey">API 密钥；仅智谱云端必填，本地后端可空。</param>
-    /// <param name="baseUrl">端点地址；为空时按后端默认。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>提取的字幕文本。</returns>
-    /// <exception cref="InvalidOperationException">云端密钥缺失、请求失败或响应无内容时抛出。</exception>
+    /// <param name="imagePath">Image file path (jpg/png, etc.).</param>
+    /// <param name="backend">OCR backend (cloud/local).</param>
+    /// <param name="model">OCR model name; uses the backend default when empty.</param>
+    /// <param name="apiKey">API key; required only for Zhipu cloud, may be empty for local backends.</param>
+    /// <param name="baseUrl">Endpoint address; uses the backend default when empty.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The extracted subtitle text.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the cloud key is missing, the request fails, or the response has no content.</exception>
     public async Task<string> OcrImageAsync(
         string imagePath,
         OcrBackend backend,
@@ -188,7 +192,7 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
         return text;
     }
 
-    /// <summary>从 OpenAI 兼容响应体提取 choices[0].message.content。</summary>
+    /// <summary>Extracts choices[0].message.content from an OpenAI-compatible response body.</summary>
     private static string ExtractText(string json)
     {
         JsonDocument document;
@@ -221,7 +225,7 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
         }
     }
 
-    /// <summary>按扩展名推断图片 MIME 类型。</summary>
+    /// <summary>Infers the image MIME type from the file extension.</summary>
     private static string GetMimeType(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".png" => "image/png",
@@ -231,7 +235,7 @@ public sealed class OcrClient(HttpClient httpClient, ILogger<OcrClient> logger)
         _ => "image/jpeg"
     };
 
-    /// <summary>截断响应正文（日志用，避免把完整错误刷屏）。</summary>
+    /// <summary>Truncates a response body (for logging, to avoid flooding the console with the full error).</summary>
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";
 }

@@ -4,15 +4,15 @@ using Centurion.Models.Llm;
 namespace Centurion.Abstractions.Factories;
 
 /// <summary>
-/// 翻译策略工厂契约：按策略名称创建对应的翻译策略实例。
+/// Factory contract for creating a translation strategy by name.
 /// </summary>
 public interface ITranslationStrategyFactory
 {
     /// <summary>
-    /// 按策略名称创建翻译策略。
+    /// Creates a translation strategy for the specified strategy name.
     /// </summary>
-    /// <param name="strategy">策略名称（如 "llm"）。</param>
-    /// <param name="llm">LLM 连接配置；为空时按旧行为（API 密钥 → OpenAI，否则 Ollama）回退。</param>
-    /// <returns>对应的翻译策略实例。</returns>
+    /// <param name="strategy">Strategy name, such as "llm".</param>
+    /// <param name="llm">LLM connection options; when null, falls back to OpenAI if an API key is set, otherwise Ollama.</param>
+    /// <returns>The translation strategy instance.</returns>
     ITranslationStrategy Create(string strategy, LlmOptions? llm = null);
 }

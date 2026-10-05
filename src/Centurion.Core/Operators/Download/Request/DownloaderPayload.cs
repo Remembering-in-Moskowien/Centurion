@@ -1,28 +1,28 @@
 namespace Centurion.Core.Operators.Download.Request;
 
 /// <summary>
-/// Aria2 专用下载载荷（替代魔数字Command数组）
+/// Aria2-specific download payload (replaces the magic-number Command array).
 /// </summary>
 public class AriaDownloadRequest
 {
-    /// <summary>下载地址</summary>
+    /// <summary>Download URL.</summary>
     public string Url { get; init; } = string.Empty;
 
-    /// <summary>文件完整保存路径</summary>
+    /// <summary>Full path where the file is saved.</summary>
     public string FullSavePath { get; init; } = string.Empty;
 
-    /// <summary>文件校验哈希值</summary>
+    /// <summary>File verification hash value.</summary>
     public string FileHash { get; init; } = string.Empty;
 
-    /// <summary>单文件分片数 -x</summary>
+    /// <summary>Number of chunks per single file (-x).</summary>
     public int SplitThread { get; set; } = 16;
 
-    /// <summary>单服务器连接数 -s</summary>
+    /// <summary>Number of connections per server (-s).</summary>
     public int ServerConnection { get; set; } = 16;
 
-    /// <summary>最大重试次数，0=无限重试</summary>
+    /// <summary>Maximum number of retries; 0 = retry indefinitely.</summary>
     public int MaxRetry { get; set; } = 0;
 
-    /// <summary>进度刷新间隔(ms)</summary>
+    /// <summary>Progress refresh interval (ms).</summary>
     public int ProgressRefreshMs { get; set; } = 200;
 }

@@ -27,9 +27,9 @@ public sealed class InitCommand(
     {
         try
         {
-            var interactive = !settings.Yes && !System.Console.IsInputRedirected;
+            var interactive = !settings.Yes && !System.Console.IsInputRedirected && !Centurion.Cli.Console.SpectreConsoleOutput.AgentMode;
 
-            // 1) 收集选项（缺省时交互提问，非交互用默认值）
+            // 1) Collect options interactively, or use defaults in non-interactive mode.
             var media = settings.Media?.FullName ?? AskText(interactive, ConsoleServices.T("Media file path (video/audio)"), "samples/test.mp4");
             var workflow = (settings.Workflow ?? AskChoice(interactive, ConsoleServices.T("Select workflow"), Workflows, "asr")).ToLowerInvariant();
             var format = (settings.Format ?? AskChoice(interactive, ConsoleServices.T("Output subtitle format"), Formats, "ass")).ToLowerInvariant();
@@ -49,7 +49,7 @@ public sealed class InitCommand(
                 ConsoleServices.Output.WriteWarning(ConsoleServices.T("Media file does not exist (config written anyway; path can be replaced later): {0}", media));
             }
 
-            // 2) 写入 centurion.config.json
+            // 2) Write centurion.config.json.
             var outputDir = settings.Output?.FullName ?? Directory.GetCurrentDirectory();
             Directory.CreateDirectory(outputDir);
             var configPath = Path.Combine(outputDir, "centurion.config.json");
@@ -69,10 +69,10 @@ public sealed class InitCommand(
             });
             await File.WriteAllTextAsync(configPath, json, ct);
 
-            // 3) 立即应用 profile
+            // 3) Apply the profile immediately.
             ProviderProfileResolver.Current = ProviderProfileResolver.FromString(profile);
 
-            // 4) 输出引导（字幕文件先行 convert 提示）
+            // 4) Print next steps, including a reminder to convert subtitle files first.
             if (IsSubtitleFile(media))
                 ConsoleServices.Output.WriteInfo(ConsoleServices.T("Detected a subtitle file; the chain starts with `Centurion convert` to turn it into IR first."));
             AnsiConsole.Write(new Rule($"[bold green]{ConsoleServices.T("Configuration complete")}[/]").RuleStyle("green"));

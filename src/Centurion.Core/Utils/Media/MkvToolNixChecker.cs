@@ -8,9 +8,10 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Utils.Media;
 
 /// <summary>
-/// 基于 mkvtoolnix（mkvmerge -i）的媒体字幕轨检查器：
-/// 探测输入媒体中的既有字幕轨，供生成/校准/打轴命令在开工前预警。
-/// mkvmerge 缺失或输入非容器文件时按警告跳过（非致命）。
+/// Subtitle track checker based on mkvtoolnix (mkvmerge -i):
+/// detects existing subtitle tracks in the input media so that the generate/align/timing
+/// commands can warn up front. Skips with a warning (non-fatal) when mkvmerge is missing
+/// or the input is not a container file.
 /// </summary>
 public sealed class MkvToolNixChecker(
     IBinaryLocator binaryLocator,
@@ -23,11 +24,11 @@ public sealed class MkvToolNixChecker(
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
-    /// 检查指定媒体文件中的字幕轨。
+    /// Check the subtitle tracks in the given media file.
     /// </summary>
-    /// <param name="mediaPath">媒体文件路径（mkv/mp4/ts 等容器）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>检查结果；mkvmerge 不可用或输入不可解析时为 Checked=false 的结果（含 Message）。</returns>
+    /// <param name="mediaPath">Path to the media file (mkv/mp4/ts, etc. containers).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The check result; when mkvmerge is unavailable or the input cannot be parsed, a result with Checked=false (including Message).</returns>
     public async Task<SubtitleTrackCheckResult> CheckAsync(string mediaPath, CancellationToken cancellationToken)
     {
         var skip = (string message) => new SubtitleTrackCheckResult
@@ -88,10 +89,10 @@ public sealed class MkvToolNixChecker(
     }
 
     /// <summary>
-    /// 解析 mkvmerge -i 输出的轨道行（"Track ID 0: video (V_MPEG4/ISO/AVC) [language:eng, name:English]"）。
+    /// Parse a track line from mkvmerge -i output ("Track ID 0: video (V_MPEG4/ISO/AVC) [language:eng, name:English]").
     /// </summary>
-    /// <param name="output">mkvmerge -i 的完整标准输出。</param>
-    /// <returns>解析出的轨道列表。</returns>
+    /// <param name="output">The full standard output of mkvmerge -i.</param>
+    /// <returns>The parsed track list.</returns>
     internal static List<MkvTrackInfo> ParseTrackLines(string output)
     {
         var allTracks = new List<MkvTrackInfo>();
@@ -127,7 +128,7 @@ public sealed class MkvToolNixChecker(
                 continue;
             var key = pair[..colon].Trim();
             var value = pair[(colon + 1)..].Trim();
-            // mkvmerge 输出语言随系统本地化（gettext），语言/名称属性键存在英文与中文两种形态
+            // mkvmerge output language is localized by the system (gettext); the language/name attribute keys exist in both English and Chinese forms
             if (key.Equals("language", StringComparison.OrdinalIgnoreCase) ||
                 key.Equals("语言", StringComparison.OrdinalIgnoreCase))
             {

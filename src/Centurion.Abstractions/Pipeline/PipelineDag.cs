@@ -1,24 +1,24 @@
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>
-/// DAG 管线定义：节点集合（节点内声明依赖、条件、重试与超时策略）。
-/// 由 <see cref="PipelineDag.Builder"/> 构建，或由 <see cref="FromSequence"/> 从线性算子列表生成链式 DAG。
+/// DAG pipeline definition: a collection of nodes that declare dependencies, conditions, retry policies, and timeouts.
+/// Build it with <see cref="PipelineDag.Builder"/> or create a chained DAG from a linear operator list with <see cref="FromSequence"/>.
 /// </summary>
 public sealed class PipelineDag
 {
     private readonly List<PipelineNode> _nodes = [];
 
-    /// <summary>全部节点（按添加顺序）。</summary>
+    /// <summary>All nodes in the order they were added.</summary>
     public IReadOnlyList<PipelineNode> Nodes => _nodes;
 
-    /// <summary>获取节点；不存在时返回 null。</summary>
+    /// <summary>Gets a node, or null if it does not exist.</summary>
     public PipelineNode? Find(string name) =>
         _nodes.FirstOrDefault(n => string.Equals(n.Name, name, StringComparison.Ordinal));
 
-    /// <summary>创建一个 DAG 构建器。</summary>
+    /// <summary>Creates a DAG builder.</summary>
     public static Builder CreateBuilder() => new();
 
-    /// <summary>从线性算子列表生成链式 DAG（第 i 个节点依赖第 i-1 个），保持原串行语义。</summary>
+    /// <summary>Creates a chained DAG from a linear operator list, where each node depends on the previous node, preserving sequential behavior.</summary>
     public static PipelineDag FromSequence(IEnumerable<IPipelineOperator> operators)
     {
         var builder = CreateBuilder();
@@ -27,7 +27,7 @@ public sealed class PipelineDag
         foreach (var op in operators)
         {
             var name = op.Name;
-            // 同名算子（如重复阶段）追加序号保证节点名唯一
+            // Append an index to duplicate operator names to keep node names unique.
             while (builder.Contains(name))
                 name = $"{op.Name}#{++index}";
 
@@ -45,8 +45,8 @@ public sealed class PipelineDag
     }
 
     /// <summary>
-    /// 校验 DAG 结构：节点名唯一、依赖存在、无环。
-    /// 返回 null 表示合法；否则返回错误描述。
+    /// Validates that node names are unique, dependencies exist, and the graph has no cycles.
+    /// Returns null when valid, or an error description otherwise.
     /// </summary>
     public string? Validate()
     {
@@ -66,7 +66,7 @@ public sealed class PipelineDag
             }
         }
 
-        // Kahn 环检测
+        // Detect cycles with Kahn's algorithm.
         var indegree = _nodes.ToDictionary(n => n.Name, _ => 0, StringComparer.Ordinal);
         var adjacency = _nodes.ToDictionary(n => n.Name, _ => new List<string>(), StringComparer.Ordinal);
         foreach (var node in _nodes)
@@ -100,19 +100,19 @@ public sealed class PipelineDag
         return null;
     }
 
-    /// <summary>DAG 构建器：链式声明节点。</summary>
+    /// <summary>DAG builder for declaring nodes fluently.</summary>
     public sealed class Builder
     {
         private readonly List<PipelineNode> _nodes = [];
 
-        /// <summary>添加节点。</summary>
+        /// <summary>Adds a node.</summary>
         public Builder Add(PipelineNode node)
         {
             _nodes.Add(node ?? throw new ArgumentNullException(nameof(node)));
             return this;
         }
 
-        /// <summary>声明式添加节点：名称、算子、依赖、条件、重试、超时、降级。</summary>
+        /// <summary>Declaratively adds a node with its name, operator, dependencies, condition, retry policy, timeout, and degradation policy.</summary>
         public Builder Add(
             string name,
             IPipelineOperator @operator,
@@ -136,10 +136,10 @@ public sealed class PipelineDag
             });
         }
 
-        /// <summary>是否已包含同名节点。</summary>
+        /// <summary>Checks whether a node with the specified name has already been added.</summary>
         public bool Contains(string name) => _nodes.Any(n => string.Equals(n.Name, name, StringComparison.Ordinal));
 
-        /// <summary>构建 DAG。</summary>
+        /// <summary>Builds the DAG.</summary>
         public PipelineDag Build()
         {
             var dag = new PipelineDag();

@@ -3,30 +3,33 @@ using Centurion.Models;
 namespace Centurion.Core.Utils.Reporting;
 
 /// <summary>
-/// 常见字幕质量问题的自动修复引擎：
-/// 1) 重叠 → 调整时间轴（后句后移，保持最小间隙）；
-/// 2) 过短 → 与相邻句合并；
-/// 3) 行宽/CPS 超限 → 在最佳断点拆分为两句（时间按字符占比分配）。
-/// 修复后重新评估可验证问题收敛；引擎保持幂等（一次修复已达标的问题不再改动）。
+/// Auto-fix engine for common subtitle quality issues:
+/// 1) Overlap → adjust the timeline (shift the next line later, keeping the minimum gap);
+/// 2) Too short → merge with an adjacent line;
+/// 3) Line width / CPS over limit → split into two lines at the best break point
+///    (time distributed by character share).
+/// Re-assessing after fixing verifies that issues converge; the engine is idempotent
+/// (issues already meeting the bar are not touched again).
 /// </summary>
 public static class QualityFixer
 {
-    /// <summary>修复结果：新句子列表 + 已应用修复说明。</summary>
+    /// <summary>Fix result: new sentence list + descriptions of applied and skipped fixes.</summary>
     public sealed record FixResult(List<Sentence> Sentences, List<string> Applied, List<string> Skipped);
 
-    /// <summary>按默认阈值执行修复。</summary>
+    /// <summary>Runs fixes using the default thresholds.</summary>
     public static FixResult Fix(List<Sentence> sentences)
         => Fix(sentences, new QualityAssessmentOptions());
 
-    /// <summary>按指定阈值执行修复。</summary>
+    /// <summary>Runs fixes using the specified thresholds.</summary>
     public static FixResult Fix(List<Sentence> sentences, QualityAssessmentOptions options)
     {
         var applied = new List<string>();
         var skipped = new List<string>();
         var result = sentences.Select(Clone).ToList();
 
-        // 1) 时间轴重叠：仅真实重叠（后句 Start < 前句 End）时把后句后移到前句结束点；
-        //    连续段（间隙 0）与正常停顿不受影响（MinGapMs 仅用于 Assess 的重叠判定，非强制间隙）
+        // 1) Timeline overlap: only on a real overlap (next.Start < current.End) shift the next line
+        //    later to the end of the current line; contiguous runs (gap 0) and normal pauses are
+        //    unaffected (MinGapMs is only used by Assess for overlap detection, not as a forced gap).
         for (var i = 0; i + 1 < result.Count; i++)
         {
             var current = result[i];
@@ -40,7 +43,8 @@ public static class QualityFixer
                 next.End = next.Start;
         }
 
-        // 2) 过短句子：与相邻句合并（优先前句；首句则并入后句）
+        // 2) Too-short sentences: merge with an adjacent line (prefer the previous line;
+        //    the first line is merged into the next one)
         for (var i = 0; i < result.Count; i++)
         {
             var sentence = result[i];
@@ -62,12 +66,14 @@ public static class QualityFixer
             if (target.Words.Count > 0 && sentence.Words.Count > 0)
                 target.Words.AddRange(sentence.Words.Select(CloneWord));
             result.RemoveAt(i);
-            i = Math.Max(-1, i - 1); // 重新扫描当前位置（索引因移除而前移）
+            i = Math.Max(-1, i - 1); // rescan at the current position (indexes shift down after removal)
         }
 
-        // 3) 行宽超限：在最佳断点拆分为多段（≤3 段，每段保留子时间轴）。
-        //    注：CPS 随等比拆分不收敛（字符/时长比不变），故不单独触发拆分；
-        //    行宽达标后若 CPS 仍高，记 skipped 提示人工/延长时长。
+        // 3) Line width over limit: split into multiple parts at the best break point (at most 3 parts,
+        //    each keeping its sub-timeline).
+        //    Note: CPS does not converge under proportional splitting (the chars/duration ratio is
+        //    unchanged), so it does not trigger a split on its own; if CPS is still high after the
+        //    line width is met, it is recorded as skipped to prompt manual handling / extending duration.
         var limit = options.MaxCharsPerLine;
         for (var i = 0; i < result.Count; i++)
         {
@@ -93,7 +99,7 @@ public static class QualityFixer
         return new FixResult(result, applied, skipped);
     }
 
-    /// <summary>把超行宽句子拆成 ≤3 段（贪心前缀拆分，每段 ≤ limit 非空白字符，时间按字符占比分配）。</summary>
+    /// <summary>Splits an over-long line into at most 3 parts (greedy prefix split, each part ≤ limit non-whitespace chars, time distributed by character share).</summary>
     private static List<Sentence> SplitIntoParts(Sentence sentence, int limit, out List<int> splitPoints)
     {
         splitPoints = [];
@@ -155,8 +161,9 @@ public static class QualityFixer
     }
 
     /// <summary>
-    /// 贪心断点：从文本开头扫描，取非空白字符数落在 [limit/2, limit] 区间内、
-    /// 且位于标点或空白之后的最后一个位置；找不到返回 -1。
+    /// Greedy break point: scan from the start of the text, taking the last position whose
+    /// non-whitespace count falls within [limit/2, limit] and that sits right after punctuation
+    /// or whitespace; returns -1 if none is found.
     /// </summary>
     private static int GreedyCut(string text, int limit)
     {
@@ -185,15 +192,16 @@ public static class QualityFixer
     private static int CountChars(string text) => text.Count(ch => !char.IsWhiteSpace(ch));
 
     /// <summary>
-    /// 找到均衡拆分点：按非空白字符数定位中点（行宽依据），在 [30%, 70%] 区间内
-    /// 向两侧找最近的标点（中文/英文）或空白；找不到返回 -1。
+    /// Finds a balanced split point: locate the midpoint by non-whitespace count (the basis for
+    /// line width), then search within the [30%, 70%] window outward for the nearest punctuation
+    /// (Chinese/English) or whitespace; returns -1 if none is found.
     /// </summary>
     internal static int FindSplitIndex(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return -1;
 
-        // 非空白字符的原始索引序列
+        // Index sequence of non-whitespace characters
         var nonBlank = new List<int>(text.Length);
         for (var i = 0; i < text.Length; i++)
         {
@@ -207,9 +215,9 @@ public static class QualityFixer
         var lo = nonBlank[Math.Max(0, (int)(nonBlank.Count * 0.3))];
         var hi = nonBlank[Math.Min(nonBlank.Count - 1, (int)(nonBlank.Count * 0.7))];
 
-        // 标点优先：从 target 向左，再向右
+        // Prefer punctuation: left from target, then right
         var best = FindNearest(text, target, lo, hi, IsPunctuation);
-        // 空白兜底
+        // Fall back to whitespace
         return best ?? FindNearest(text, target, lo, hi, char.IsWhiteSpace) ?? -1;
     }
 
@@ -231,7 +239,7 @@ public static class QualityFixer
     private static bool IsPunctuation(char ch)
         => ch is '。' or '！' or '？' or '；' or '，' or '：' or '、' or '.' or '!' or '?' or ';' or ':' or ',';
 
-    /// <summary>按字符比例把词级明细拆分到两个新句（词时间戳保持原值）。</summary>
+    /// <summary>Splits word-level details into the two new lines by character ratio (word timestamps keep their original values).</summary>
     private static void SplitWords(List<Word> words, double ratio, Sentence first, Sentence second)
     {
         if (words is null || words.Count == 0)

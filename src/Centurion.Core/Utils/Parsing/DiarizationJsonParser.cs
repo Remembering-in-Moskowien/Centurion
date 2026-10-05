@@ -4,18 +4,19 @@ using Centurion.Models.Transcript;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 解析 CrispASR --diarize-speakers 输出的 JSON（-ojf 格式），提取说话人时间片段。
-/// 说话人信息位于 transcription 数组每个条目的 speaker 字段（如 "(speaker 0)"），时间取自该条目的毫秒偏移。
+/// Parses the JSON output of CrispASR --diarize-speakers (-ojf format) and extracts speaker time segments.
+/// Speaker info lives in the speaker field of each entry in the transcription array (e.g. "(speaker 0)");
+/// timing comes from that entry's millisecond offsets.
 /// </summary>
 public static class DiarizationJsonParser
 {
     /// <summary>
-    /// 解析 CrispASR --diarize-speakers 输出，提取各说话人时间片段。
-    /// 缺少 speaker 标签的条目会被忽略。
+    /// Parse the CrispASR --diarize-speakers output and extract the time segments of each speaker.
+    /// Entries lacking a speaker tag are ignored.
     /// </summary>
-    /// <param name="json">CrispASR -ojf 格式的 JSON 字符串。</param>
-    /// <returns>解析得到的说话人片段列表（时间为秒）。</returns>
-    /// <exception cref="InvalidOperationException">输出中缺少 transcription 数组时抛出。</exception>
+    /// <param name="json">The JSON string in CrispASR -ojf format.</param>
+    /// <returns>The parsed speaker segment list (times in seconds).</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the output lacks the transcription array.</exception>
     public static IReadOnlyList<SpeakerSegment> Parse(string json)
     {
         var root = JsonParser.Deserialize<CrispAsrTranscriptJson>(json);
@@ -40,10 +41,10 @@ public static class DiarizationJsonParser
     }
 
     /// <summary>
-    /// 规范化说话人标签："(speaker 0) " → "speaker 0"；非括号格式保留原文并去除首尾空白。
+    /// Normalize a speaker label: "(speaker 0)" -> "speaker 0"; non-parenthesized forms keep the original text with surrounding whitespace trimmed.
     /// </summary>
-    /// <param name="raw">CrispASR 输出的原始 speaker 字段值。</param>
-    /// <returns>规范化后的标签；空白或空值时返回 null。</returns>
+    /// <param name="raw">The raw speaker field value from CrispASR output.</param>
+    /// <returns>The normalized label; null when blank or empty.</returns>
     private static string? ExtractSpeaker(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))

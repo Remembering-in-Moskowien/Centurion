@@ -6,18 +6,20 @@ using Centurion.Models.Workflow;
 namespace Centurion.Core.Utils.Reporting;
 
 /// <summary>
-/// 字幕格式渲染器：把工作流上下文渲染为 SRT / TXT 文本。
-/// ASS 渲染由 <c>AssSubBuilder</c> 负责；本类负责 build 命令支持的其余两种格式，
-/// 复用与 ASS 一致的双语/说话人/跳过规则，时间轴取自句子级毫秒时间戳。
+/// Subtitle format renderer: renders the workflow context into SRT / TXT text.
+/// ASS rendering is handled by <c>AssSubBuilder</c>; this class covers the other two formats
+/// supported by the build command, reusing the same bilingual / speaker / skip rules as ASS,
+/// with the timeline taken from the sentence-level millisecond timestamps.
 /// </summary>
 public static partial class SubtitleFormatRenderer
 {
     /// <summary>
-    /// 把工作流上下文渲染为 SRT 字幕文本（UTF-8，含 BOM 友好：调用方决定编码）。
-    /// 每句一行序号 + 标准 SRT 时间轴 + 文本；双语时原文与译文以换行拼接。
+    /// Renders the workflow context into SRT subtitle text (UTF-8, BOM-friendly: the caller decides the encoding).
+    /// Each sentence: a line number + a standard SRT timeline + text; in bilingual mode the original and
+    /// translation are joined by a newline.
     /// </summary>
-    /// <param name="context">工作流上下文（含句子与配置）。</param>
-    /// <returns>SRT 文本内容。</returns>
+    /// <param name="context">Workflow context (containing sentences and config).</param>
+    /// <returns>The SRT text content.</returns>
     public static string RenderSrt(SubtitleWorkflowContext context)
     {
         var sb = new StringBuilder();
@@ -38,10 +40,11 @@ public static partial class SubtitleFormatRenderer
     }
 
     /// <summary>
-    /// 把工作流上下文渲染为纯文本（每句一行；双语时原文/译文各占一行）。
+    /// Renders the workflow context into plain text (one line per sentence; in bilingual mode the
+    /// original and translation each take a line).
     /// </summary>
-    /// <param name="context">工作流上下文（含句子与配置）。</param>
-    /// <returns>纯文本内容。</returns>
+    /// <param name="context">Workflow context (containing sentences and config).</param>
+    /// <returns>The plain-text content.</returns>
     public static string RenderTxt(SubtitleWorkflowContext context)
     {
         var sb = new StringBuilder();
@@ -54,7 +57,7 @@ public static partial class SubtitleFormatRenderer
         return sb.ToString();
     }
 
-    /// <summary>可渲染句子：跳过被标记的句子与非法时间轴。</summary>
+    /// <summary>Renderable sentences: skips flagged sentences and invalid timelines.</summary>
     private static IEnumerable<Sentence> GetRenderableSentences(SubtitleWorkflowContext context)
     {
         var sentences = context.State.CurrentSentences ?? [];
@@ -62,15 +65,16 @@ public static partial class SubtitleFormatRenderer
             .Where(s => !s.SkipRender && s.End >= s.Start);
     }
 
-    /// <summary>零时长句补最小 80ms，与 ASS 渲染保持一致。</summary>
+    /// <summary>Zero-duration lines are padded to a minimum 80ms, consistent with ASS rendering.</summary>
     private static double NormalizeStart(Sentence sentence) => sentence.Start;
 
     private static double NormalizeEnd(Sentence sentence, double start) =>
         sentence.End <= start ? start + 80 : sentence.End;
 
     /// <summary>
-    /// 取句子显示文本：与 ASS 一致——有译文时按双语/单语选择；说话人标签可选前缀。
-    /// 清除可能残留的 ASS 覆盖标签（{\...}、\N、\h 等），保证 SRT/TXT 为纯文本。
+    /// Takes the sentence's display text, consistent with ASS: when a translation exists, choose by
+    /// bilingual/monolingual mode; the speaker label is an optional prefix.
+    /// Strips any leftover ASS override tags ({\...}, \N, \h, etc.) so SRT/TXT stay plain text.
     /// </summary>
     private static string GetDisplayText(Sentence sentence, SubtitleWorkflowContext context)
     {
@@ -97,14 +101,14 @@ public static partial class SubtitleFormatRenderer
             : speakerPrefix + body;
     }
 
-    /// <summary>毫秒 → SRT 时间轴（HH:MM:SS,mmm）。</summary>
+    /// <summary>Milliseconds → SRT timeline (HH:MM:SS,mmm).</summary>
     private static string ToSrtTime(double ms)
     {
         var t = TimeSpan.FromMilliseconds(Math.Max(0, ms));
         return $"{(int)t.TotalHours:00}:{t.Minutes:00}:{t.Seconds:00},{t.Milliseconds:000}";
     }
 
-    /// <summary>去除 ASS 覆盖标签（{\...}）与 \N、\h、\K 等行内转义，返回纯文本。</summary>
+    /// <summary>Strips ASS override tags ({\...}) and inline escapes such as \N, \h, \K, returning plain text.</summary>
     private static string CleanAssTags(string text)
     {
         if (string.IsNullOrEmpty(text))

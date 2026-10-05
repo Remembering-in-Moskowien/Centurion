@@ -4,20 +4,21 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 转换管道 - 使用 <see cref="SubtitleFileParser"/> 解析输入字幕文件，
-/// 并将每个字幕条目转换为 Sentence 对象存入 TranscribeSentences。
-/// ASS 输入使用项目自有解析器，保留样式表与逐行样式。
+/// Convert pipeline: uses <see cref="SubtitleFileParser"/> to parse the input subtitle file
+/// and converts every subtitle entry into a Sentence object stored in TranscribeSentences.
+/// ASS input uses the project's own parser, preserving the style table and per-line styles.
 /// </summary>
 public sealed class ConvertParseOperator : IPipelineOperator
 {
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public string Name => "ConvertParse";
 
     /// <summary>
-    /// 解析输入字幕文件并将每个字幕条目转换为 <see cref="Centurion.Models.Sentence"/>，写入工作流状态。
+    /// Parses the input subtitle file and converts each subtitle entry into a
+    /// <see cref="Centurion.Models.Sentence"/>, writing it into the workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供字幕文件路径。</param>
-    /// <param name="cancellationToken">用于取消解析过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the subtitle file path.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the parsing process.</param>
     public Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken = default)
     {
         var inputPath = context.Config.SubtitleFilePath ?? context.Config.InputFilePath;
@@ -25,11 +26,11 @@ public sealed class ConvertParseOperator : IPipelineOperator
 
         var sentences = parsed.Sentences;
 
-        // ASS 样式表写入状态（供 build 渲染时复用原始样式）
+        // Write the ASS style table into state (so build rendering can reuse the original styles)
         if (parsed.Styles.Count > 0)
             context.State.Styles = [.. parsed.Styles];
 
-        // 保留独立基线；转换管道仍使用 TranscribeSentences 作为现有输出槽。
+        // Keep an independent baseline; the convert pipeline still uses TranscribeSentences as the existing output slot.
         context.State.SubtitleSentences = sentences.Select(CloneSentence).ToList();
         context.State.TranscribeSentences = sentences;
         context.State.CurrentSentences = sentences;

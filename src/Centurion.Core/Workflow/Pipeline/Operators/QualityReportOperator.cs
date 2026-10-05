@@ -58,7 +58,7 @@ public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
     /// 输出 Provider 用量汇总（token/音频分钟/缓存命中/估算成本）。
     /// 数据来自 <see cref="WorkflowState.ProviderUsages"/>（进程内聚合）。
     /// </summary>
-    private static void LogProviderUsage(SubtitleWorkflowContext context)
+    private void LogProviderUsage(SubtitleWorkflowContext context)
     {
         var usages = context.State.ProviderUsages;
         if (usages.Count == 0)
@@ -70,7 +70,6 @@ public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
         var cacheHits = usages.Sum(u => u.CacheHits);
         var cost = usages.Sum(u => u.EstimatedCostUsd);
         var via = string.Join(", ", usages.Select(u => u.ProviderName).Distinct());
-        Console.WriteLine(
-            $"[provider] usage: tokens {tokensIn}+{tokensOut}, audio {audioMinutes:F2}m, cache hits {cacheHits}, est. cost ${cost:F4} (via {via})");
+        LogInfo($"[provider] usage: tokens {tokensIn}+{tokensOut}, audio {audioMinutes:F2}m, cache hits {cacheHits}, est. cost ${cost:F4} (via {via})");
     }
 }

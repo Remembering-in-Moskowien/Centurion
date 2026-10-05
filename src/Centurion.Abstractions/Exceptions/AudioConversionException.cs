@@ -6,18 +6,18 @@ namespace Centurion.Abstractions.Exceptions;
 public class AudioConversionException : Exception
 {
     /// <summary>
-    /// 使用指定错误消息初始化异常实例。
+    /// Initializes an exception with the specified error message.
     /// </summary>
-    /// <param name="message">描述错误原因的消息。</param>
+    /// <param name="message">A message describing the cause of the error.</param>
     public AudioConversionException(string message) : base(message)
     {
     }
 
     /// <summary>
-    /// 使用指定错误消息和内部异常初始化异常实例。
+    /// Initializes an exception with the specified error message and inner exception.
     /// </summary>
-    /// <param name="message">描述错误原因的消息。</param>
-    /// <param name="inner">导致当前异常的内部异常。</param>
+    /// <param name="message">A message describing the cause of the error.</param>
+    /// <param name="inner">The exception that caused the current exception.</param>
     public AudioConversionException(string message, Exception inner) : base(message, inner)
     {
     }

@@ -3,9 +3,9 @@ namespace Centurion.Abstractions.Strategy;
 using Centurion.Models.Asr;
 
 /// <summary>
-/// 云端 ASR 连接配置：提供商、密钥与端点（本地转录策略不使用此配置）。
+/// Cloud ASR connection settings: provider, API key, and endpoint. Local transcription strategies do not use these settings.
 /// </summary>
-/// <param name="Provider">云端 ASR 提供商。</param>
-/// <param name="ApiKey">提供商 API 密钥。</param>
-/// <param name="BaseUrl">自定义端点；为空时按提供商默认。</param>
+/// <param name="Provider">Cloud ASR provider.</param>
+/// <param name="ApiKey">Provider API key.</param>
+/// <param name="BaseUrl">Custom endpoint; null uses the provider default.</param>
 public sealed record AsrOptions(AsrProvider Provider, string? ApiKey, string? BaseUrl);

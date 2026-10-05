@@ -85,20 +85,20 @@ public sealed class FromScriptCommand(
 
             var workflowContext = new SubtitleWorkflowContext(config);
 
-            // from-script DAG：轨道检查→转换→预处理→人声分离→转录→脚本加载→清洗→映射→对齐→质量报告
+            // From-script DAG: check tracks, convert and preprocess audio, separate vocals, transcribe, load and clean the script, map, align, and report quality.
             var dag = BuildFromScriptDag(
                 subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, scriptLoaderOp, textCleaningOp, mapperOp, qualityReportOp, config);
 
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, ct);
 
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, ct);
 
-            // 保存为 Centurion 中间文件（含词级时间戳/说话人/脚本映射等全部详细信息）
+            // Save a Centurion intermediate file with word timings, speakers, script mapping, and other details.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "from-script", outputPath);
             await store.SaveAsync(outDoc, outputPath, ct);
 

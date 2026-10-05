@@ -11,36 +11,38 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Capabilities.Infrastructure.Asr;
 
 /// <summary>
-/// 云端 ASR 转录策略：把音频上传到常见云语音识别 API 并返回词级时间戳。
-/// 支持 OpenAI 兼容 multipart 协议（OpenAI / Groq / 阿里百炼 DashScope）与
-/// Deepgram 原生协议；响应带 segment/word 时间戳时直接映射，仅有整段文本时
-/// 按音频时长等分。供 <c>--transcriber openai|groq|dashscope|deepgram</c> 使用。
+/// Cloud ASR transcription strategy: uploads audio to common cloud speech-recognition
+/// APIs and returns word-level timestamps. Supports the OpenAI-compatible multipart
+/// protocol (OpenAI / Groq / Alibaba Bailian DashScope) and the Deepgram native
+/// protocol; when the response carries segment/word timestamps they are mapped
+/// directly, and when only full-text is available the duration is split evenly across
+/// the audio. Used by <c>--transcriber openai|groq|dashscope|deepgram</c>.
 /// </summary>
 public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStrategy> logger) : ITranscriptionStrategy
 {
-    /// <summary>云端提供商（由工厂按引擎名设置）。</summary>
+    /// <summary>Cloud provider (set by the factory based on the engine name).</summary>
     public AsrProvider Provider { get; set; }
 
-    /// <summary>提供商 API 密钥。</summary>
+    /// <summary>Provider API key.</summary>
     public string? ApiKey { get; set; }
 
-    /// <summary>自定义端点；为空时按提供商默认。</summary>
+    /// <summary>Custom endpoint; falls back to the provider default when empty.</summary>
     public string? BaseUrl { get; set; }
 
-    /// <summary>策略显示名称。</summary>
+    /// <summary>Strategy display name.</summary>
     public string StrategyName => $"Cloud ASR ({Provider})";
 
     /// <summary>
-    /// 上传音频到云端 ASR，解析为词级时间戳列表。
+    /// Uploads audio to a cloud ASR and parses it into a list of word-level timestamps.
     /// </summary>
-    /// <param name="audioPath">输入音频文件路径（WAV 16kHz 单声道）。</param>
-    /// <param name="language">语言代码，如 "en"、"zh"。</param>
-    /// <param name="modelName">模型名；为空时按提供商默认。</param>
-    /// <param name="initialPrompt">可选提示词（传给 OpenAI 兼容接口的 prompt 字段）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <param name="device">忽略（云端推理无设备概念）。</param>
-    /// <returns>词列表（含毫秒级起止时间）。</returns>
-    /// <exception cref="InvalidOperationException">密钥缺失、请求失败或响应为空时抛出。</exception>
+    /// <param name="audioPath">Input audio file path (WAV 16kHz mono).</param>
+    /// <param name="language">Language code, e.g. "en", "zh".</param>
+    /// <param name="modelName">Model name; falls back to the provider default when empty.</param>
+    /// <param name="initialPrompt">Optional prompt (passed to the OpenAI-compatible endpoint's prompt field).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="device">Ignored (cloud inference has no device concept).</param>
+    /// <returns>The word list (with millisecond start/end times).</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the key is missing, the request fails, or the response is empty.</exception>
     public async Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
@@ -81,7 +83,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
         return words;
     }
 
-    /// <summary>调用 OpenAI 兼容 multipart 转录接口（OpenAI/Groq/DashScope）。</summary>
+    /// <summary>Calls the OpenAI-compatible multipart transcription endpoint (OpenAI/Groq/DashScope).</summary>
     private async Task<string> TranscribeOpenAiCompatibleAsync(
         string audioPath, string endpoint, string model, string language,
         string? initialPrompt, CancellationToken cancellationToken)
@@ -103,7 +105,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
         return await SendAndReadAsync(request, cancellationToken);
     }
 
-    /// <summary>调用 Deepgram 原生接口（query 参数 + raw 音频）。</summary>
+    /// <summary>Calls the Deepgram native endpoint (query params + raw audio).</summary>
     private async Task<string> TranscribeDeepgramAsync(
         string audioPath, string endpoint, string model, string language, CancellationToken cancellationToken)
     {
@@ -121,7 +123,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
         return await SendAndReadAsync(request, cancellationToken);
     }
 
-    /// <summary>发送请求并读取响应体；非 2xx 抛出带截断正文的异常。</summary>
+    /// <summary>Sends the request and reads the response body; throws with a truncated body on non-2xx status.</summary>
     private async Task<string> SendAndReadAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         using var response = await httpClient.SendAsync(request, cancellationToken);
@@ -138,16 +140,16 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
     }
 
     /// <summary>
-    /// 解析响应为词级单元：
-    /// OpenAI 形态 segments → 每段切词（真实时间戳）；仅 text → 整段等分；
-    /// Deepgram words → 直接映射。
+    /// Parses the response into word-level units:
+    /// OpenAI-shaped segments → split each segment into words (real timestamps); text only
+    /// → split the whole duration evenly; Deepgram words → mapped directly.
     /// </summary>
     private List<Word> ParseResponse(string json, string language, string audioPath, CancellationToken cancellationToken)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        // Deepgram：results.channels[0].alternatives[0].words
+        // Deepgram: results.channels[0].alternatives[0].words
         if (Provider == AsrProvider.Deepgram)
         {
             var words = new List<Word>();
@@ -171,7 +173,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
             return words;
         }
 
-        // OpenAI 兼容：segments 或 text
+        // OpenAI-compatible: segments or text
         var durationMs = GetAudioDurationMsAsync(audioPath, cancellationToken).GetAwaiter().GetResult();
 
         if (root.TryGetProperty("segments", out var segments) && segments.GetArrayLength() > 0)
@@ -195,7 +197,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
         return [];
     }
 
-    /// <summary>用 FFprobe 获取音频时长（毫秒）；失败时回退 0。</summary>
+    /// <summary>Gets the audio duration via FFprobe (milliseconds); falls back to 0 on failure.</summary>
     private async Task<double> GetAudioDurationMsAsync(string audioPath, CancellationToken cancellationToken)
     {
         try
@@ -210,7 +212,7 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
         }
     }
 
-    /// <summary>截断响应正文（日志用）。</summary>
+    /// <summary>Truncates a response body (for logging).</summary>
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";
 }

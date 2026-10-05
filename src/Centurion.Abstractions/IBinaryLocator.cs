@@ -3,19 +3,19 @@ using Centurion.Abstractions.Exceptions;
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 二进制文件查找服务接口。
+/// Service interface for locating executable files.
 /// </summary>
 public interface IBinaryLocator
 {
     /// <summary>
-    /// 查找可执行文件的完整路径。
+    /// Locates the full path to an executable.
     /// </summary>
-    /// <param name="binaryName">程序名（如 ffmpeg.exe）</param>
-    /// <param name="localSearchRelativeDirs">程序目录下优先检索的子目录</param>
-    /// <returns>完整路径</returns>
-    /// <exception cref="BinaryNotFoundException">未找到时抛出</exception>
+    /// <param name="binaryName">Executable name, such as ffmpeg.exe.</param>
+    /// <param name="localSearchRelativeDirs">Subdirectories under the application directory to search first.</param>
+    /// <returns>The full path.</returns>
+    /// <exception cref="BinaryNotFoundException">Thrown when the executable cannot be found.</exception>
     string Locate(string binaryName, params string[] localSearchRelativeDirs);
 
-    /// <summary>清空缓存</summary>
+    /// <summary>Clears the cache.</summary>
     void ClearCache();
 }

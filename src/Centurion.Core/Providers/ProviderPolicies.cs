@@ -5,33 +5,34 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers;
 
 /// <summary>
-/// Provider 横切执行策略：重试（指数退避）、限流（滑动窗口）、熔断（连续失败冷却）。
-/// 每个 Provider 名一个独立状态，线程安全；由 fallback 链在每次调用前/后驱动。
+/// Cross-cutting provider execution policies: retry (exponential backoff), rate limiting
+/// (sliding window), and circuit breaking (cooldown after consecutive failures). One independent
+/// state per provider name, thread-safe; driven by the fallback chain around each call.
 /// </summary>
 public sealed class ProviderPolicies(ProviderPolicyOptions options)
 {
     private readonly ProviderPolicyOptions _options = options;
 
-    // 熔断状态：provider 名 → (连续失败次数, 熔断截止时间)
+    // Circuit-breaker state: provider name → (consecutive failure count, circuit-open deadline)
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset OpenUntil)> _breakers = new();
 
-    // 限流滑动窗口：provider 名 → 调用时间戳队列
+    // Rate-limit sliding window: provider name → queue of call timestamps
     private readonly ConcurrentDictionary<string, Queue<DateTimeOffset>> _rateWindows = new();
 
-    /// <summary>当前配置。</summary>
+    /// <summary>The current configuration.</summary>
     public ProviderPolicyOptions Options => _options;
 
-    /// <summary>本运行累计估算花费（USD），跨链共享（同一 policies 实例多次 ExecuteAsync 累计）。</summary>
+    /// <summary>Cumulative estimated spend (USD) for this run, shared across chains (accumulated across multiple ExecuteAsync calls on the same policies instance).</summary>
     public double BudgetSpentUsd { get; private set; }
 
-    /// <summary>记录一次成功调用产生的估算成本。</summary>
+    /// <summary>Records the estimated cost produced by one successful call.</summary>
     public void RecordSpend(double costUsd)
     {
         if (costUsd > 0)
             BudgetSpentUsd += costUsd;
     }
 
-    /// <summary>检查是否允许发起调用：未熔断且未超限流。</summary>
+    /// <summary>Checks whether a call may be made: not open on the breaker and within the rate limit.</summary>
     public bool CanInvoke(string providerName)
     {
         if (_options.CircuitBreakerFailureThreshold > 0
@@ -45,14 +46,14 @@ public sealed class ProviderPolicies(ProviderPolicyOptions options)
         return true;
     }
 
-    /// <summary>调用成功后记录：清零熔断计数（如已冷却则恢复）。</summary>
+    /// <summary>Records a successful call: resets the breaker count (recovering after cooldown).</summary>
     public void OnSuccess(string providerName)
     {
         if (_breakers.TryGetValue(providerName, out var state) && state.OpenUntil <= DateTimeOffset.UtcNow)
             _breakers.TryRemove(providerName, out _);
     }
 
-    /// <summary>调用失败后记录：达到阈值即熔断。</summary>
+    /// <summary>Records a failed call: trips the breaker once the threshold is reached.</summary>
     public void OnFailure(string providerName)
     {
         if (_options.CircuitBreakerFailureThreshold <= 0)
@@ -69,7 +70,7 @@ public sealed class ProviderPolicies(ProviderPolicyOptions options)
         }
     }
 
-    /// <summary>按重试配置执行委托（指数退避），耗尽抛 ProviderExecutionException。</summary>
+    /// <summary>Runs the delegate per the retry policy (exponential backoff); throws ProviderExecutionException when retries are exhausted.</summary>
     public async Task<T> WithRetryAsync<T>(
         string providerName,
         Func<CancellationToken, Task<T>> action,
@@ -92,7 +93,7 @@ public sealed class ProviderPolicies(ProviderPolicyOptions options)
             }
             catch (ProviderUnavailableException)
             {
-                throw; // 不可用不重试，直接交链切换
+                throw; // Unavailable providers are not retried; the chain switches over immediately.
             }
         }
     }

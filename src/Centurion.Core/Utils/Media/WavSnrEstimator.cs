@@ -1,16 +1,17 @@
 namespace Centurion.Core.Utils.Media;
 
 /// <summary>
-/// 基于 WAV 采样帧 RMS 的粗略信噪比（SNR）估计器（dB）
+/// Rough signal-to-noise ratio (SNR) estimator (dB) based on the RMS of WAV sample frames.
 /// </summary>
 public static class WavSnrEstimator
 {
     /// <summary>
-    /// 估计指定 16 位 PCM WAV 文件的信噪比（dB）：按帧计算 RMS，以低能量帧均方作为噪声、高能量段均方作为信号估算。
+    /// Estimate the signal-to-noise ratio (dB) of the given 16-bit PCM WAV file: computes RMS per frame,
+    /// using the mean square of low-energy frames as noise and the mean square of high-energy segments as the signal.
     /// </summary>
-    /// <param name="path">WAV 文件路径。</param>
-    /// <returns>估计的信噪比（dB）；数据帧过少时返回 40。</returns>
-    /// <exception cref="FormatException">文件不是受支持的 PCM WAV 格式时抛出。</exception>
+    /// <param name="path">Path to the WAV file.</param>
+    /// <returns>The estimated signal-to-noise ratio (dB); returns 40 when there are too few data frames.</returns>
+    /// <exception cref="FormatException">Thrown when the file is not a supported PCM WAV format.</exception>
     public static double Estimate(string path)
     {
         using var stream = File.OpenRead(path);

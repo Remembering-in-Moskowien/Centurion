@@ -3,16 +3,17 @@ using System.Reflection;
 namespace Centurion.Core.Utils.Infrastructure;
 
 /// <summary>
-/// 构建标识：统一"版本号 → 构建号"。从输出目录 build-number.txt 读取"第几号构建"
-/// （横幅 Build #N 与 IR 溯源 generator.version 共用同一来源），缺失时回退程序集
-/// InformationalVersion（语义版本 + commit），再回退程序集版本。
+/// Build identity: unified "version → build number". Reads the build sequence number
+/// from build-number.txt in the output directory (shared source for the banner Build #N and
+/// IR provenance generator.version); falls back to the assembly InformationalVersion
+/// (semantic version + commit), then to the assembly version.
 /// </summary>
 public static class BuildInfo
 {
-    /// <summary>构建号（如 75）；无构建文件或读取失败时为 null。</summary>
+    /// <summary>Build number (e.g. 75); null when no build file exists or reading fails.</summary>
     public static string? BuildNumber { get; } = ReadBuildNumber();
 
-    /// <summary>展示用的版本标签：优先 build-N，缺失回退语义版本（保持旧产物可读）。</summary>
+    /// <summary>Display version label: prefers build-N, falls back to the semantic version when missing (keeps old artifacts readable).</summary>
     public static string DisplayVersion =>
         BuildNumber is { Length: > 0 } number ? $"build-{number}" : AssemblyVersion;
 

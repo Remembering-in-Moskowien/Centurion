@@ -2,7 +2,10 @@ using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Utils;
-using Centurion.Core.Capabilities.Infrastructure;using Centurion.Core.Workflow.Pipeline;using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Models.Workflow;
+using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Workflow.Pipeline;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Core.Utils.Serialization;
@@ -48,11 +51,11 @@ public sealed class DubCommand(
             if (!string.IsNullOrWhiteSpace(mediaPath) && !File.Exists(mediaPath))
                 throw new FileNotFoundException($"Media file not found: {mediaPath}", mediaPath);
 
-            // 加载中间文件（含句子、翻译、说话人信息）
+            // Load the intermediate file, including sentences, translations, and speaker information.
             var loadedDoc = await store.LoadAsync(inputPath, ct);
             var workflowContext = new SubtitleWorkflowContext(loadedDoc.Config) { State = loadedDoc.State };
 
-            // 更新配置：dub 相关字段
+            // Update dubbing-related configuration fields.
             var previous = workflowContext.Config;
             workflowContext.Config = new WorkflowConfig
             {
@@ -79,11 +82,11 @@ public sealed class DubCommand(
             workflowContext.State.PipelineTempDirectory = tempDir.Path;
             workflowContext.State.DubOutputWavPath = wavPath;
 
-            // 说话人参考目录是用户输入，保留在临时目录之外
-            // dub DAG：画像 → 合成 → 对齐 → 混音 → 质量报告（pipeline-graph 命令共享同一装配）
+            // Keep the user-provided speaker reference directory outside the temporary directory.
+            // Dub DAG: profiling, synthesis, alignment, mixing, and quality reporting; pipeline-graph uses the same assembly.
             var dag = BuildDubDag(speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp);
 
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, workflowContext.Config, serviceProvider, settings.Json, ct);
 
@@ -92,7 +95,7 @@ public sealed class DubCommand(
             var segments = workflowContext.State.DubSegments;
             var dubbed = segments.Count(s => !s.Skipped);
 
-            // 保存含译制分段的中间文件 + 写出译制 wav
+            // Save the intermediate file with dubbing segments and write the dubbed WAV.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "dub", outputPath);
             await store.SaveAsync(outDoc, outputPath, ct);
             if (segments.Count > 0)
@@ -114,7 +117,8 @@ public sealed class DubCommand(
                     output = wavPath,
                     steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
                 });
-            }            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Synthesized {0}/{1} segments -> {2}", dubbed, segments.Count, settings.TargetLanguage));
+            }
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Synthesized {0}/{1} segments -> {2}", dubbed, segments.Count, settings.TargetLanguage));
             ConsoleServices.Output.WriteInfo(ConsoleServices.T("Intermediate file: {0}", outputPath));
 
             return ExitCodes.Success;

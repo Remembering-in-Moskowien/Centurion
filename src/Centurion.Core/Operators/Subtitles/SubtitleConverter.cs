@@ -7,7 +7,7 @@ using Centurion.Core.Operators.Subtitles.Response;
 namespace Centurion.Core.Operators.Subtitles;
 
 /// <summary>
-/// 字幕转换算子（如 SRT → ASS）
+/// Subtitle conversion operator (e.g. SRT -> ASS).
 /// </summary>
 public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConvertResponse>, IAsyncDisposable
 {
@@ -16,9 +16,9 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     private bool _disposed;
 
     /// <summary>
-    /// 用一组按扩展名注册的字幕解析器初始化转换算子。
+    /// Initializes the conversion operator with a set of subtitle parsers registered by extension.
     /// </summary>
-    /// <param name="parsers">支持不同字幕格式的解析器集合。</param>
+    /// <param name="parsers">A collection of parsers supporting different subtitle formats.</param>
     public SubtitleConverter(IEnumerable<ISubtitleParser> parsers)
     {
         _parsers = parsers ?? throw new ArgumentNullException(nameof(parsers));
@@ -28,7 +28,7 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     }
 
     /// <summary>
-    /// 健康检查；本算子无外部依赖，始终直接返回成功。
+    /// Health check; this operator has no external dependencies and always returns success directly.
     /// </summary>
     public Task CheckHealthAsync()
     {
@@ -36,11 +36,11 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     }
 
     /// <summary>
-    /// 根据目标格式选择对应解析器读取字幕文件，并转换为 ASS 文档。
+    /// Selects the matching parser by target format, reads the subtitle file, and converts it to an ASS document.
     /// </summary>
-    /// <param name="request">包含字幕文件路径与目标格式的请求。</param>
-    /// <param name="cancellationToken">取消操作的取消令牌。</param>
-    /// <returns>转换得到的 ASS 字幕文档。</returns>
+    /// <param name="request">Request containing the subtitle file path and the target format.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+    /// <returns>The converted ASS subtitle document.</returns>
     public async Task<SubtitleConvertResponse> ProcessAsync(
         OperatorsRequest<SubtitleConvertRequest> request,
         CancellationToken cancellationToken = default)
@@ -90,9 +90,9 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
         return builder.Build();
     }
 
-    // ---------- 资源释放 ----------
+    // ---------- Resource cleanup ----------
     /// <summary>
-    /// 同步释放资源，内部转调 <see cref="DisposeAsync"/>。
+    /// Synchronously releases resources, internally delegating to <see cref="DisposeAsync"/>.
     /// </summary>
     public void Dispose()
     {
@@ -100,14 +100,14 @@ public class SubtitleConverter : IOperator<SubtitleConvertRequest, SubtitleConve
     }
 
     /// <summary>
-    /// 异步释放资源，并释放实现了 <see cref="IDisposable"/> 的解析器。
+    /// Asynchronously releases resources, and disposes any parsers that implement <see cref="IDisposable"/>.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
-        // 清理解析器资源（如果有）
+        // Clean up parser resources (if any).
         foreach (var parser in _parsers.OfType<IDisposable>())
             parser.Dispose();
 

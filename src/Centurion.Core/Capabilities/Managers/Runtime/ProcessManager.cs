@@ -6,21 +6,21 @@ using Centurion.Abstractions.Utils;
 namespace Centurion.Core.Capabilities.Managers.Runtime;
 
 /// <summary>
-/// 进程执行器，返回原始标准输出，由调用方解析。
-/// 支持超时、取消，并在进程退出前强制终止。
+/// Process executor that returns raw standard output for the caller to parse.
+/// Supports timeouts and cancellation, and force-terminates the process on exit.
 /// </summary>
 public class ProcessManager(ILogger<ProcessManager> logger)
 {
     /// <summary>
-    /// 执行外部程序，返回标准输出字符串。
+    /// Runs an external program and returns its standard output as a string.
     /// </summary>
-    /// <param name="executablePath">可执行文件完整路径</param>
-    /// <param name="arguments">命令行参数</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="throwOnNonZeroExit">进程退出码非 0 时是否抛 InvalidOperationException（默认 true）</param>
-    /// <returns>进程的标准输出内容</returns>
-    /// <exception cref="TimeoutException">超时</exception>
-    /// <exception cref="InvalidOperationException">进程退出码非0或无法启动</exception>
+    /// <param name="executablePath">Full path to the executable</param>
+    /// <param name="arguments">Command-line arguments</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="throwOnNonZeroExit">Whether to throw InvalidOperationException when the process exit code is non-zero (default true)</param>
+    /// <returns>The process's standard output</returns>
+    /// <exception cref="TimeoutException">Timed out</exception>
+    /// <exception cref="InvalidOperationException">The process exited with a non-zero code or could not be started</exception>
     public async Task<string> ExecuteAsync(
         string executablePath,
         string arguments,
@@ -29,15 +29,16 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         => await ExecuteCoreAsync(executablePath, arguments, null, cancellationToken, throwOnNonZeroExit);
 
     /// <summary>
-    /// 执行外部程序（参数数组形式），返回标准输出字符串。
-    /// 使用 <see cref="ProcessStartInfo.ArgumentList"/> 传递参数，由系统负责正确转义，
-    /// 调用方无需手工加引号，也避免路径/提示词中的引号破坏参数边界。
+    /// Runs an external program (argument-array form) and returns its standard output as a string.
+    /// Uses <see cref="ProcessStartInfo.ArgumentList"/> to pass arguments, letting the system handle
+    /// escaping correctly; the caller need not add quotes manually, and quotes inside paths/prompts
+    /// cannot break the argument boundaries.
     /// </summary>
-    /// <param name="executablePath">可执行文件完整路径</param>
-    /// <param name="arguments">按顺序排列的参数列表（不含引号）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="throwOnNonZeroExit">进程退出码非 0 时是否抛 InvalidOperationException（默认 true）</param>
-    /// <returns>进程的标准输出内容</returns>
+    /// <param name="executablePath">Full path to the executable</param>
+    /// <param name="arguments">Ordered argument list (without quotes)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="throwOnNonZeroExit">Whether to throw InvalidOperationException when the process exit code is non-zero (default true)</param>
+    /// <returns>The process's standard output</returns>
     public async Task<string> ExecuteAsync(
         string executablePath,
         IReadOnlyList<string> arguments,
@@ -89,7 +90,7 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        // 注册取消回调，强制终止进程
+        // Register a cancellation callback that force-terminates the process
         await using (cts.Token.Register(() =>
                      {
                          if (process.HasExited) return;
@@ -106,7 +107,7 @@ public class ProcessManager(ILogger<ProcessManager> logger)
                 if (!process.HasExited)
                 {
                     process.Kill();
-                    await process.WaitForExitAsync(cancellationToken); // 确保进程完全退出
+                    await process.WaitForExitAsync(cancellationToken); // Ensure the process exits completely
                 }
                 throw new TimeoutException($"Process '{executablePath}' timed out.");
             }
@@ -116,7 +117,8 @@ public class ProcessManager(ILogger<ProcessManager> logger)
         var error = errorBuilder.ToString();
         if (!throwOnNonZeroExit)
             return outputBuilder.ToString();
-        // 进程失败属内部细节：以 warn 记录（异常继续上抛，由最外层统一输出一次 fail）
+        // A process failure is an internal detail: log at warn (the exception keeps propagating
+        // and the outermost layer prints a single fail).
         logger.LogWarning(
             "Process '{Exe}' exited with code {ExitCode}. Error: {Error}",
             executablePath, process.ExitCode, error);

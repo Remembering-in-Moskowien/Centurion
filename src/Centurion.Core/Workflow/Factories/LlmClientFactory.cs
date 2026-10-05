@@ -8,31 +8,34 @@ using System.ClientModel;
 namespace Centurion.Core.Workflow.Factories;
 
 /// <summary>
-/// LLM 聊天客户端工厂：统一创建各常见 OpenAI 兼容服务（DeepSeek、Moonshot、智谱、OpenRouter、Groq、
-/// SiliconFlow、DashScope、方舟、Azure 等）或本地 Ollama 客户端，供分句、翻译等 LLM 策略复用。
-/// 服务商识别与端点/默认模型补全由 <see cref="LlmEndpointParser"/> 完成。
+/// LLM chat client factory: uniformly creates clients for common OpenAI-compatible services (DeepSeek,
+/// Moonshot, Zhipu, OpenRouter, Groq, SiliconFlow, DashScope, Ark, Azure, etc.) or a local Ollama client,
+/// reused by LLM-based strategies such as sentence splitting and translation. Provider detection and
+/// endpoint/default-model completion are handled by <see cref="LlmEndpointParser"/>.
 /// </summary>
 public static class LlmClientFactory
 {
     /// <summary>
-    /// 按简洁配置创建聊天客户端（兼容旧签名）：提供 API 密钥时使用 OpenAI 官方，否则使用本地 Ollama。
+    /// Creates a chat client from the concise configuration (back-compat with the old signature): uses the
+    /// official OpenAI service when an API key is provided, otherwise the local Ollama.
     /// </summary>
-    /// <param name="model">模型名称；为空时按后端默认（OpenAI gpt-4o-mini / Ollama llama3.1）。</param>
-    /// <param name="apiKey">OpenAI API 密钥；为空时回退 Ollama。</param>
-    /// <param name="logger">创建客户端失败或配置告警时记录日志的日志器。</param>
-    /// <returns>配置好的聊天客户端。</returns>
+    /// <param name="model">The model name; when empty the backend default applies (OpenAI gpt-4o-mini / Ollama llama3.1).</param>
+    /// <param name="apiKey">The OpenAI API key; when empty it falls back to Ollama.</param>
+    /// <param name="logger">Logger used when client creation fails or a configuration warning is raised.</param>
+    /// <returns>A configured chat client.</returns>
     public static IChatClient Create(string? model, string? apiKey, ILogger logger) =>
         Create(new LlmOptions { Model = model, ApiKey = apiKey }, logger);
 
     /// <summary>
-    /// 按完整配置创建聊天客户端：显式/推断提供商，使用其端点与默认模型。
-    /// Ollama 走本地 API；其余提供商均为 OpenAI 兼容端点，统一用官方 OpenAI SDK 的
-    /// <see cref="OpenAIClient"/>（自定义 <see cref="OpenAIClientOptions.Endpoint"/>）连接。
+    /// Creates a chat client from the full configuration: uses the explicit/inferred provider along with its
+    /// endpoint and default model. Ollama goes through the local API; all other providers are OpenAI-compatible
+    /// endpoints connected uniformly via the official OpenAI SDK <see cref="OpenAIClient"/> (with a custom
+    /// <see cref="OpenAIClientOptions.Endpoint"/>).
     /// </summary>
-    /// <param name="options">LLM 连接配置（模型/密钥/端点/提供商）。</param>
-    /// <param name="logger">创建客户端失败或配置告警时记录日志的日志器。</param>
-    /// <returns>配置好的聊天客户端。</returns>
-    /// <exception cref="InvalidOperationException">端点或模型缺失、创建失败时抛出。</exception>
+    /// <param name="options">LLM connection options (model/key/endpoint/provider).</param>
+    /// <param name="logger">Logger used when client creation fails or a configuration warning is raised.</param>
+    /// <returns>A configured chat client.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the endpoint or model is missing or creation fails.</exception>
     public static IChatClient Create(LlmOptions options, ILogger logger)
     {
         var (provider, baseUrl, model) = LlmEndpointParser.Resolve(options, logger);
@@ -64,11 +67,11 @@ public static class LlmClientFactory
         }
     }
 
-    /// <summary>创建本地 Ollama 聊天客户端。</summary>
-    /// <param name="model">Ollama 模型名。</param>
-    /// <param name="logger">记录创建失败的日志器。</param>
-    /// <param name="baseUrl">Ollama 服务地址；为空时默认 http://localhost:11434。</param>
-    /// <returns>配置好的 Ollama 客户端。</returns>
+    /// <summary>Creates a local Ollama chat client.</summary>
+    /// <param name="model">The Ollama model name.</param>
+    /// <param name="logger">Logger used to record creation failures.</param>
+    /// <param name="baseUrl">The Ollama service address; defaults to http://localhost:11434 when empty.</param>
+    /// <returns>A configured Ollama client.</returns>
     private static IChatClient CreateOllama(string model, ILogger logger, string? baseUrl)
     {
         try

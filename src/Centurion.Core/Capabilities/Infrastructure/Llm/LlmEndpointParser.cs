@@ -7,18 +7,19 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Infrastructure.Llm;
 
 /// <summary>
-/// LLM 端点解析器：把用户提供的 <see cref="LlmOptions"/> 归一为具体的（提供商、端点、模型）三元组。
-/// 解析优先级：
+/// LLM endpoint parser: normalizes the user-supplied <see cref="LlmOptions"/> into a
+/// concrete (provider, endpoint, model) triple. Resolution precedence:
 /// <list type="number">
-/// <item>显式 <see cref="LlmOptions.Provider"/>（或 <see cref="LlmOptions.ProviderName"/> 字符串）→ 使用该提供商；</item>
-/// <item>否则若提供了 <see cref="LlmOptions.BaseUrl"/> → 按主机名自动识别提供商（识别不了则视为 OpenAI 兼容自定义端点）；</item>
-/// <item>否则按"有 API 密钥 → OpenAI 官方，无 → 本地 Ollama"回退（兼容旧行为）。</item>
+/// <item>An explicit <see cref="LlmOptions.Provider"/> (or <see cref="LlmOptions.ProviderName"/> string) → use that provider;</item>
+/// <item>Otherwise, if <see cref="LlmOptions.BaseUrl"/> is provided → auto-detect the provider from the host name (if it cannot be recognized, treat it as an OpenAI-compatible custom endpoint);</item>
+/// <item>Otherwise fall back to "API key present → official OpenAI, absent → local Ollama" (preserving legacy behavior).</item>
 /// </list>
-/// 模型名未提供时补全为所选提供商的默认模型；端点未提供时补全为默认端点。
+/// When no model name is given it is filled in with the selected provider's default
+/// model; when no endpoint is given it is filled in with the default endpoint.
 /// </summary>
 public static class LlmEndpointParser
 {
-    /// <summary>提供商字符串 → 枚举的别名表（大小写不敏感，容忍常见拼写）。</summary>
+    /// <summary>Provider string → enum alias table (case-insensitive, tolerant of common spellings).</summary>
     private static readonly Dictionary<string, LlmProvider> ProviderAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["openai"] = LlmProvider.OpenAI,
@@ -44,10 +45,10 @@ public static class LlmEndpointParser
     };
 
     /// <summary>
-    /// 解析提供商名称（字符串）为枚举；无法识别时返回 <see cref="LlmProvider.Auto"/>。
+    /// Parses a provider name (string) into the enum; returns <see cref="LlmProvider.Auto"/> when unrecognized.
     /// </summary>
-    /// <param name="name">提供商名称或别名。</param>
-    /// <returns>对应的提供商枚举；空/未知返回 Auto。</returns>
+    /// <param name="name">Provider name or alias.</param>
+    /// <returns>The corresponding provider enum; Auto for empty/unknown.</returns>
     public static LlmProvider ParseProvider(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -60,10 +61,10 @@ public static class LlmEndpointParser
     }
 
     /// <summary>
-    /// 按 API 端点主机名推断提供商；识别不了时返回 <see cref="LlmProvider.Auto"/>。
+    /// Infers the provider from the API endpoint host name; returns <see cref="LlmProvider.Auto"/> when unrecognized.
     /// </summary>
-    /// <param name="baseUrl">API 端点 URL。</param>
-    /// <returns>推断的提供商；无法识别时 Auto。</returns>
+    /// <param name="baseUrl">API endpoint URL.</param>
+    /// <returns>The inferred provider; Auto when unrecognized.</returns>
     public static LlmProvider InferFromUrl(string? baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -99,12 +100,14 @@ public static class LlmEndpointParser
     }
 
     /// <summary>
-    /// 归一化解析：返回最终 (提供商, 端点, 模型)。模型/端点为空时按提供商默认值补全；
-    /// 未识别提供商且无端点时按"有 API 密钥 → OpenAI 官方，无 → Ollama"回退。
+    /// Normalized resolution: returns the final (provider, endpoint, model). Missing
+    /// model/endpoint are filled in with the provider defaults; when the provider is
+    /// unrecognized and no endpoint is given, falls back to "API key present → official
+    /// OpenAI, absent → Ollama".
     /// </summary>
-    /// <param name="options">用户提供的 LLM 连接配置。</param>
-    /// <param name="logger">解析告警（模型/端点缺失被补全等）写入的日志器。</param>
-    /// <returns>(提供商, 端点 URL, 模型名)。</returns>
+    /// <param name="options">The LLM connection configuration supplied by the user.</param>
+    /// <param name="logger">Logger to which resolution warnings are written (e.g. a missing model/endpoint being filled in).</param>
+    /// <returns>(provider, endpoint URL, model name).</returns>
     public static (LlmProvider Provider, string BaseUrl, string? Model) Resolve(LlmOptions options, ILogger logger)
     {
         var provider = options.Provider != LlmProvider.Auto
@@ -114,7 +117,7 @@ public static class LlmEndpointParser
         if (provider == LlmProvider.Auto)
             provider = InferFromUrl(options.BaseUrl);
 
-        // 仍无法识别：有 API 密钥 → OpenAI 官方，无 → 本地 Ollama（保持旧行为）
+        // Still unrecognized: API key present → official OpenAI, absent → local Ollama (preserve legacy behavior)
         if (provider == LlmProvider.Auto)
             provider = string.IsNullOrEmpty(options.ApiKey) ? LlmProvider.Ollama : LlmProvider.OpenAI;
 
@@ -133,8 +136,9 @@ public static class LlmEndpointParser
         var model = !string.IsNullOrWhiteSpace(options.Model)
             ? options.Model
             : LlmProviderRegistry.GetDefaultModel(provider);
-        // Ollama 默认模型（llama3.1）可能与本机实际拉取的模型不一致，导致 404 整批失败；
-        // 未显式指定模型时自动探测本机 Ollama 已安装的对话模型。
+        // The Ollama default model may not match the model actually pulled locally, causing
+        // whole-batch 404 failures; when no model is explicitly given, auto-detect a local
+        // conversational model already installed in Ollama.
         if (string.IsNullOrWhiteSpace(options.Model) && provider == LlmProvider.Ollama)
         {
             var probed = TryProbeLocalOllamaModel(baseUrl);
@@ -153,9 +157,7 @@ public static class LlmEndpointParser
         return (provider, baseUrl, model);
     }
 
-    /// <summary>
-    /// 探测本地 Ollama（/api/tags）已安装的第一个对话模型；失败或不可达返回 null。
-    /// </summary>
+    /// <summary>Probes the first conversational model installed in the local Ollama (/api/tags); returns null on failure or when unreachable.</summary>
     private static string? TryProbeLocalOllamaModel(string baseUrl)
     {
         try
@@ -173,7 +175,7 @@ public static class LlmEndpointParser
                     caps.ValueKind == JsonValueKind.Array &&
                     caps.EnumerateArray().Any(x => x.GetString() == "embedding"))
                 {
-                    continue; // 仅 embedding 模型不能做对话翻译
+                    continue; // Embedding-only models cannot do conversational translation
                 }
                 return name;
             }

@@ -7,9 +7,10 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 说话人分割算子：对当前工作集的每个 Word 按时间中点匹配说话人片段并标注 Speaker。
-/// 后端由 WorkflowConfig.DiarizationBackend 选择（"crispasr" / "pyannote" / "none"）。
-/// 非致命错误仅记录警告，不中断管道。
+/// Speaker-diarization operator: matches each Word in the current working set to a speaker
+/// segment by its time midpoint and annotates Speaker accordingly.
+/// The backend is selected by WorkflowConfig.DiarizationBackend ("crispasr" / "pyannote" / "none").
+/// Non-fatal errors are only logged as warnings and do not interrupt the pipeline.
 /// </summary>
 public sealed class DiarizationOperator(
     IDiarizationStrategy strategy,
@@ -17,20 +18,21 @@ public sealed class DiarizationOperator(
 {
     private readonly IDiarizationStrategy _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Speaker Diarization";
 
     /// <summary>
-    /// 执行说话人分割：按配置创建策略，对音频做说话人分离，
-    /// 并把每个词按时间中点标注对应说话人。失败为非致命错误，仅记录警告。
+    /// Runs speaker diarization: creates the strategy per config, performs speaker separation
+    /// on the audio, and annotates each word with the corresponding speaker by time midpoint.
+    /// Failures are non-fatal and only logged as warnings.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供音频、句子与配置。</param>
-    /// <param name="cancellationToken">用于取消说话人分割过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing audio, sentences, and configuration.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the diarization process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var config = context.Config;
 
-        // 音频路径（优先人声轨，其次预处理后的音频）
+        // Audio path (prefer the vocals track, then the preprocessed audio)
         var audioPath = context.State.VocalsPath
             ?? context.State.PreprocessedAudioPath
             ?? context.State.ConvertedAudioPath
@@ -41,7 +43,7 @@ public sealed class DiarizationOperator(
             return;
         }
 
-        // 待标注句子（当前工作集，回退到转录结果）
+        // Sentences to annotate (current working set, falling back to the transcription result)
         var sentences = context.State.CurrentSentences.Count > 0
             ? context.State.CurrentSentences
             : context.State.TranscribeSentences;
@@ -63,13 +65,14 @@ public sealed class DiarizationOperator(
                 return;
             }
 
-            // 6. 后处理平滑：合并相邻同说话人、消除逐段交替抖动与过短碎片，
-            //    显著降低边界词的错标率
+            // 6. Post-processing smoothing: merge adjacent same-speaker segments, remove
+            //    per-segment alternation jitter and overly short fragments,
+            //    significantly reducing the mislabeling rate of boundary words.
             var smoothed = SpeakerSegmentSmoother.Smooth(turns, config.DiarizationMinSegmentSeconds);
             if (smoothed.Count < turns.Count)
                 LogInfo($"Speaker segments smoothed from {turns.Count} to {smoothed.Count} (min duration {config.DiarizationMinSegmentSeconds}s).");
 
-            // 7. 按时间窗重叠最大化把说话人映射到每个 Word（Word 为引用类型，原地标注）
+            // 7. Map speakers onto each Word by time-window overlap maximization (Words are reference types; annotated in place)
             var annotated = sentences.ToList();
             var annotatedWordCount = 0;
             foreach (var sentence in annotated)
@@ -88,7 +91,7 @@ public sealed class DiarizationOperator(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // 非致命：说话人标注失败不中断字幕生成
+            // Non-fatal: a speaker-annotation failure does not interrupt subtitle generation
             LogWarning($"Speaker diarization failed; continuing without speaker labels. {ex.Message}");
         }
     }

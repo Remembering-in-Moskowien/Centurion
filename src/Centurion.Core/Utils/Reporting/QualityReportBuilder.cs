@@ -4,18 +4,19 @@ using Centurion.Models.Workflow;
 namespace Centurion.Core.Utils.Reporting;
 
 /// <summary>
-/// 从 <see cref="SubtitleWorkflowContext"/> 提取指标并构建 <see cref="QualityReport"/>。
-/// 统计逻辑独立于 IO，便于单元测试；所有路径（spawn/from-script/correct/convert/translate/dub）统一使用。
+/// Extracts metrics from <see cref="SubtitleWorkflowContext"/> and builds a <see cref="QualityReport"/>.
+/// The statistics logic is IO-independent for easy unit testing, and is shared by all paths
+/// (spawn/from-script/correct/convert/translate/dub).
 /// </summary>
 public static class QualityReportBuilder
 {
     /// <summary>
-    /// 根据工作流上下文构建质量报告。
+    /// Builds a quality report from the workflow context.
     /// </summary>
-    /// <param name="context">字幕工作流上下文。</param>
-    /// <param name="outputPath">本次运行的输出文件路径（用于 Meta）。</param>
-    /// <param name="elapsedSeconds">本次运行总耗时（秒）。</param>
-    /// <returns>质量报告。</returns>
+    /// <param name="context">Subtitle workflow context.</param>
+    /// <param name="outputPath">Output file path for this run (used for Meta).</param>
+    /// <param name="elapsedSeconds">Total elapsed time for this run (seconds).</param>
+    /// <returns>The quality report.</returns>
     public static QualityReport Build(SubtitleWorkflowContext context, string outputPath, double elapsedSeconds)
     {
         var state = context.State;
@@ -60,7 +61,7 @@ public static class QualityReportBuilder
             Errors = state.Errors.ToList()
         };
 
-        // 校准命令自带漂移统计：优先直接取用
+        // The correction command carries its own drift statistics: prefer them directly
         if (state.Report is { AverageDriftMs: > 0 } correction)
         {
             report.Alignment.MeanDriftMs = correction.AverageDriftMs;
@@ -68,30 +69,30 @@ public static class QualityReportBuilder
             report.Alignment.MapperCoverage = correction.TextCoverage;
         }
 
-        // 行级质量评估（CPS / 行宽 / 最小时长 / 最大时长 / 重叠 / 置信度）→ Timing + Issues
+        // Line-level quality assessment (CPS / line width / min duration / max duration / overlap / confidence) → Timing + Issues
         var assessment = QualityAssessor.Assess(sentences, new QualityAssessmentOptions(), BuildConfidenceMap(sentences));
         report.Timing = assessment.Timing;
         report.Issues = assessment.Issues;
 
-        // ASR 置信度（模型提供时）
+        // ASR confidence (when the model provides it)
         report.Confidence = BuildConfidence(sentences);
         if (report.Confidence.MeanConfidence is null && sentences.Count > 0)
             report.Warnings.Add("ASR model did not provide per-sentence confidence; LowConfidence analysis is skipped.");
 
-        // 翻译 QA（TranslationOperator 已写入 TranslationQa）
+        // Translation QA (TranslationOperator has already written TranslationQa)
         if (state.TranslationQa is not null)
             report.Translation = MapTranslationQa(state.TranslationQa);
         else if (state.IsTranslated && sentences.Count > 0)
             report.Warnings.Add("Translation QA is unavailable (no glossary/length metrics recorded for translated sentences).");
 
-        // TTS / 配音（dub 命令时）
+        // TTS / dubbing (only for the dub command)
         if (string.Equals(context.Config.CommandName, "dub", StringComparison.OrdinalIgnoreCase))
             report.Tts = BuildTts(context, sentences);
 
         return report;
     }
 
-    /// <summary>句级置信度映射（index → 0~1；仅供 Assess 的低置信度判定）。</summary>
+    /// <summary>Per-sentence confidence map (index → 0~1; used only by Assess for low-confidence detection).</summary>
     private static IReadOnlyDictionary<int, double> BuildConfidenceMap(List<Sentence> sentences)
     {
         var map = new Dictionary<int, double>();
@@ -103,7 +104,7 @@ public static class QualityReportBuilder
         return map;
     }
 
-    /// <summary>ASR 置信度聚合：平均 + 低置信度索引（阈值 0.5）。</summary>
+    /// <summary>Aggregates ASR confidence: mean + low-confidence indexes (threshold 0.5).</summary>
     private static QualityConfidence BuildConfidence(List<Sentence> sentences)
     {
         var values = sentences.Select(s => s.Confidence).Where(c => c is not null).Select(c => c!.Value).ToList();
@@ -119,7 +120,7 @@ public static class QualityReportBuilder
         return confidence;
     }
 
-    /// <summary>TranslationQa → 报告质量翻译指标（回译相似度未启用，恒为 null）。</summary>
+    /// <summary>Maps TranslationQa into the report's translation metrics (back-translation similarity is disabled and always null).</summary>
     private static QualityTranslation MapTranslationQa(TranslationQa qa) => new()
     {
         GlossaryHitRate = qa.GlossaryHitRate,
@@ -130,7 +131,7 @@ public static class QualityReportBuilder
         CachedSentenceCount = qa.CachedSentenceCount
     };
 
-    /// <summary>dub 命令的 TTS 指标：对齐误差、语速、停顿、重叠、ducking（响度探测未接入时警告）。</summary>
+    /// <summary>TTS metrics for the dub command: alignment error, speech rate, pauses, overlap, ducking (warns when loudness probing is not wired in).</summary>
     private static QualityTts BuildTts(SubtitleWorkflowContext context, List<Sentence> sentences)
     {
         var segments = context.State.DubSegments;
@@ -163,7 +164,7 @@ public static class QualityReportBuilder
         return tts;
     }
 
-    /// <summary>TTS 合成段平均语速（字符/秒；无段时 0）。</summary>
+    /// <summary>Average speech rate of TTS-synthesized segments (characters/second; 0 when there are no segments).</summary>
     private static double ComputeSpeechRate(List<Sentence> sentences)
     {
         var segments = sentences
@@ -176,7 +177,7 @@ public static class QualityReportBuilder
             : Math.Round(segments.Average(x => x.Chars / x.Seconds), 2);
     }
 
-    /// <summary>构建 dub 专属指标（非 dub 命令返回 null）。</summary>
+    /// <summary>Builds dub-specific metrics (returns null for non-dub commands).</summary>
     private static QualityDub? BuildDub(SubtitleWorkflowContext context, List<Sentence> sentences)
     {
         if (!string.Equals(context.Config.CommandName, "dub", StringComparison.OrdinalIgnoreCase))
@@ -185,7 +186,8 @@ public static class QualityReportBuilder
         var segments = context.State.DubSegments;
 
         var succeeded = segments.Where(s => !s.Skipped).ToList();
-        // 配音文本覆盖率：目标语言文本（译文轨或单轨原文）非空的句子占比
+        // Dubbing text coverage: share of sentences whose target-language text
+        // (the translated track, or the single-track original) is non-empty
         var translatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText ?? s.Text));
         var deviations = succeeded
             .Where(s => s.TargetDurationSec > 0 && s.AlignedDurationSec > 0)
@@ -193,7 +195,8 @@ public static class QualityReportBuilder
             .ToList();
         var tempos = succeeded.Where(s => s.AlignmentTempo > 0).Select(s => s.AlignmentTempo).ToList();
 
-        // 克隆一致性启发式：合成时长越贴近目标时长，节奏一致性越高（0~1）；非真实声纹相似度
+        // Clone-consistency heuristic: the closer the synthesized duration is to the target duration,
+        // the higher the tempo consistency (0~1); not a real voiceprint similarity
         double consistency = 1.0;
         if (deviations.Count > 0)
         {
@@ -217,7 +220,7 @@ public static class QualityReportBuilder
         };
     }
 
-    /// <summary>取当前工作集；为空时回退到最新有内容的阶段列表（对齐/分割/转录）。</summary>
+    /// <summary>Takes the current working set; when empty, falls back to the latest populated stage list (align/split/transcribe).</summary>
     public static List<Sentence> EffectiveSentences(WorkflowState state)
     {
         if (state.CurrentSentences.Count > 0)
@@ -263,7 +266,7 @@ public static class QualityReportBuilder
             return 0;
         var minStart = sentences.Select(s => s.Start).Min();
         var maxEnd = sentences.Select(s => s.End).Max();
-        // Sentence.Start/End 全项目统一为毫秒
+        // Sentence.Start/End are in milliseconds project-wide
         return Math.Max(0, (maxEnd - minStart) / 1000.0);
     }
 
@@ -279,7 +282,7 @@ public static class QualityReportBuilder
     private static QualityAlignment BuildAlignment(WorkflowState state, List<Sentence> sentences)
     {
         var durations = sentences
-            .Select(s => s.End - s.Start)   // Start/End 已统一为毫秒（去掉多余的 ×1000，此前把 ms 误当 s 放大 1000 倍）
+            .Select(s => s.End - s.Start)   // Start/End are already in milliseconds (removed the redundant ×1000; previously ms was mistaken for s and scaled up 1000×)
             .Where(ms => ms >= 0)
             .ToList();
 

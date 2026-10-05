@@ -6,9 +6,10 @@ using RapidOcrNet;
 namespace Centurion.Core.Capabilities.Infrastructure.Ocr;
 
 /// <summary>
-/// 本地 RapidOCR 引擎（RapidOcrNet，PaddleOCR ONNX，纯 CPU）。
-/// 优先加载 PP-OCRv6 small 多语言模型（中文/英文等）；模型未下载时回退
-/// RapidOcrNet 包内置的 PP-OCRv5 latin 模型（英文/数字）。线程安全、懒初始化。
+/// Local RapidOCR engine (RapidOcrNet, PaddleOCR ONNX, CPU-only). Prefers loading the
+/// PP-OCRv6 small multilingual model (Chinese/English, etc.); when the model is not
+/// downloaded, falls back to the PP-OCRv5 latin model bundled with the RapidOcrNet
+/// package (English/digits). Thread-safe, lazily initialized.
 /// </summary>
 public sealed class RapidOcrEngine(
     RapidOcrModelManager modelManager,
@@ -18,10 +19,10 @@ public sealed class RapidOcrEngine(
     private RapidOcr? _ocr;
     private RapidOcrOptions _options = RapidOcrOptions.Default;
 
-    /// <summary>引擎是否可加载（首次初始化后为 true；模型与运行库都缺失时为 false）。</summary>
+    /// <summary>Whether the engine can be loaded (true after first initialization; false when both the model and runtime are missing).</summary>
     public bool IsInitialized => _ocr is not null;
 
-    /// <summary>探测可用性：尝试初始化（不下载模型）。</summary>
+    /// <summary>Probes availability: attempts initialization (without downloading the model).</summary>
     public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken)
     {
         var ocr = await GetOcrAsync(initOnMissing: false, cancellationToken);
@@ -29,8 +30,10 @@ public sealed class RapidOcrEngine(
     }
 
     /// <summary>
-    /// 确保引擎可用：允许自动下载 PP-OCRv6 模型（下载失败时回退内置 PP-OCRv5 latin）。
-    /// 供 ocr 命令在校验阶段调用，避免“探测不下载”阻断首次使用时的自动模型获取。
+    /// Ensures the engine is usable: allows auto-downloading the PP-OCRv6 model (falls
+    /// back to the bundled PP-OCRv5 latin when the download fails). Called by the ocr
+    /// command during its validation phase, so that the "probe without download" check
+    /// does not block automatic model acquisition on first use.
     /// </summary>
     public async Task<bool> EnsureAvailableAsync(CancellationToken cancellationToken)
     {
@@ -39,8 +42,9 @@ public sealed class RapidOcrEngine(
     }
 
     /// <summary>
-    /// 对单张图片做字幕级 OCR，返回识别文本（每行一条；无文本返回空字符串）。
-    /// 引擎不可用时抛出 <see cref="ProviderUnavailableException"/>。
+    /// Runs subtitle-level OCR on a single image and returns the recognized text (one
+    /// entry per line; an empty string when there is no text). Throws
+    /// <see cref="ProviderUnavailableException"/> when the engine is unavailable.
     /// </summary>
     public async Task<string> OcrImageAsync(string imagePath, CancellationToken cancellationToken)
     {
@@ -66,7 +70,7 @@ public sealed class RapidOcrEngine(
 
             try
             {
-                // 首选：PP-OCRv6 small 多语言（中英字幕通用）——模型缺失时尝试下载
+                // Preferred: PP-OCRv6 small multilingual (covers Chinese/English subtitles) — download the model when it is missing
                 var models = initOnMissing
                     ? await modelManager.EnsureModelsAsync(cancellationToken)
                     : modelManager.ModelPaths();
@@ -92,7 +96,7 @@ public sealed class RapidOcrEngine(
                 if (!initOnMissing)
                     return null;
 
-                // 回退：包内置 PP-OCRv5 latin（英文/数字）——路径必须绝对化（RapidOcrNet 按相对 cwd 解析）
+                // Fallback: the package's bundled PP-OCRv5 latin (English/digits) — paths must be absolute (RapidOcrNet resolves them relative to the cwd)
                 var latin = new RapidOcr();
                 var latinSet = RapidOcrModelSet.PPOCRv5Latin with
                 {

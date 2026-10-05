@@ -8,9 +8,9 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.VocalSeparation;
 
 /// <summary>
-/// 人声分离 Provider：直接驱动 demucs-rs CLI（-s vocals）分离人声轨。
-/// 轻量路径：工具按需下载、模型名默认 htdemucs（demucs-rs 自身缓存）；
-/// 管道内 <see cref="VocalSeparationOperator"/> 为生产路径（含镜像预下载增强）。
+/// Vocal separation provider: directly drives the demucs-rs CLI (-s vocals) to isolate the vocal track.
+/// Lightweight path: the tool is downloaded on demand, model name defaults to htdemucs (cached by demucs-rs itself);
+/// the in-pipeline <see cref="VocalSeparationOperator"/> is the production path (with mirror pre-download enhancement).
 /// </summary>
 public sealed class DemucsVocalSeparationProvider(
     string name,
@@ -19,7 +19,7 @@ public sealed class DemucsVocalSeparationProvider(
     ProcessManager processManager,
     ProviderCapabilities capabilities) : IVocalSeparationProvider
 {
-    /// <summary>默认分离模型。</summary>
+    /// <summary>Default separation model.</summary>
     public string DefaultModel { get; set; } = "htdemucs";
 
     /// <inheritdoc />
@@ -65,13 +65,13 @@ public sealed class DemucsVocalSeparationProvider(
     }
 }
 
-/// <summary>Demucs 人声分离 Provider 注册工厂。</summary>
+/// <summary>Demucs vocal separation provider registration factory.</summary>
 public static class DemucsVocalSeparationProviders
 {
-    /// <summary>注册名。</summary>
+    /// <summary>Registered name.</summary>
     public const string Name = "demucs";
 
-    /// <summary>能力声明：本地、不限语言、高质量分离。</summary>
+    /// <summary>Capability declaration: local, language-agnostic, high-quality separation.</summary>
     public static ProviderCapabilities Capabilities => ProviderCapabilities.Local(
         requiresGpu: true,
         latency: ProviderLatency.High,

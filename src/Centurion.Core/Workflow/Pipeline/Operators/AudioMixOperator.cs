@@ -6,13 +6,16 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 混音算子（dub Phase 2/3）：把各对齐后的 TTS 片段按字幕时间轴放置到完整时长音轨上。
-/// 支持三种模式：
-/// 1) 纯人声：TTS 片段 amix 到静音底轨 → loudnorm 响度归一化；
-/// 2) 伴奏 + ducking：提供 <c>DubBackgroundPath</c> 时，伴奏先经 sidechaincompress 被人声侧链压低，
-///    再与人声混合（默认开启，可用 <c>DubDucking=false</c> 关闭）；
-/// 3) 相邻段重叠：按 TimeAlignment 阶段计算的 MixOffsetMs 压叠（后段前移）。
-/// 输出最终译制 wav。
+/// Audio mixing operator (dub Phase 2/3): places each aligned TTS segment onto a full-length
+/// audio track according to the subtitle timeline.
+/// Supports three modes:
+/// 1) Vocals only: amix TTS segments onto a silent base track, then loudnorm loudness normalization;
+/// 2) Background + ducking: when <c>DubBackgroundPath</c> is provided, the background track is first
+///    sidechain-compressed (ducked) by the vocals via sidechaincompress, then mixed with the vocals
+///    (on by default; disable with <c>DubDucking=false</c>);
+/// 3) Overlapping adjacent segments: stacked by the MixOffsetMs computed in the TimeAlignment stage
+///    (the later segment is shifted earlier).
+/// Outputs the final dubbed wav.
 /// </summary>
 public sealed class AudioMixOperator(
     IBinaryLocator binaryLocator,
@@ -22,14 +25,15 @@ public sealed class AudioMixOperator(
 {
     private const int SampleRate = 44100;
 
-    /// <summary>算子名称。</summary>
+    /// <summary>The operator name.</summary>
     public override string Name => "Audio Mix";
 
     /// <summary>
-    /// 生成完整时长底音轨并把各段 adelay 对齐后混合输出；有伴奏时启用 ducking，最终 loudnorm 归一化。
+    /// Builds a full-length base audio track, aligns each segment with adelay and mixes the output;
+    /// enables ducking when a background track is present, and finally normalizes with loudnorm.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">The workflow context.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.DubSegments is not { Count: > 0 } segments)
@@ -71,10 +75,10 @@ public sealed class AudioMixOperator(
     }
 
     /// <summary>
-    /// 用 ffmpeg filter_complex 完成混音：
-    /// - 各 TTS 段以 (TargetStartMs + MixOffsetMs) 偏移叠加为 [vox]；
-    /// - 有伴奏且 ducking 开启时 [bg][vox]sidechaincompress 生成 [duckbg]，再 amix；
-    /// - 最后 loudnorm 归一化到目标 LUFS。
+    /// Performs the mix with ffmpeg filter_complex:
+    /// - overlays each TTS segment at the offset (TargetStartMs + MixOffsetMs) into [vox];
+    /// - when a background is present and ducking is on, [bg][vox]sidechaincompress produces [duckbg], then amix;
+    /// - finally loudnorm normalizes to the target LUFS.
     /// </summary>
     private async Task MixAsync(string ffmpeg, List<DubSegment> segments, int totalMs, string outputPath,
         double loudnessTarget, string? backgroundPath, bool ducking, CancellationToken ct)
@@ -104,9 +108,9 @@ public sealed class AudioMixOperator(
         var loudnorm = $"loudnorm=I={loudnessTarget.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}:TP=-1.5:LRA=11";
         if (ducking && backgroundPath is not null)
         {
-            // 伴奏轨后置输入：索引 = 1 + segments.Count。
-            // [vox] 被两个 filter 引用（sidechain 侧链 + 最终混合），ffmpeg 7 直接 fan-out 会解析失败，
-            // 故先用 asplit 显式分流。
+            // The background track is the trailing input: index = 1 + segments.Count.
+            // [vox] is consumed by two filters (the sidechain input of sidechaincompress and the final mix);
+            // ffmpeg 7 cannot resolve direct fan-out, so we explicitly split it with asplit first.
             var bgIndex = 1 + segments.Count;
             filters.Add($"[vox]asplit=2[v1][v2]");
             filters.Add($"[{bgIndex}:a]aresample={SampleRate}[bg]");

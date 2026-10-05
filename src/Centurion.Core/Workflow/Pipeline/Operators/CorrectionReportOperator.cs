@@ -7,25 +7,27 @@ using Centurion.Models.Console;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 校正报告算子：基于工作流状态与校正元数据汇总句子总数、文本覆盖率、时间漂移等指标，
-/// 输出到控制台并写入 <see cref="SubtitleWorkflowContext"/> 状态中的 Report。
+/// Correction-report operator: aggregates metrics such as total sentence count, text coverage,
+/// and timeline drift from the workflow state and correction metadata, prints them to the
+/// console, and writes them into the Report in the <see cref="SubtitleWorkflowContext"/> state.
 /// </summary>
 public sealed class CorrectionReportOperator : PipelineOperatorBase<CorrectionReportOperator>
 {
-    /// <summary>创建校正报告算子实例。</summary>
-    /// <param name="logger">记录报告输出日志的记录器。</param>
+    /// <summary>Creates a correction-report operator instance.</summary>
+    /// <param name="logger">Logger used to record report-output logs.</param>
     public CorrectionReportOperator(ILogger<CorrectionReportOperator> logger) : base(logger)
     {
     }
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Correction Report";
 
     /// <summary>
-    /// 汇总并输出校正报告：统计句子总数、文本覆盖率、时间漂移与耗时，写入 Report 并打印。
+    /// Aggregates and outputs the correction report: counts total sentences, text coverage,
+    /// timeline drift, and elapsed time; writes into Report and prints it.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供句子、元数据与报告对象。</param>
-    /// <param name="cancellationToken">用于取消报告生成的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing sentences, metadata, and the report object.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel report generation.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();

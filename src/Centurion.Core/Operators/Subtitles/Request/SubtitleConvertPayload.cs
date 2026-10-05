@@ -1,13 +1,13 @@
 namespace Centurion.Core.Operators.Subtitles.Request;
 
 /// <summary>
-/// 字幕转换算子请求载荷
+/// Request payload for the subtitle conversion operator.
 /// </summary>
 public class SubtitleConvertRequest
 {
-    /// <summary>字幕文件路径</summary>
+    /// <summary>Path to the subtitle file.</summary>
     public required string FilePath { get; init; }
 
-    /// <summary>可选：显式指定格式（文件扩展名由系统自动识别，若指定则优先）</summary>
+    /// <summary>Optional: explicitly specify the format (the file extension is auto-detected; an explicit format takes precedence).</summary>
     public string? Format { get; init; }
 }

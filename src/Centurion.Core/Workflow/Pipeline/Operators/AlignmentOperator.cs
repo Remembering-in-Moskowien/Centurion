@@ -21,16 +21,16 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
     private readonly IAlignmentStrategy _strategy;
     private readonly IToolManagerFactory _toolManagerFactory;
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>The display name of this operator in the pipeline.</summary>
     public override string Name => "Forced Alignment";
 
     /// <summary>
-    /// 创建对齐算子实例。
+    /// Creates an alignment operator instance.
     /// </summary>
-    /// <param name="serviceProvider">用于解析服务的依赖注入容器。</param>
-    /// <param name="logger">记录对齐过程日志的记录器。</param>
-    /// <param name="strategy">已解析好的强制对齐策略。</param>
-    /// <param name="toolManagerFactory">用于创建 CrispASR 工具管理器的工厂。</param>
+    /// <param name="serviceProvider">The dependency-injection container used to resolve services.</param>
+    /// <param name="logger">The logger that records the alignment process.</param>
+    /// <param name="strategy">The resolved forced-alignment strategy.</param>
+    /// <param name="toolManagerFactory">The factory used to create the CrispASR tool manager.</param>
     public AlignmentOperator(
         IServiceProvider serviceProvider,
         ILogger<AlignmentOperator> logger,
@@ -45,11 +45,12 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
     }
 
     /// <summary>
-    /// 执行强制对齐：读取当前句子与转换后的音频，经策略细化词级时间戳，
-    /// 并将结果写回 <see cref="SubtitleWorkflowContext"/> 状态。对齐失败时保留原始时间。
+    /// Runs forced alignment: reads the current sentences and the converted audio, refines the
+    /// word-level timestamps via the strategy, and writes the result back into the
+    /// <see cref="SubtitleWorkflowContext"/> state. Keeps the original timings when alignment fails.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供句子、音频路径与配置。</param>
-    /// <param name="cancellationToken">用于取消对齐过程的取消标记。</param>
+    /// <param name="context">The subtitle workflow context, providing sentences, audio path, and config.</param>
+    /// <param name="cancellationToken">The cancellation token used to cancel the alignment process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         // Alignment is omitted from the pipeline when disabled.
@@ -202,9 +203,10 @@ public class AlignmentOperator : PipelineOperatorBase<AlignmentOperator>, IHealt
     private sealed record WordTiming(double Start, double End);
 
     /// <summary>
-    /// 检查对齐运行环境：确认 CrispASR 可执行文件是否就绪，缺失时记录警告。
+    /// Checks the alignment runtime environment: verifies whether the CrispASR executable is ready,
+    /// and logs a warning when it is missing.
     /// </summary>
-    /// <param name="cancellationToken">用于取消健康检查的取消标记。</param>
+    /// <param name="cancellationToken">The cancellation token used to cancel the health check.</param>
     public override async Task CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         LogInfo("Checking alignment environment...");

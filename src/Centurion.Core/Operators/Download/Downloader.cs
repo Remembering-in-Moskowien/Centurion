@@ -7,27 +7,27 @@ using Centurion.Models.Console;
 namespace Centurion.Core.Operators.Download;
 
 /// <summary>
-/// 基于 Downloader 库的下载算子，替代 aria2 外部调用
+/// Download operator based on the Downloader library, replacing the external aria2 invocation.
 /// </summary>
 public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
 {
     private bool _disposed;
 
     /// <summary>
-    /// 健康检查；本算子不再依赖外部二进制，始终直接返回成功。
+    /// Health check; this operator no longer relies on an external binary and always returns success directly.
     /// </summary>
     public Task CheckHealthAsync()
     {
-        // 不再依赖外部二进制，直接返回成功
+        // No longer relies on an external binary; return success directly.
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// 按请求多线程下载文件，显示下载进度，并在提供哈希值时进行 SHA256 校验。
+    /// Downloads the file in multiple threads as requested, shows download progress, and performs SHA256 verification when a hash is provided.
     /// </summary>
-    /// <param name="request">包含下载 URL、保存路径以及线程数、重试等配置的请求。</param>
-    /// <param name="cancellationToken">取消下载操作的取消令牌。</param>
-    /// <returns>下载结果，包含是否成功与保存文件路径。</returns>
+    /// <param name="request">Request containing the download URL, save path, and configuration such as thread count and retries.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the download.</param>
+    /// <returns>The download result, including whether it succeeded and the saved file path.</returns>
     public async Task<DownloaderResponse> ProcessAsync(
         OperatorsRequest<AriaDownloadRequest> request,
         CancellationToken cancellationToken = default)
@@ -35,16 +35,16 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
         var payload = request.Payload;
         await CheckHealthAsync();
 
-        // 生产安全：仅允许 HTTPS 下载，防止配置被篡改为明文 HTTP 造成中间人攻击
+        // Production safety: only allow HTTPS downloads, preventing a tampered config from falling back to plaintext HTTP and enabling a man-in-the-middle attack.
         if (!Uri.TryCreate(payload.Url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Refusing to download from non-HTTPS URL: {payload.Url}");
 
-        // 确保目标目录存在
+        // Ensure the target directory exists.
         var targetDir = Path.GetDirectoryName(payload.FullSavePath)!;
         if (!Directory.Exists(targetDir))
             Directory.CreateDirectory(targetDir);
 
-        // 配置下载器（依据官方文档）
+        // Configure the downloader (per the official documentation).
         var config = new DownloadConfiguration
         {
             ParallelDownload = true,
@@ -56,59 +56,59 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
 
         using var downloader = new DownloadService(config);
 
-        // 进度状态（线程安全）
+        // Progress state (thread-safe).
         var progress = new DownloadProgressState();
 
-        // 订阅下载进度事件
+        // Subscribe to download progress events.
         downloader.DownloadProgressChanged += (_, e) =>
         {
             progress.TotalBytes = e.TotalBytesToReceive;
             progress.ReceivedBytes = e.ReceivedBytesSize;
         };
 
-        // 启动下载任务（传入取消令牌）
+        // Start the download task (pass the cancellation token).
         var downloadTask = downloader.DownloadFileTaskAsync(payload.Url, payload.FullSavePath, cancellationToken);
 
-        // 使用 IProgressReporter 显示进度
+        // Use IProgressReporter to display progress.
         ConsoleServices.Progress.StartProgress("Downloading...", ctx =>
         {
-            // 添加进度任务，最大值为总字节数（可能为 0，但后续会更新）
+            // Add a progress task with max value = total bytes (may be 0, but updated later).
             var task = ctx.AddTask(
                 $"Downloading {Path.GetFileName(payload.FullSavePath)}",
                 (long)progress.TotalBytes
             );
 
-            // 循环更新进度直至下载完成
+            // Loop updating progress until the download completes.
             while (!downloadTask.IsCompleted)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 task.SetValue(progress.ReceivedBytes);
-                // 如果总大小变化，更新最大值
+                // If the total size changes, update the max value.
                 if (progress.TotalBytes > 0)
                     task.SetMaxValue((long)progress.TotalBytes);
                 Thread.Sleep(payload.ProgressRefreshMs);
             }
 
-            // 最终刷新至 100%
+            // Finally refresh to 100%.
             task.SetValue(progress.TotalBytes);
             task.SetDescription("Download complete.");
-            ctx.Refresh(); // 确保 UI 刷新
+            ctx.Refresh(); // Ensure the UI refreshes.
         });
 
-        // 等待下载任务完成，若有异常将在此抛出
+        // Wait for the download task to complete; any exception is rethrown here.
         await downloadTask;
 
-        // 检查文件是否存在
+        // Check whether the file exists.
         if (!File.Exists(payload.FullSavePath))
             throw new FileNotFoundException("Download completed but file not found.", payload.FullSavePath);
 
-        // 执行 SHA256 校验（如果提供了哈希值）
+        // Perform SHA256 verification (if a hash was provided).
         if (!string.IsNullOrEmpty(payload.FileHash))
         {
             var result = HashVerifier.VerifyHash(payload.FullSavePath, payload.FileHash);
             if (!result.IsMatch)
             {
-                // 删除损坏文件
+                // Delete the corrupted file.
                 File.Delete(payload.FullSavePath);
                 throw new InvalidOperationException(
                     $"Hash mismatch. Expected: {payload.FileHash}, Actual: {result.ActualHash}");
@@ -123,7 +123,7 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
     }
 
     /// <summary>
-    /// 释放资源并抑制终结器。
+    /// Releases resources and suppresses the finalizer.
     /// </summary>
     public void Dispose()
     {
@@ -132,7 +132,7 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
     }
 
     /// <summary>
-    /// 终结器，在对象回收时调用 <see cref="Dispose(bool)"/>。
+    /// Finalizer; calls <see cref="Dispose(bool)"/> when the object is garbage-collected.
     /// </summary>
     ~Downloader()
     {
@@ -140,18 +140,18 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
     }
 
     /// <summary>
-    /// 释放资源；本类无需要释放的非托管资源。
+    /// Releases resources; this class has no unmanaged resources to release.
     /// </summary>
-    /// <param name="disposing">为 <see langword="true"/> 时同时释放托管资源。</param>
+    /// <param name="disposing">Also releases managed resources when <see langword="true"/>.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
-        // 无需要释放的非托管资源
+        // No unmanaged resources to release.
         _disposed = true;
     }
 
     /// <summary>
-    /// 线程安全的进度状态
+    /// Thread-safe progress state.
     /// </summary>
     private sealed class DownloadProgressState
     {

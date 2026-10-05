@@ -4,15 +4,17 @@ using System.Text.RegularExpressions;
 namespace Centurion.Core.Processing.Text;
 
 /// <summary>
-/// 文本分词与归一化工具：CJK 字符按单字切分，拉丁字母与数字按连续串切分。
+/// Text tokenization and normalization utilities: CJK characters are split one per token,
+/// while Latin letters and digits are grouped into continuous runs.
 /// </summary>
 public static partial class Tokenizer
 {
     /// <summary>
-    /// 先归一化再切分文本：每个 CJK 字符单独成词，连续的非空白、非 CJK 字符合并为一个词。
+    /// Normalizes then tokenizes the text: each CJK character becomes its own token,
+    /// while consecutive non-whitespace, non-CJK characters are merged into one token.
     /// </summary>
-    /// <param name="text">待分词文本，为 <see langword="null"/> 时返回空列表。</param>
-    /// <returns>切分得到的词元列表。</returns>
+    /// <param name="text">The text to tokenize; returns an empty list when <see langword="null"/>.</param>
+    /// <returns>The list of tokens produced by tokenization.</returns>
     public static IReadOnlyList<string> Tokenize(string? text)
     {
         var normalized = Normalize(text);
@@ -41,10 +43,11 @@ public static partial class Tokenizer
     }
 
     /// <summary>
-    /// 对文本做 Unicode KC 归一化、转小写，并将标点与连续空白统一替换为单个空格后去除首尾空白。
+    /// Applies Unicode KC normalization, lowercases the text, and replaces punctuation and runs of
+    /// whitespace with a single space, then trims leading and trailing whitespace.
     /// </summary>
-    /// <param name="text">待归一化文本，为 <see langword="null"/> 时按空串处理。</param>
-    /// <returns>归一化后的文本。</returns>
+    /// <param name="text">The text to normalize; treated as an empty string when <see langword="null"/>.</param>
+    /// <returns>The normalized text.</returns>
     public static string Normalize(string? text)
     {
         var normalized = (text ?? string.Empty).Normalize(NormalizationForm.FormKC).ToLowerInvariant();
@@ -66,7 +69,6 @@ public static partial class Tokenizer
 
     [GeneratedRegex(@"[\p{P}\p{S}]+")]
     private static partial Regex PunctuationRegex();
-
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 }

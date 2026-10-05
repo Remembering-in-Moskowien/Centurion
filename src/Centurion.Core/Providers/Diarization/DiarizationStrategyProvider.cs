@@ -5,8 +5,8 @@ using Centurion.Models.Providers;
 namespace Centurion.Core.Providers.Diarization;
 
 /// <summary>
-/// 说话人分割 Provider：适配 <see cref="IDiarizationStrategy"/>（CrispASR 内置 / Pyannote+TitaNet）。
-/// 本地推理，免密钥；可用性以执行结果为准。
+/// Speaker-segmentation provider: adapts <see cref="IDiarizationStrategy"/> (built-in CrispASR /
+/// Pyannote+TitaNet). Runs locally with no key required; availability is determined by execution result.
 /// </summary>
 public sealed class DiarizationStrategyProvider(
     string name,
@@ -42,23 +42,23 @@ public sealed class DiarizationStrategyProvider(
     }
 }
 
-/// <summary>说话人分割 Provider 注册工厂（名称/能力固定）。</summary>
+/// <summary>Registration factory for speaker-segmentation providers (fixed names/capabilities).</summary>
 public static class DiarizationProviders
 {
-    /// <summary>CrispASR 内置后端注册名。</summary>
+    /// <summary>Registration name for the built-in CrispASR backend.</summary>
     public const string CrispAsrName = "crispasr";
 
-    /// <summary>Pyannote+TitaNet 后端注册名。</summary>
+    /// <summary>Registration name for the Pyannote+TitaNet backend.</summary>
     public const string PyannoteName = "pyannote";
 
-    /// <summary>CrispASR 能力声明：本地、energy/xcorr/vad-turns/foxnose 方法。</summary>
+    /// <summary>CrispASR capability declaration: local, energy/xcorr/vad-turns/foxnose methods.</summary>
     public static ProviderCapabilities CrispAsrCapabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Low,
         quality: ProviderQualityLevel.Normal,
         description: "CrispASR built-in speaker segmentation (energy/xcorr/vad-turns/foxnose)");
 
-    /// <summary>Pyannote 能力声明：本地、高精度。</summary>
+    /// <summary>Pyannote capability declaration: local, high accuracy.</summary>
     public static ProviderCapabilities PyannoteCapabilities => ProviderCapabilities.Local(
         requiresGpu: true,
         latency: ProviderLatency.High,

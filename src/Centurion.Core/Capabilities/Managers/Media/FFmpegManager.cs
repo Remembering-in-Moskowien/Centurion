@@ -4,8 +4,8 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Capabilities.Managers.Media;
 
 /// <summary>
-/// 管理 FFmpeg 二进制可用性，并配置 FFMpegCore 全局选项，
-/// 其中临时目录由 ITempDirectoryManager 统一管理。
+/// Manages FFmpeg binary availability and configures FFMpegCore global options;
+/// the temporary directory is centrally managed by ITempDirectoryManager.
 /// </summary>
 public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager tempDirManager)
     : IAsyncDisposable
@@ -17,13 +17,13 @@ public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager t
     private bool _disposed;
 
     /// <summary>
-    /// 确保 FFmpeg 可用，并配置全局选项（包括临时目录）
+    /// Ensures FFmpeg is available and configures global options (including the temp directory).
     /// </summary>
     public async Task CheckHealthAsync()
     {
         if (_isInitialized) return;
 
-        // 1. 定位 ffmpeg 可执行文件
+        // 1. Locate the ffmpeg executable
         var binName = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
         var ffmpegPath = _binaryLocator.Locate(binName, "tools", "ffmpeg");
         if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
@@ -31,12 +31,13 @@ public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager t
 
         var binaryFolder = Path.GetDirectoryName(ffmpegPath)!;
 
-        // 2. 从 TempDirectoryManager 创建一个专用临时目录
-        //    使用固定前缀 "ffmpeg_" 以便识别，目录会在程序退出时由管理器自动清理
+        // 2. Create a dedicated temp directory from TempDirectoryManager.
+        //    Uses the fixed prefix "ffmpeg_" for identification; the directory is cleaned up
+        //    automatically by the manager when the application exits.
         _tempDirHandle = await _tempDirManager.CreateTempDirectoryAsync("ffmpeg_");
         var tempDir = _tempDirHandle.Path;
 
-        // 3. 配置 FFMpegCore 全局选项
+        // 3. Configure FFMpegCore global options
         GlobalFFOptions.Configure(new FFOptions
         {
             BinaryFolder = binaryFolder,
@@ -46,9 +47,9 @@ public class FFmpegManager(IBinaryLocator binaryLocator, ITempDirectoryManager t
         _isInitialized = true;
     }
 
-    // ---------- 资源释放 ----------
+    // ---------- Resource cleanup ----------
     /// <summary>
-    /// 释放由本管理器占用的资源，包括回收专用的 FFmpeg 临时目录句柄。
+    /// Releases resources held by this manager, including disposing the dedicated FFmpeg temp directory handle.
     /// </summary>
     public async ValueTask DisposeAsync()
     {

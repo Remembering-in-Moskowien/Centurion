@@ -47,7 +47,7 @@ public sealed class CorrectCommand(
             Validate(settings, strategy);
             var needsAudio = strategy is CorrectionStrategy.TimelineOnly or CorrectionStrategy.Both;
 
-            // 输入：Centurion 中间文件（含待校正的句子与词级时间轴）
+            // Input: a Centurion intermediate file containing sentences and word-level timings to correct.
             var inputPath = settings.CenturionFile.FullName;
             if (!File.Exists(inputPath))
                 throw new FileNotFoundException($"Centurion intermediate file not found: {inputPath}", inputPath);
@@ -64,7 +64,7 @@ public sealed class CorrectCommand(
             if (needsAudio && audioForTimeline is null)
                 throw new ArgumentException("--audio is required for the selected correction strategy.");
 
-            // 重建工作流配置：保留中间文件中的语言/设备/人声分离等设置，覆盖校正相关字段
+            // Rebuild the workflow configuration, preserving language, device, and vocal-separation settings while overriding correction fields.
             var previous = workflowContext.Config;
             var config = new WorkflowConfig
             {
@@ -100,19 +100,19 @@ public sealed class CorrectCommand(
             };
             workflowContext.Config = config;
 
-            // correct DAG：文本分支（脚本加载→文本校正）与音频分支（转换→预处理→人声分离→
-            // 说话人分割→对齐→重叠消解）并行，汇合后拼写检查 → 校正报告 → 质量报告
+            // Correct DAG: run script loading/text correction and audio conversion/preprocessing/separation/diarization/alignment in parallel.
+            // Join the branches for overlap resolution, spell checking, the correction report, and the quality report.
             var dag = BuildCorrectDag(
                 scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                 operatorFactory, overlapOp, spellCheckOp, reportOp, qualityReportOp,
                 config, strategy, needsAudio, settings.SpellCheck);
-            // --dry-run：预览 DAG / 模型 / 成本，不执行
+            // --dry-run previews the DAG, models, and costs without running operators.
             if (settings.DryRun)
                 return await DryRunHelper.PreviewAsync(dag, config, serviceProvider, settings.Json, cancellationToken);
 
             await pipelineExecutor.ExecuteAsync(dag, workflowContext, cancellationToken);
 
-            // 保存校正后的中间文件（时间轴/文本修正全部写入状态）
+            // Save the corrected intermediate file with all timing and text changes.
             var outDoc = CenturionDocumentBuilder.Create(workflowContext, "correct", outputPath);
             await store.SaveAsync(outDoc, outputPath, cancellationToken);
 
@@ -127,7 +127,8 @@ public sealed class CorrectCommand(
                     output = outputPath,
                     steps = workflowContext.State.StepTimings?.Select(kv => new { name = kv.Key, elapsedSeconds = kv.Value.TotalSeconds })
                 });
-            }            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
+            }
+            ConsoleServices.Output.WriteInfo(ConsoleServices.T("Build subtitles with: {0}", "Centurion build <file>.centurion.json"));
 
             return ExitCodes.Success;
         }

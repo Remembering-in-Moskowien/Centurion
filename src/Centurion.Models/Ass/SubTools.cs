@@ -103,16 +103,16 @@ internal static class SubTools
     private static readonly Regex IllegalSpacesRegex = new(@"\s+(?=[.,!?;:'])", RegexOptions.Compiled);
 
     /// <summary>
-    /// 规范化文本中的空格：去除连续空格、首尾空格，并移除标点前的多余空格。
+    /// Normalizes spaces in text by collapsing repeated spaces, trimming the ends, and removing spaces before punctuation.
     /// </summary>
     public static string NormalizeSpaces(string text)
     {
         if (string.IsNullOrEmpty(text)) return text;
-        // 将连续多个空白替换为单个空格
+        // Replace consecutive whitespace with a single space.
         var normalized = MultipleSpacesRegex.Replace(text, " ");
-        // 去除首尾空格
+        // Trim leading and trailing whitespace.
         normalized = normalized.Trim();
-        // 处理标点前的多余空格，例如 "Hello , world" -> "Hello, world"
+        // Remove extra spaces before punctuation, for example, "Hello , world" -> "Hello, world".
         normalized = IllegalSpacesRegex.Replace(normalized, "");
         return normalized;
     }

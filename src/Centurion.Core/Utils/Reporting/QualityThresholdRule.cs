@@ -4,16 +4,16 @@ using Centurion.Models.Workflow;
 namespace Centurion.Core.Utils.Reporting;
 
 /// <summary>
-/// CI 阈值规则：形如 <c>cps&gt;20</c> / <c>coverage&lt;95</c>。
-/// 指标名（cps/maxcps/meancps/linelen/overlap/minms/maxms/coverage/confidence/glossary/lengthdev/ttsdev）
-/// 与 quality 命令 --fail-on 文档一致；百分数指标（coverage/glossary）按 0~100 比较。
+/// CI threshold rule: of the form <c>cps&gt;20</c> / <c>coverage&lt;95</c>.
+/// Metric names (cps/maxcps/meancps/linelen/overlap/minms/maxms/coverage/confidence/glossary/lengthdev/ttsdev)
+/// match the quality command --fail-on documentation; percentage metrics (coverage/glossary) are compared on a 0~100 scale.
 /// </summary>
 public sealed record QualityThresholdRule(string Metric, string Op, double Value)
 {
-    /// <summary>规则的原始表达式（如 "cps>20"，用于 FailedThresholds 展示）。</summary>
+    /// <summary>The rule's raw expression (e.g. "cps>20", used for the FailedThresholds display).</summary>
     public string Expression => $"{Metric}{Op}{Value.ToString(CultureInfo.InvariantCulture)}";
 
-    /// <summary>解析表达式；格式非法返回 null。</summary>
+    /// <summary>Parses the expression; returns null if the format is invalid.</summary>
     public static QualityThresholdRule? TryParse(string expression)
     {
         if (string.IsNullOrWhiteSpace(expression))
@@ -26,7 +26,7 @@ public sealed record QualityThresholdRule(string Metric, string Op, double Value
 
         var metric = trimmed[..opIndex].Trim().ToLowerInvariant();
         var op = trimmed[opIndex];
-        // 处理 >= / <= / == / !=
+        // Handle >= / <= / == / !=
         var opText = op.ToString();
         if (opIndex + 1 < trimmed.Length && (trimmed[opIndex + 1] == '=' || trimmed[opIndex + 1] == '>'))
         {
@@ -46,12 +46,12 @@ public sealed record QualityThresholdRule(string Metric, string Op, double Value
         "coverage", "confidence", "glossary", "lengthdev", "ttsdev"
     };
 
-    /// <summary>提取指标数值（百分数指标转换为 0~100 后比较）。</summary>
+    /// <summary>Extracts the metric value (percentage metrics are converted to 0~100 before comparison).</summary>
     public bool Evaluate(QualityReport report)
     {
         var actual = ExtractValue(report);
         if (actual is null)
-            return false; // 指标无数据视为不满足（CI 应失败并提示）
+            return false; // a metric with no data is treated as not satisfied (CI should fail and flag it)
 
         var value = actual.Value;
         return opText switch
@@ -68,7 +68,7 @@ public sealed record QualityThresholdRule(string Metric, string Op, double Value
 
     private readonly string opText = Op;
 
-    /// <summary>提取指标当前值；数据缺失（null）返回 null。</summary>
+    /// <summary>Extracts the metric's current value; returns null when data is missing.</summary>
     private double? ExtractValue(QualityReport report)
     {
         switch (Metric)

@@ -4,16 +4,16 @@ using Centurion.Models.Llm;
 namespace Centurion.Abstractions.Factories;
 
 /// <summary>
-/// 分句策略工厂：按策略名称创建分句策略（规则式/LLM 式）。
+/// Factory that creates a sentence-splitting strategy by name (rule-based or LLM-based).
 /// </summary>
 public interface ISentenceSplitStrategyFactory
 {
     /// <summary>
-    /// 按策略类型创建分句策略。
+    /// Creates a sentence-splitting strategy for the specified strategy type.
     /// </summary>
-    /// <param name="strategy">策略名称（如 rule, rule-passive, llm）</param>
-    /// <param name="options">分句配置参数</param>
-    /// <param name="llm">LLM 连接配置（仅 llm 策略需要）；为空时按旧行为（API 密钥 → OpenAI，否则 Ollama）回退。</param>
-    /// <returns>对应的分句策略实例。</returns>
+    /// <param name="strategy">Strategy name, such as rule, rule-passive, or llm.</param>
+    /// <param name="options">Sentence-splitting options.</param>
+    /// <param name="llm">LLM connection options, required only for the llm strategy; when null, falls back to OpenAI if an API key is set, otherwise Ollama.</param>
+    /// <returns>The sentence-splitting strategy instance.</returns>
     ISentenceSplitStrategy Create(string strategy, SplitOptions options, LlmOptions? llm = null);
 }

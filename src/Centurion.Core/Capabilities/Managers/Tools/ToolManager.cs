@@ -11,8 +11,9 @@ using Centurion.Core.Operators.Download.Request;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// 管理外部工具（ASR引擎）的下载、解压和路径。
-/// 支持按推理设备（CUDA/Vulkan/CPU 等）自动选择工具的对应变体下载。
+/// Manages downloading, extracting, and paths for external tools (ASR engines).
+/// Supports automatically selecting the matching tool variant for the inference device
+/// (CUDA/Vulkan/CPU, etc.) when downloading.
 /// </summary>
 public class ToolManager : IDisposable
 {
@@ -21,24 +22,25 @@ public class ToolManager : IDisposable
     private readonly string _toolsRoot;
     private readonly ToolMeta _toolMeta;
 
-    /// <summary>工具解压后所在的根目录。</summary>
+    /// <summary>Root directory where the tool is extracted.</summary>
     public string ToolDirectory { get; private set; }
-    /// <summary>工具主可执行文件的完整路径。</summary>
+    /// <summary>Full path to the tool's main executable.</summary>
     public string ExecutablePath { get; private set; }
 
-    /// <summary>工具运行时模型/权重的下载基础地址（可为空，为空时使用工具内置默认）。</summary>
+    /// <summary>Base URL for downloading the tool's runtime model/weights (may be null; when null, the tool's built-in default is used).</summary>
     public string? ModelBaseUrl { get; }
 
-    /// <summary>实际选用的设备变体（null 表示基础构建）。</summary>
+    /// <summary>The device variant actually selected (null means the base build).</summary>
     public string? ActiveVariantDescription { get; }
 
     /// <summary>
-    /// 根据工具名称与目标推理设备，从注册表解析对应下载变体并初始化路径。
+    /// Resolves the matching download variant from the registry based on the tool name and target
+    /// inference device, and initializes the paths.
     /// </summary>
-    /// <param name="toolName">要管理的工具名称。</param>
-    /// <param name="registry">包含全部可用工具元数据的注册表。</param>
-    /// <param name="device">目标推理设备，用于选择 CUDA/Vulkan/DirectML/CPU 等变体。</param>
-    /// <param name="serviceProvider">服务提供者，用于解析日志等依赖。</param>
+    /// <param name="toolName">Name of the tool to manage.</param>
+    /// <param name="registry">Registry containing metadata for all available tools.</param>
+    /// <param name="device">Target inference device, used to select the CUDA/Vulkan/DirectML/CPU variant.</param>
+    /// <param name="serviceProvider">Service provider, used to resolve dependencies such as logging.</param>
     public ToolManager(string toolName, ToolRegistry registry, InferenceDevice device, IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -50,7 +52,7 @@ public class ToolManager : IDisposable
         if (!registry.Tools.TryGetValue(toolName, out var baseMeta))
             throw new ArgumentException($"Unsupported tool: {toolName}", nameof(toolName));
 
-        // 按设备选择变体（精确匹配 → default → 基础字段）
+        // Pick the variant by device (exact match -> default -> base fields)
         var (url, archiveType, exeRelative, description, fileHash) = ResolveVariant(baseMeta, device);
         _toolMeta = new ToolMeta
         {
@@ -70,8 +72,9 @@ public class ToolManager : IDisposable
     }
 
     /// <summary>
-    /// 解析工具在指定设备下应使用的下载信息（internal，便于单元测试）。
-    /// 匹配顺序：设备键（cuda/vulkan/directml/cpu）→ "default" → 基础字段。
+    /// Resolves the download information the tool should use for the given device (internal, to
+    /// facilitate unit testing).
+    /// Match order: device key (cuda/vulkan/directml/cpu) -> "default" -> base fields.
     /// </summary>
     internal static (string Url, string ArchiveType, string ExecutableRelativePath, string? Description, string? FileHash) ResolveVariant(
         ToolMeta meta, InferenceDevice device)
@@ -107,7 +110,7 @@ public class ToolManager : IDisposable
     }
 
     /// <summary>
-    /// 确保工具已下载并解压，若不存在则自动下载
+    /// Ensures the tool is downloaded and extracted; downloads it automatically if missing.
     /// </summary>
     public async Task EnsureToolAsync(CancellationToken cancellationToken = default)
     {
@@ -123,18 +126,19 @@ public class ToolManager : IDisposable
         _logger.LogInformation("Tool '{ToolName}' not found. Downloading...", _toolMeta.ToolName);
         await DownloadAndExtractAsync(cancellationToken);
 
-        // 解压后可能因为嵌套目录导致 ExecutablePath 不存在，进行扁平化处理
+        // After extraction, nested directories may mean ExecutablePath does not exist; flatten the layout.
         await NormalizeToolDirectoryAsync(cancellationToken);
     }
 
     private async Task DownloadAndExtractAsync(CancellationToken cancellationToken)
     {
-        // 下载临时文件统一放入程序根目录下的临时目录，随句柄自动清理
+        // Download temp files go into the temp directory under the application root, cleaned up
+        // automatically with the handle.
         await using var tempDir = await _serviceProvider.GetRequiredService<ITempDirectoryManager>().CreateTempDirectoryAsync("tool_");
         var tempFile = Path.Combine(tempDir.Path, "download_archive");
         try
         {
-            // 1. 下载
+            // 1. Download
             using var downloader = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
             var request = new OperatorsRequest<AriaDownloadRequest>
             {
@@ -151,7 +155,7 @@ public class ToolManager : IDisposable
             };
             await downloader.ProcessAsync(request, cancellationToken);
 
-            // 2. 解压
+            // 2. Extract
             Directory.CreateDirectory(ToolDirectory);
             _logger.LogInformation("Extracting {ArchiveType} archive to {ToolDirectory}", _toolMeta.ArchiveType, ToolDirectory);
 
@@ -171,7 +175,7 @@ public class ToolManager : IDisposable
                         continue;
                     if (entry.Key == null) continue;
 
-                    // 防 zip-slip：拒绝任何会逃逸出工具目录的条目路径
+                    // Guard against zip-slip: reject any entry path that escapes the tool directory.
                     var fullPath = Path.GetFullPath(Path.Combine(root, entry.Key));
                     if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
                         throw new InvalidDataException($"Unsafe archive entry path rejected: {entry.Key}");
@@ -197,8 +201,9 @@ public class ToolManager : IDisposable
     }
 
     /// <summary>
-    /// 扁平化工具目录：如果 ExecutablePath 不存在，则在子目录中查找可执行文件，
-    /// 并将其所在目录的所有内容移至根目录，删除空目录。
+    /// Flattens the tool directory: if ExecutablePath does not exist, searches the subdirectories
+    /// for the executable, moves everything in its directory to the root, and removes empty
+    /// directories.
     /// </summary>
     private async Task NormalizeToolDirectoryAsync(CancellationToken cancellationToken)
     {
@@ -208,7 +213,7 @@ public class ToolManager : IDisposable
         var exeName = Path.GetFileName(ExecutablePath);
         _logger.LogWarning("Executable '{ExeName}' not found at expected path. Searching in subdirectories...", exeName);
 
-        // 递归查找与可执行文件同名的文件
+        // Recursively search for a file with the executable's name
         var foundFiles = Directory.GetFiles(ToolDirectory, exeName, SearchOption.AllDirectories);
         if (foundFiles.Length == 0)
         {
@@ -220,13 +225,13 @@ public class ToolManager : IDisposable
         var sourceDir = Path.GetDirectoryName(firstMatch)!;
         if (string.Equals(sourceDir, ToolDirectory, StringComparison.OrdinalIgnoreCase))
         {
-            // 已在根目录，但路径可能大小写不同，更新路径
+            // Already in the root, but the path may differ in casing; update it.
             ExecutablePath = firstMatch;
             _logger.LogInformation("Executable found at {Path}", ExecutablePath);
             return;
         }
 
-        // 将 sourceDir 下的所有内容移动到 ToolDirectory 根目录
+        // Move everything under sourceDir into the ToolDirectory root.
         _logger.LogInformation("Flattening directory: moving contents from {SourceDir} to {ToolDirectory}", sourceDir, ToolDirectory);
         foreach (var file in Directory.GetFiles(sourceDir))
         {
@@ -243,27 +248,27 @@ public class ToolManager : IDisposable
             Directory.Move(dir, dest);
         }
 
-        // 删除原空目录（及其可能的空父目录，但只删到根目录）
+        // Delete the now-empty original directory (and any empty parents, but only up to the root).
         DeleteEmptySubdirectories(ToolDirectory);
 
-        // 更新 ExecutablePath
+        // Update ExecutablePath.
         var newExePath = Path.Combine(ToolDirectory, exeName);
         if (File.Exists(newExePath))
             ExecutablePath = newExePath;
         else
         {
-            // 再次查找（可能被移动到其他位置，但理论上已在根目录）
+            // Search again (it may have been moved elsewhere, but in theory it is now in the root).
             var newFound = Directory.GetFiles(ToolDirectory, exeName, SearchOption.TopDirectoryOnly);
             if (newFound.Length > 0)
                 ExecutablePath = newFound[0];
         }
 
         _logger.LogInformation("Normalized executable path to {ExecutablePath}", ExecutablePath);
-        await Task.CompletedTask; // 保持异步签名一致
+        await Task.CompletedTask; // Keep the async signature consistent.
     }
 
     /// <summary>
-    /// 递归删除所有空子目录（不删除根目录）。
+    /// Recursively deletes all empty subdirectories (without deleting the root).
     /// </summary>
     private void DeleteEmptySubdirectories(string root)
     {
@@ -286,7 +291,7 @@ public class ToolManager : IDisposable
     }
 
     /// <summary>
-    /// 释放资源；本管理器无需释放非托管资源。
+    /// Releases resources; this manager holds no unmanaged resources to release.
     /// </summary>
     public void Dispose() { }
 }

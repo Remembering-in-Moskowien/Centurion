@@ -17,6 +17,13 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
     /// <param name="action">Progress action run while the spinner is active; can update progress via the context.</param>
     public void StartProgress(string title, Action<IProgressContext> action)
     {
+        // --agent mode: run the work synchronously without any spinner UI (LLM-friendly output stays clean).
+        if (SpectreConsoleOutput.AgentMode)
+        {
+            action(new NullProgressContext());
+            return;
+        }
+
         var spinner = new SpinnerState(title);
         spinner.Start();
         try
@@ -30,7 +37,7 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
     }
 
     // ------------------------------------------------------------------
-    // Spinner 状态：后台线程按固定间隔旋转刷新当前行
+    // Spinner state: a background thread refreshes the current line at a fixed interval.
     // ------------------------------------------------------------------
 
     private sealed class SpinnerState(string title)
@@ -65,7 +72,7 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
                 _thread = null;
             }
 
-            // 清空 spinner 行，避免残留动画字符
+            // Clear the spinner line to avoid leaving animation characters behind.
             var width = 80;
             try { width = System.Console.WindowWidth; } catch (IOException) { } catch (ArgumentOutOfRangeException) { }
             if (width <= 0) width = 80;
@@ -86,7 +93,7 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
     }
 
     // ------------------------------------------------------------------
-    // 上下文 / 任务适配（兼容现有 IProgressReporter 用法）
+    // Context/task adapter for the existing IProgressReporter contract.
     // ------------------------------------------------------------------
 
     private sealed class SpinnerProgressContext(SpinnerState spinner) : IProgressContext
@@ -96,7 +103,7 @@ public sealed class DotnetStyleProgressReporter : IProgressReporter
 
         public void Refresh()
         {
-            // 单行刷新由 spinner 线程持续进行，无需额外操作
+            // The spinner thread refreshes the single line continuously.
         }
     }
 

@@ -51,7 +51,17 @@ public sealed class PlainConsoleFormatter : ConsoleFormatter
             _ => Centurion.Models.Console.CliPalette.InfoColor
         };
 
-        var line = $"{DateTime.Now:HH:mm:ss} {levelText}: {message}";
+        var line = SpectreConsoleOutput.AgentMode
+            ? $"{levelText}: {message}"
+            : $"{DateTime.Now:HH:mm:ss} {levelText}: {message}";
+
+        // --agent mode keeps plain, colorless lines for LLM-friendly output.
+        if (SpectreConsoleOutput.AgentMode)
+        {
+            textWriter.WriteLine(line);
+            return;
+        }
+
         var original = System.Console.ForegroundColor;
         try
         {

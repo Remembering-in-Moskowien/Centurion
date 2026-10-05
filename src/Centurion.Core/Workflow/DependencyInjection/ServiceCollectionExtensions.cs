@@ -28,32 +28,34 @@ using Centurion.Core.Utils.Media;
 namespace Centurion.Core.Workflow.DependencyInjection;
 
 /// <summary>
-/// Centurion.Core 服务注册扩展方法。
-/// 将基础设施、策略工厂、管道算子等核心服务的 DI 注册集中于此，
-/// 使 CLI 入口保持精简。
+/// DI registration extension methods for Centurion.Core.
+/// Centralizes the DI registration of core services such as infrastructure, strategy factories, and
+/// pipeline operators, keeping the CLI entry point slim.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// 注册 Centurion.Core 的全部核心服务。
+    /// Registers all core services of Centurion.Core.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     /// <param name="metadataPath">
-    /// 可选：元数据外部 JSON 路径。不传时按
-    /// 环境变量 <c>CENTURION_METADATA_PATH</c> → 默认候选路径
-    /// （可执行目录 / 当前目录下的 config\metadata.json）解析。
+    /// Optional: path to the external metadata JSON. When omitted it is resolved as
+    /// the environment variable <c>CENTURION_METADATA_PATH</c> -> the default candidate path
+    /// (config\metadata.json under the executable directory / the current directory).
     /// </param>
     public static IServiceCollection AddCenturionCore(this IServiceCollection services, string? metadataPath = null)
     {
-        // ---------- 0. 元数据注册表（程序启动时从外部 JSON 加载） ----------
-        var metadata = MetadataJsonLoader.LoadOrDefault(metadataPath);
-        services.AddSingleton(metadata.Tools);
-        services.AddSingleton(metadata.Models);
+        // ---------- 0. Metadata catalog (loaded from external JSON at startup) ----------
+        services.AddSingleton<MetadataCatalog>(sp => MetadataJsonLoader.LoadOrDefault(
+            metadataPath,
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger("Centurion.Metadata")));
+        services.AddSingleton(sp => sp.GetRequiredService<MetadataCatalog>().Tools);
+        services.AddSingleton(sp => sp.GetRequiredService<MetadataCatalog>().Models);
 
-        // ---------- 0b. IR 文档存储（*.centurion.json 读写/校验/迁移） ----------
+        // ---------- 0b. IR document store (read/write/validate/migrate *.centurion.json) ----------
         services.AddSingleton<ICenturionDocumentStore, CenturionDocumentStore>();
 
-        // ---------- 1. 基础设施 ----------
+        // ---------- 1. Infrastructure ----------
         services.AddSingleton<IBinaryLocator, BinaryLocator>();
         services.AddSingleton<IDeviceDetector, DeviceDetector>();
         services.AddSingleton<ITempDirectoryManager, TempDirectoryManager>();
@@ -61,7 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Centurion.Core.Operators.Download.Downloader>();
         services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromMinutes(10) });
 
-        // ---------- 2. 进程 / 工具 / FFmpeg 管理 ----------
+        // ---------- 2. Process / tool / FFmpeg management ----------
         services.AddTransient<ProcessManager>();
         services.AddSingleton<EncoderfileManager>();
         services.AddSingleton<FFmpegManager>();
@@ -83,7 +85,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MediaSubtitleExtractor>();
         services.AddSingleton<HunspellSpellChecker>();
 
-        // ---------- OCR（ocr 命令 / GLM-OCR） ----------
+        // ---------- OCR (ocr command / GLM-OCR) ----------
         services.AddSingleton(sp =>
             new OcrClient(
                 new HttpClient { Timeout = TimeSpan.FromMinutes(10) },
@@ -92,7 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RapidOcrEngine>();
         services.AddTransient<OcrExtractOperator>();
 
-        // ---------- 3. 策略工厂 ----------
+        // ---------- 3. Strategy factories ----------
         services.AddSingleton<ITranscriptionStrategyFactory, TranscriptionStrategyFactory>();
         services.AddSingleton<ISentenceSplitStrategyFactory, SentenceSplitStrategyFactory>();
         services.AddSingleton<IAlignmentStrategyFactory, AlignmentStrategyFactory>();
@@ -101,21 +103,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITranslationStrategyFactory, TranslationStrategyFactory>();
         services.AddTransient<PipelineOperatorFactory>();
 
-        // ---------- 4. 转录策略（具体实现） ----------
+        // ---------- 4. Transcription strategies (concrete implementations) ----------
         services.AddTransient<WhisperCppStrategy>();
         services.AddTransient<CrispAsrQwenStrategy>();
         services.AddTransient<CrispAsrWhisperStrategy>();
         services.AddTransient<CloudAsrStrategy>();
 
-        // ---------- 4b. 说话人分割策略 ----------
+        // ---------- 4b. Diarization strategies ----------
         services.AddTransient<CrispAsrDiarizationStrategy>();
         services.AddTransient<PyannoteTitaNetDiarizationStrategy>();
 
-        // ---------- 5. 分句策略 ----------
+        // ---------- 5. Sentence-split strategies ----------
         services.AddTransient<AggressiveRuleSplitStrategy>();
         services.AddTransient<PassiveRuleSplitStrategy>();
 
-        // ---------- 6. 管道算子 ----------
+        // ---------- 6. Pipeline operators ----------
         services.AddTransient<SubtitleTrackCheckerOperator>();
         services.AddTransient<SpellCheckOperator>();
         services.AddTransient<FFmpegConvertOperator>();
@@ -131,20 +133,20 @@ public static class ServiceCollectionExtensions
         services.AddTransient<OverlapResolutionOperator>();
         services.AddTransient<CorrectionReportOperator>();
 
-        // ---------- 转换管道专用算子（使用 SubtitlesParserV2） ----------
+        // ---------- Conversion-pipeline-specific operators (use SubtitlesParserV2) ----------
         services.AddTransient<ConvertParseOperator>();
 
-        // ---------- 7. 管道执行器 ----------
+        // ---------- 7. Pipeline executor ----------
         services.AddSingleton<PipelineExecutor>();
 
-        // ---------- 8. 转换管道算子序列工厂 ----------
+        // ---------- 8. Conversion-pipeline operator sequence factory ----------
         services.AddTransient<Func<IEnumerable<IPipelineOperator>>>(sp => () =>
         [
             sp.GetRequiredService<ConvertParseOperator>()
         ]);
 
-        // ---------- 9. 自更新服务（GitHub Releases） ----------
-                // ---------- 8b. Provider 抽象（本地/云统一抽象 + fallback 链） ----------
+        // ---------- 9. Self-update service (GitHub Releases) ----------
+                // ---------- 8b. Provider abstraction (unified local/cloud abstraction + fallback chain) ----------
         services.AddSingleton<IProviderRegistry, ProviderRegistry>();
         services.AddSingleton<IProviderFactory, ProviderFactory>();
 

@@ -3,22 +3,25 @@ using Centurion.Abstractions.Strategy;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 说话人片段后处理平滑器：消除说话人分割输出的逐段交替抖动与过短碎片，
-/// 是标准说话人分割（NIST collar / min-duration 合并）的确定性轻量实现。
+/// Post-processing smoother for speaker segments: removes per-turn alternating jitter and
+/// overly short fragments from diarization output; a deterministic, lightweight implementation
+/// of standard diarization (NIST collar / min-duration merging).
 /// <para>
-/// 处理流程：按开始时间排序并保证不重叠 → 合并相邻同说话人片段 →
-/// 消除"交替碎片"（夹在两个相同说话人之间的过短异说话人片段并入两侧）→
-/// 过短片段并入相邻的较长片段。全部操作仅扩展边界、保持连续不重叠。
+/// Pipeline: sort by start time and ensure non-overlapping → merge adjacent same-speaker
+/// segments → remove "alternating fragments" (an overly short different-speaker segment wedged
+/// between two identical speakers is absorbed into both sides) → absorb overly short segments
+/// into a neighboring longer segment. Every operation only expands boundaries and keeps the
+/// timeline continuous and non-overlapping.
 /// </para>
 /// </summary>
 public static class SpeakerSegmentSmoother
 {
     /// <summary>
-    /// 平滑说话人片段列表。
+    /// Smooths a list of speaker segments.
     /// </summary>
-    /// <param name="turns">分割器输出的原始片段（按时间排序、允许轻微交叠）。</param>
-    /// <param name="minDurationSeconds">片段最短时长（秒）；短于该值视为碎片参与合并，默认 0.5 秒。</param>
-    /// <returns>平滑后的片段列表；空输入返回空列表。</returns>
+    /// <param name="turns">Raw segments from the diarizer (time-sorted; slight overlap allowed).</param>
+    /// <param name="minDurationSeconds">Minimum segment duration in seconds; anything shorter is treated as a fragment and merged. Defaults to 0.5 seconds.</param>
+    /// <returns>The smoothed segment list; an empty input yields an empty list.</returns>
     public static IReadOnlyList<SpeakerSegment> Smooth(
         IReadOnlyList<SpeakerSegment> turns,
         double minDurationSeconds = 0.5)
@@ -26,12 +29,12 @@ public static class SpeakerSegmentSmoother
         if (turns.Count == 0)
             return [];
 
-        // 1. 按开始时间排序
+        // 1. Sort by start time
         var ordered = turns
             .OrderBy(turn => turn.StartSeconds)
             .ToList();
 
-        // 2. 保证不重叠：后一片段起点不得早于前一片段终点
+        // 2. Ensure non-overlapping: a later segment may not start before the previous one ends
         var nonOverlapping = new List<SpeakerSegment>(ordered.Count);
         foreach (var turn in ordered)
         {
@@ -43,7 +46,7 @@ public static class SpeakerSegmentSmoother
                 nonOverlapping.Add(new SpeakerSegment(start, end, turn.Speaker));
         }
 
-        // 3. 合并相邻同说话人片段
+        // 3. Merge adjacent same-speaker segments
         var merged = new List<SpeakerSegment>(nonOverlapping.Count);
         foreach (var turn in nonOverlapping)
         {
@@ -59,7 +62,8 @@ public static class SpeakerSegmentSmoother
             }
         }
 
-        // 4. 消除交替碎片与过短片段（多遍直到收敛：并入/吞并可能产生新的相邻同说话人）
+        // 4. Remove alternating fragments and overly short segments (iterate until convergence:
+        //    absorbing/merging may create new adjacent same-speaker pairs)
         List<SpeakerSegment> result;
         var pass = merged;
         for (var round = 0; round < 4; round++)
@@ -78,9 +82,11 @@ public static class SpeakerSegmentSmoother
     }
 
     /// <summary>
-    /// 单遍处理：合并相邻同说话人（因并入扩展边界可能再产生相邻同说话人，需多遍收敛），
-    /// 并消除短于阈值的碎片——夹在相同说话人之间的碎片并入两侧；
-    /// 否则并入相邻较长的片段。返回新列表（不修改输入）。
+    /// Single pass: merge adjacent same-speaker segments (boundary expansion from absorbing may
+    /// create new adjacent same-speaker pairs, hence multiple passes until convergence), and drop
+    /// fragments shorter than the threshold — a fragment wedged between identical speakers is
+    /// absorbed into both sides; otherwise it is absorbed into a neighboring longer segment.
+    /// Returns a new list (the input is not modified).
     /// </summary>
     private static List<SpeakerSegment> Pass(List<SpeakerSegment> turns, double minDurationSeconds)
     {
@@ -90,7 +96,7 @@ public static class SpeakerSegmentSmoother
             var current = turns[index];
             var duration = current.EndSeconds - current.StartSeconds;
 
-            // 相邻同说话人（由前一遍并入产生）→ 合并
+            // Adjacent same speaker (created by a previous pass) → merge
             if (result.Count > 0
                 && string.Equals(result[^1].Speaker, current.Speaker, StringComparison.Ordinal))
             {
@@ -99,14 +105,14 @@ public static class SpeakerSegmentSmoother
                 continue;
             }
 
-            // 不是碎片 → 保留
+            // Not a fragment → keep
             if (duration >= minDurationSeconds)
             {
                 result.Add(current);
                 continue;
             }
 
-            // 碎片：夹在两个相同说话人之间 → 与两侧合并（吞并）
+            // Fragment: wedged between two identical speakers → merge with both sides (absorb)
             var hasPrev = result.Count > 0;
             var hasNext = index + 1 < turns.Count;
             var prevSpeaker = hasPrev ? result[^1].Speaker : null;
@@ -116,11 +122,12 @@ public static class SpeakerSegmentSmoother
             {
                 var previous = result[^1];
                 result[^1] = new SpeakerSegment(previous.StartSeconds, turns[index + 1].EndSeconds, previous.Speaker);
-                index++; // 跳过被吞并的下一个片段
+                index++; // skip the absorbed next segment
                 continue;
             }
 
-            // 碎片：并入相邻较长的片段（优先并入前一个；无前一个则并入后一个）
+            // Fragment: absorb into a neighboring longer segment (prefer the previous one; if
+            // there is none, absorb into the next)
             if (hasPrev && hasNext)
             {
                 var previous = result[^1];
@@ -147,7 +154,7 @@ public static class SpeakerSegmentSmoother
             }
             else
             {
-                result.Add(current); // 唯一的碎片片段，无处并入，保留
+                result.Add(current); // the only fragment, nowhere to absorb into, keep it
             }
         }
 

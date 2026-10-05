@@ -4,13 +4,15 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// RapidOCR（PaddleOCR ONNX）模型管理：按需从魔搭社区（ModelScope）下载 PP-OCRv6 small
-/// 多语言模型集（中文/英文等 87 种语言单模型识别），本地缓存并做 SHA-256 校验。
-/// 模型文件：
-///   - PP-OCRv6_det_small.onnx   （文本检测 DBNet）
-///   - PP-OCRv6_rec_small.onnx   （识别 CRNN，多语言）
-///   - ppocrv6_small_dict.txt    （识别字典，必须与 rec 模型配套）
-/// 分类器（180° 方向）复用 RapidOcrNet 包内置的 PP-OCRv5 cls 模型，无需下载。
+/// RapidOCR (PaddleOCR ONNX) model management: on demand, downloads the PP-OCRv6 small
+/// multilingual model set from ModelScope (single model recognizing 87 languages including
+/// Chinese/English), caches it locally, and verifies SHA-256.
+/// Model files:
+///   - PP-OCRv6_det_small.onnx   (text detection, DBNet)
+///   - PP-OCRv6_rec_small.onnx   (recognition, CRNN, multilingual)
+///   - ppocrv6_small_dict.txt    (recognition dictionary, must match the rec model)
+/// The 180-degree orientation classifier reuses the PP-OCRv5 cls model bundled in the
+/// RapidOcrNet package, so no download is needed.
 /// </summary>
 public sealed class RapidOcrModelManager(ILogger<RapidOcrModelManager> logger)
 {
@@ -22,13 +24,13 @@ public sealed class RapidOcrModelManager(ILogger<RapidOcrModelManager> logger)
     private const string ModelScopeBase =
         "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2";
 
-    /// <summary>检测模型相对名。</summary>
+    /// <summary>Relative name of the detection model.</summary>
     public const string DetModelFile = "PP-OCRv6_det_small.onnx";
 
-    /// <summary>识别模型相对名。</summary>
+    /// <summary>Relative name of the recognition model.</summary>
     public const string RecModelFile = "PP-OCRv6_rec_small.onnx";
 
-    /// <summary>识别字典相对名。</summary>
+    /// <summary>Relative name of the recognition dictionary.</summary>
     public const string DictFile = "ppocrv6_small_dict.txt";
 
     private static readonly (string FileName, string Url, string Sha256)[] ModelManifest =
@@ -40,17 +42,17 @@ public sealed class RapidOcrModelManager(ILogger<RapidOcrModelManager> logger)
         (DictFile, $"{ModelScopeBase}/paddle/PP-OCRv6/rec/PP-OCRv6_rec_small/ppocrv6_dict.txt", string.Empty)
     ];
 
-    /// <summary>模型根目录。</summary>
+    /// <summary>Model root directory.</summary>
     public static string Root => ModelsRoot;
 
-    /// <summary>模型是否已就绪（三件齐全）。</summary>
+    /// <summary>Whether the models are ready (all three present).</summary>
     public bool IsReady()
     {
         var paths = ModelPaths();
         return paths is not null;
     }
 
-    /// <summary>返回 (det, rec, dict) 本地路径；未就绪返回 null。</summary>
+    /// <summary>Returns the local paths (det, rec, dict); returns null when not ready.</summary>
     public (string DetPath, string RecPath, string DictPath)? ModelPaths()
     {
         var det = Path.Combine(ModelsRoot, DetModelFile);
@@ -62,8 +64,9 @@ public sealed class RapidOcrModelManager(ILogger<RapidOcrModelManager> logger)
     }
 
     /// <summary>
-    /// 确保模型已下载并校验。已就绪直接返回路径；缺失则逐个下载。
-    /// 任一模型下载/校验失败时记录日志并返回 null（引擎将回退内置 latin 模型）。
+    /// Ensures the models are downloaded and verified. Returns the paths directly when ready;
+    /// downloads them one by one when missing. When any model fails to download/verify, logs and
+    /// returns null (the engine will fall back to the bundled latin models).
     /// </summary>
     public async Task<(string DetPath, string RecPath, string DictPath)?> EnsureModelsAsync(
         CancellationToken cancellationToken)

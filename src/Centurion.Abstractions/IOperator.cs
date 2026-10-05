@@ -1,35 +1,35 @@
 namespace Centurion.Abstractions;
 
 /// <summary>
-/// 下载算子通用接口
+/// Generic interface for download operators.
 /// </summary>
-/// <typeparam name="TRequest">请求载荷类型</typeparam>
-/// <typeparam name="TResponse">算子执行返回的结果类型</typeparam>
+/// <typeparam name="TRequest">Request payload type.</typeparam>
+/// <typeparam name="TResponse">Result type returned by the operator.</typeparam>
 public interface IOperator<TRequest, TResponse> : IDisposable
 {
     /// <summary>
-    /// 校验底层执行程序是否可用
+    /// Checks whether the underlying executable is available.
     /// </summary>
     Task CheckHealthAsync();
 
     /// <summary>
-    /// 发送算子请求，全异步支持取消
+    /// Processes an operator request asynchronously with cancellation support.
     /// </summary>
-    /// <param name="request">请求包</param>
-    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="request">The operator request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task<TResponse> ProcessAsync(
         OperatorsRequest<TRequest> request,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// 算子请求载体
+/// Operator request container.
 /// </summary>
-/// <typeparam name="TPayload">业务载荷</typeparam>
+/// <typeparam name="TPayload">Business payload type.</typeparam>
 public class OperatorsRequest<TPayload>
 {
     /// <summary>
-    /// 业务载荷，封装该算子执行所需的输入数据。
+    /// Business payload containing the input data required by the operator.
     /// </summary>
     public required TPayload Payload { get; init; }
 }

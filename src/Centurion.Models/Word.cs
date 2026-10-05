@@ -1,20 +1,20 @@
 namespace Centurion.Models;
 
-/// <summary>一个词级别的转录单元，携带文本、时间轴、说话人、词性标注与对齐状态。</summary>
+/// <summary>Word-level transcription unit containing text, timing, speaker, part-of-speech tag, and alignment status.</summary>
 public class Word
 {
-    /// <summary>词的文本。</summary>
+    /// <summary>Word text.</summary>
     public required string Text { get; set; }
-    /// <summary>词起始时间（毫秒）。</summary>
+    /// <summary>Word start time in milliseconds.</summary>
     public double Start { get; set; }
-    /// <summary>词结束时间（毫秒）。</summary>
+    /// <summary>Word end time in milliseconds.</summary>
     public double End { get; set; }
-    /// <summary>该词所属的说话人标识，未做说话人分离时可为空串。</summary>
+    /// <summary>Speaker identifier for this word; may be empty when diarization was not performed.</summary>
     public required string Speaker { get; set; }
-    /// <summary>词性标注（POS tag），未标注时为 null。</summary>
+    /// <summary>Part-of-speech tag, or null when not annotated.</summary>
     public string? PosTag { get; set; }
-    /// <summary>词级 ASR 置信度（0~1；模型提供时填充，否则为 null）。</summary>
+    /// <summary>Word-level ASR confidence (0–1), or null when not provided by the model.</summary>
     public double? Confidence { get; set; }
-    /// <summary>该词与脚本的对齐匹配状态，默认为 <see cref="MappingStatus.Matched"/>。</summary>
+    /// <summary>Alignment status between this word and the script; defaults to <see cref="MappingStatus.Matched"/>.</summary>
     public MappingStatus Status { get; set; } = MappingStatus.Matched;
 }

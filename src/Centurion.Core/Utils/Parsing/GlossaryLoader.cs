@@ -4,27 +4,29 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Utils.Parsing;
 
 /// <summary>
-/// 术语表加载器：从外部 JSON 文件读取翻译术语映射（{源语言术语: 目标语言术语}）。
-/// 支持字典对象（{ "term": "译文" }）与数组对象（[{ "source": "...", "target": "..." }]）两种形态。
+/// Glossary loader: reads translation term mappings from an external JSON file
+/// ({source-language term: target-language term}).
+/// Supports both the dictionary object form ({ "term": "translation" }) and the
+/// array-of-objects form ([{ "source": "...", "target": "..." }]).
 /// </summary>
 public static class GlossaryLoader
 {
-    /// <summary>字典形态术语表条目。</summary>
+    /// <summary>A glossary entry in the dictionary form.</summary>
     private sealed class GlossaryEntry
     {
-        /// <summary>源语言术语。</summary>
+        /// <summary>The source-language term.</summary>
         public string? Source { get; set; }
 
-        /// <summary>目标语言术语。</summary>
+        /// <summary>The target-language term.</summary>
         public string? Target { get; set; }
     }
 
     /// <summary>
-    /// 从 JSON 文件加载术语表；文件缺失或格式非法时返回空表并记录警告。
+    /// Load the glossary from a JSON file; returns an empty map and logs a warning when the file is missing or malformed.
     /// </summary>
-    /// <param name="path">术语表 JSON 文件路径；为空或不存在时返回空表。</param>
-    /// <param name="logger">可选的日志器，用于记录加载告警。</param>
-    /// <returns>术语映射字典（大小写不敏感键）。</returns>
+    /// <param name="path">Path to the glossary JSON file; returns an empty map when null or non-existent.</param>
+    /// <param name="logger">Optional logger for recording load warnings.</param>
+    /// <returns>The term mapping dictionary (case-insensitive keys).</returns>
     public static Dictionary<string, string> Load(string? path, ILogger? logger = null)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

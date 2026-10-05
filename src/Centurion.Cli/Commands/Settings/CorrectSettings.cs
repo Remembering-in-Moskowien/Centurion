@@ -82,7 +82,7 @@ public sealed class CorrectSettings : GlobalCommandSettings
     [Description("Disable loudness normalization")]
     public bool DisableAudioLoudness { get; init; }
 
-    // ----- 人声分离模块 (Vocal Separation) -----
+    // ----- Vocal separation -----
     /// <summary>
     /// Whether to separate vocals with Demucs before alignment (only for music/BGM-heavy media).
     /// </summary>
@@ -97,7 +97,7 @@ public sealed class CorrectSettings : GlobalCommandSettings
     [Description("Demucs model name, default htdemucs")]
     public string VocalSeparationModel { get; init; } = "htdemucs";
 
-    // ----- 推理设备 (Device) -----
+    // ----- Inference device -----
     /// <summary>
     /// Inference device preference: auto, cpu, cuda, vulkan, directml (GPU tool builds auto-downloaded).
     /// </summary>

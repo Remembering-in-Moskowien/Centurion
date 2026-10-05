@@ -1,35 +1,35 @@
 ﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Centurion.Models.Metadata;
 
 /// <summary>
-/// 程序启动时的元数据加载结果：包含工具注册表与模型注册表实例。
+/// Metadata load result created at startup, containing tool and model registries.
 /// </summary>
 public sealed class MetadataCatalog
 {
-    /// <summary>已加载的工具注册表，按工具名索引。</summary>
+    /// <summary>Loaded tool registry, indexed by tool name.</summary>
     public required ToolRegistry Tools { get; init; }
-    /// <summary>已加载的模型注册表，按模型类别索引。</summary>
+    /// <summary>Loaded model registry, indexed by model category.</summary>
     public required ModelRegistry Models { get; init; }
 }
 
 /// <summary>
-/// 元数据外部 JSON 配置加载器。
+/// Loads external metadata JSON configuration.
 /// <para>
-/// 加载顺序：
-/// 1. 显式传入的路径（AddCenturionCore 参数）优先；
-/// 2. 其次环境变量 <c>CENTURION_METADATA_PATH</c>；
-/// 3. 再次默认候选路径（可执行目录 / 当前目录下的 config\metadata.json）。
+/// Resolution order:
+/// 1. Explicit path passed to AddCenturionCore.
+/// 2. The <c>CENTURION_METADATA_PATH</c> environment variable.
+/// 3. Default candidates under the executable directory or current directory at config\metadata.json.
 /// </para>
 /// <para>
-/// 若目标 JSON 存在则加载之；不存在或解析失败时回退到内置默认注册表
-/// （<see cref="ToolRegistry.Default"/> / <see cref="ModelRegistry.Default"/>），
-/// 并尝试在默认路径写出种子 JSON 文件，便于用户按需编辑。
+/// Loads the target JSON when present; otherwise, or when parsing fails, falls back to the built-in registries
+/// (<see cref="ToolRegistry.Default"/> / <see cref="ModelRegistry.Default"/>) and attempts to write an editable seed JSON file to the default path.
 /// </para>
 /// </summary>
 public static class MetadataJsonLoader
 {
-    /// <summary>环境变量名：覆盖元数据 JSON 路径。</summary>
+    /// <summary>Environment variable that overrides the metadata JSON path.</summary>
     public const string EnvVarName = "CENTURION_METADATA_PATH";
 
     private const string DefaultFileName = "metadata.json";
@@ -46,24 +46,24 @@ public static class MetadataJsonLoader
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 加载元数据。外部 JSON 缺失或损坏时回退内置默认，并尝试生成种子文件。
-    /// 同一进程内按最终路径缓存：多次 AddCenturionCore（如 serve 场景）不会
-    /// 重复合并、重复写文件或重复输出合并提示。
+    /// Loads metadata, falling back to built-in defaults and attempting to create a seed file when external JSON is missing or invalid.
+    /// Results are cached by resolved path within the process so repeated AddCenturionCore calls (for example, in serve mode)
+    /// do not repeat merges, file writes, or merge notifications.
     /// </summary>
-    public static MetadataCatalog LoadOrDefault(string? explicitPath = null)
+    public static MetadataCatalog LoadOrDefault(string? explicitPath = null, ILogger? logger = null)
     {
         var path = ResolvePath(explicitPath);
         lock (Sync)
         {
             if (CatalogCache.TryGetValue(path, out var cached))
                 return cached;
-            var catalog = LoadOrDefaultCore(path);
+            var catalog = LoadOrDefaultCore(path, logger);
             CatalogCache[path] = catalog;
             return catalog;
         }
     }
 
-    private static MetadataCatalog LoadOrDefaultCore(string path)
+    private static MetadataCatalog LoadOrDefaultCore(string path, ILogger? logger)
     {
         if (File.Exists(path))
         {
@@ -73,21 +73,21 @@ public static class MetadataJsonLoader
                 var merged = MergeMissingDefaults(catalog);
                 if (merged.Changed)
                 {
-                    // 程序升级引入的新工具/模型条目补入本地配置，保留用户自定义部分
-                    System.Console.Error.WriteLine("[Centurion] New default entries merged into metadata config.");
-                    WriteCatalogFile(path, merged.Catalog);
+                    // Add new tools and models introduced by upgrades while preserving user-defined entries.
+                    logger?.LogInformation("New default entries merged into metadata config.");
+                    WriteCatalogFile(path, merged.Catalog, logger);
                 }
                 return merged.Catalog;
             }
             catch (Exception ex)
             {
-                System.Console.Error.WriteLine($"[Centurion] Failed to load metadata config from '{path}': {ex.Message}");
-                System.Console.Error.WriteLine("[Centurion] Falling back to built-in default metadata.");
+                logger?.LogWarning(ex, "Failed to load metadata config from '{MetadataPath}'.", path);
+                logger?.LogWarning("Falling back to built-in default metadata.");
             }
         }
         else
         {
-            WriteSeedFile(path);
+            WriteSeedFile(path, logger);
         }
 
         return new MetadataCatalog
@@ -98,7 +98,7 @@ public static class MetadataJsonLoader
     }
 
     /// <summary>
-    /// 解析元数据 JSON 的最终路径。
+    /// Resolves the final metadata JSON path.
     /// </summary>
     public static string ResolvePath(string? explicitPath = null)
     {
@@ -124,7 +124,7 @@ public static class MetadataJsonLoader
         return candidates[0];
     }
 
-    // ---------- 加载 ----------
+    // ---------- Loading ----------
 
     private static MetadataCatalog LoadFromFile(string path)
     {
@@ -251,14 +251,14 @@ public static class MetadataJsonLoader
         _ => throw new InvalidOperationException($"Unknown model download type: '{value}'.")
     };
 
-    // ---------- 缺失条目合并 ----------
+    // ---------- Merge missing entries ----------
 
     /// <summary>
-    /// 把内置默认注册表中有、而本地配置缺失的工具/模型条目补入，
-    /// 使用户自定义条目保留的同时，随程序升级自动获得新增能力。
+    /// Adds tool and model entries that exist in the built-in registries but are missing from local configuration,
+    /// preserving user-defined entries while making new capabilities available after upgrades.
     /// </summary>
-    /// <param name="catalog">已加载的本地注册表。</param>
-    /// <returns>合并结果（是否发生补充 + 合并后的注册表）。</returns>
+    /// <param name="catalog">Loaded local registries.</param>
+    /// <returns>Whether entries were added and the merged registries.</returns>
     private static (bool Changed, MetadataCatalog Catalog) MergeMissingDefaults(MetadataCatalog catalog)
     {
         var changed = false;
@@ -310,10 +310,11 @@ public static class MetadataJsonLoader
         return result;
     }
 
-    /// <summary>把注册表对象序列化写回配置文件。</summary>
-    /// <param name="path">目标 JSON 路径。</param>
-    /// <param name="catalog">待写入的注册表。</param>
-    private static void WriteCatalogFile(string path, MetadataCatalog catalog)
+    /// <summary>Serializes the registries back to the configuration file.</summary>
+    /// <param name="path">Destination JSON path.</param>
+    /// <param name="catalog">Registries to write.</param>
+    /// <param name="logger">Logger for non-fatal write errors.</param>
+    private static void WriteCatalogFile(string path, MetadataCatalog catalog, ILogger? logger)
     {
         try
         {
@@ -338,14 +339,14 @@ public static class MetadataJsonLoader
         }
         catch (Exception ex)
         {
-            // 写回失败不影响本次运行（内存中已合并）
-            System.Console.Error.WriteLine($"[Centurion] Could not persist merged metadata at '{path}': {ex.Message}");
+            // A failed write does not affect this run; the merge is already applied in memory.
+            logger?.LogWarning(ex, "Could not persist merged metadata at '{MetadataPath}'.", path);
         }
     }
 
-    // ---------- 种子文件 ----------
+    // ---------- Seed file ----------
 
-    private static void WriteSeedFile(string path)
+    private static void WriteSeedFile(string path, ILogger? logger)
     {
         try
         {
@@ -369,12 +370,12 @@ public static class MetadataJsonLoader
             };
 
             File.WriteAllText(path, JsonSerializer.Serialize(seed, JsonOptions));
-            System.Console.Error.WriteLine($"[Centurion] Metadata config not found; seeded default at '{path}'. Edit it to customize tools/models.");
+            logger?.LogInformation("Metadata config not found; seeded default at '{MetadataPath}'. Edit it to customize tools/models.", path);
         }
         catch (Exception ex)
         {
-            // 种子文件写出失败不影响启动：继续使用内置默认
-            System.Console.Error.WriteLine($"[Centurion] Could not seed metadata config at '{path}': {ex.Message}");
+            // A failed seed write does not block startup; continue with built-in defaults.
+            logger?.LogWarning(ex, "Could not seed metadata config at '{MetadataPath}'.", path);
         }
     }
 
@@ -419,69 +420,69 @@ public static class MetadataJsonLoader
         Subdirectory = meta.Subdirectory
     };
 
-    // ---------- JSON 结构 ----------
+    // ---------- JSON structures ----------
 
-    /// <summary>元数据 JSON 根结构。</summary>
+    /// <summary>Root structure of the metadata JSON.</summary>
     public sealed class MetadataFileDto
     {
-        /// <summary>工具条目字典，键为工具标识名。</summary>
+        /// <summary>Tool entries, keyed by tool identifier.</summary>
         public Dictionary<string, ToolMetaDto>? Tools { get; set; }
-        /// <summary>模型条目字典，外层键为类别（whisper/fasterWhisper/qwen3Asr 等），内层键为模型名。</summary>
+        /// <summary>Model entries, keyed first by category (whisper, fasterWhisper, qwen3Asr, and so on), then by model name.</summary>
         public Dictionary<string, Dictionary<string, ModelMetaDto>>? Models { get; set; }
     }
 
-    /// <summary>工具条目 JSON 结构。</summary>
+    /// <summary>JSON structure for a tool entry.</summary>
     public sealed class ToolMetaDto
     {
-        /// <summary>工具标识名（如 whispercpp）。</summary>
+        /// <summary>Tool identifier, such as whispercpp.</summary>
         public string? ToolName { get; set; }
-        /// <summary>默认下载包 URL（zip 或 tar.gz）。</summary>
+        /// <summary>Default download package URL (zip or tar.gz).</summary>
         public string? DownloadUrl { get; set; }
-        /// <summary>压缩包类型（"zip" 或 "tar.gz"）。</summary>
+        /// <summary>Archive type: "zip" or "tar.gz".</summary>
         public string? ArchiveType { get; set; }
-        /// <summary>解压后可执行文件相对包根目录的路径。</summary>
+        /// <summary>Path to the executable relative to the extracted package root.</summary>
         public string? ExecutableRelativePath { get; set; }
-        /// <summary>工具版本号。</summary>
+        /// <summary>Tool version.</summary>
         public string? Version { get; set; }
-        /// <summary>工具运行所需模型/权重的基础下载地址，可为空。</summary>
+        /// <summary>Base URL for models or weights required at runtime; optional.</summary>
         public string? ModelBaseUrl { get; set; }
-        /// <summary>可选：下载包 SHA256 校验值（十六进制小写），为空时不校验。</summary>
+        /// <summary>Optional SHA-256 hash of the download package in lowercase hexadecimal; null disables verification.</summary>
         public string? FileHash { get; set; }
-        /// <summary>按设备键的下载变体字典。</summary>
+        /// <summary>Download variants keyed by device.</summary>
         public Dictionary<string, ToolVariantDto>? Variants { get; set; }
     }
 
-    /// <summary>工具按设备变体的 JSON 结构。</summary>
+    /// <summary>JSON structure for a device-specific tool variant.</summary>
     public sealed class ToolVariantDto
     {
-        /// <summary>该变体的下载包 URL，为空则回退到工具基础值。</summary>
+        /// <summary>Download package URL for this variant; null falls back to the tool default.</summary>
         public string? DownloadUrl { get; set; }
-        /// <summary>该变体的压缩包类型。</summary>
+        /// <summary>Archive type for this variant.</summary>
         public string? ArchiveType { get; set; }
-        /// <summary>该变体解压后可执行文件相对路径。</summary>
+        /// <summary>Path to the executable relative to the extracted variant package.</summary>
         public string? ExecutableRelativePath { get; set; }
-        /// <summary>面向用户的变体说明（如 "CUDA 12.4 build"）。</summary>
+        /// <summary>User-facing variant description, such as "CUDA 12.4 build".</summary>
         public string? Description { get; set; }
-        /// <summary>可选：该变体下载包 SHA256 校验值（十六进制小写），为空回退到工具基础值。</summary>
+        /// <summary>Optional lowercase hexadecimal SHA-256 hash; null falls back to the tool default.</summary>
         public string? FileHash { get; set; }
     }
 
-    /// <summary>模型条目 JSON 结构。</summary>
+    /// <summary>JSON structure for a model entry.</summary>
     public sealed class ModelMetaDto
     {
-        /// <summary>单文件模型的本地文件名（单文件类型时使用）。</summary>
+        /// <summary>Local filename for single-file models.</summary>
         public string? FileName { get; set; }
-        /// <summary>模型下载 URL。</summary>
+        /// <summary>Model download URL.</summary>
         public string? DownloadUrl { get; set; }
-        /// <summary>可选：下载文件 SHA256 校验值（十六进制小写），为空时不校验。</summary>
+        /// <summary>Optional lowercase hexadecimal SHA-256 hash; null disables verification.</summary>
         public string? FileHash { get; set; }
-        /// <summary>下载类型字符串（"single-file" / "directory" / "onnx-directory"）。</summary>
+        /// <summary>Download type: "single-file", "directory", or "onnx-directory".</summary>
         public string? DownloadType { get; set; }
-        /// <summary>目录/ONNX 模型需下载的文件相对路径列表。</summary>
+        /// <summary>Relative paths of files to download for directory and ONNX models.</summary>
         public List<string>? Files { get; set; }
-        /// <summary>ONNX 模型任务类型（如 token_classification、embedding）。</summary>
+        /// <summary>ONNX task type, such as token_classification or embedding.</summary>
         public string? OnnxModelType { get; set; }
-        /// <summary>模型在下载目录中的子目录，可为空。</summary>
+        /// <summary>Optional subdirectory for the model within the download directory.</summary>
         public string? Subdirectory { get; set; }
     }
 }

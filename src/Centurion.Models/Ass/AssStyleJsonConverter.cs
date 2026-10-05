@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 namespace Centurion.Models.Ass;
 
 /// <summary>
-/// <see cref="AssStyle"/> 的 System.Text.Json 转换器：保持与 Newtonsoft 契约一致的 JSON 字段名
-/// （name/fontname/fontsize 等 Studio 前端 IAssStyle 契约），并支持主构造函数反序列化。
+/// System.Text.Json converter for <see cref="AssStyle"/>. Keeps JSON field names consistent with the Newtonsoft contract
+/// (the Studio frontend IAssStyle contract, including name, fontname, and fontsize) and supports primary-constructor deserialization.
 /// </summary>
 public sealed class AssStyleJsonConverter : JsonConverter<AssStyle>
 {
-    /// <summary>按名称读取的可空占位，用于区分"字段缺失"与"默认值"。</summary>
+    /// <summary>Nullable placeholders used to distinguish missing fields from default values.</summary>
     private static readonly float[] FloatDefaults =
     [
         100f, 100f, 0f, 0f, 0f, 0f, 0f

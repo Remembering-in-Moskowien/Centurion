@@ -8,9 +8,10 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Capabilities.Managers.Tools;
 
 /// <summary>
-/// llama.cpp（llama-tts）管理器：确保 llama-tts.exe 可用。
-/// 缺失时按设备变体（cpu/cuda/vulkan）从 metadata.json 注册表自动下载官方 zip，
-/// 解压并扁平化到 tools/llama/。下载走 GitHub 520 镜像链，结果按进程缓存。
+/// llama.cpp (llama-tts) manager: ensures llama-tts.exe is available.
+/// When missing, automatically downloads the official zip from the metadata.json registry per the
+/// device variant (cpu/cuda/vulkan), extracts and flattens it into tools/llama/. Downloads go
+/// through the GitHub 520 mirror chain; the result is cached per process.
 /// </summary>
 public sealed class LlamaTtsManager(
     ToolRegistry registry,
@@ -21,13 +22,13 @@ public sealed class LlamaTtsManager(
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private string? _resolvedDirectory;
 
-    /// <summary>llama-tts 是否已可用。</summary>
+    /// <summary>Whether llama-tts is available.</summary>
     public bool IsInstalled => LocateExecutable() is not null;
 
     /// <summary>
-    /// 确保 llama-tts 已安装，返回可执行文件路径；失败返回 null。
+    /// Ensures llama-tts is installed and returns the executable path; returns null on failure.
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
     {
         var existing = LocateExecutable();
@@ -87,7 +88,7 @@ public sealed class LlamaTtsManager(
         }
     }
 
-    /// <summary>定位 llama-tts.exe（本地 tools/llama + PATH）。</summary>
+    /// <summary>Locates llama-tts.exe (local tools/llama + PATH).</summary>
     private string? LocateExecutable()
     {
         if (_resolvedDirectory is { } cached && File.Exists(Path.Combine(cached, "llama-tts.exe")))
@@ -103,27 +104,29 @@ public sealed class LlamaTtsManager(
         }
     }
 
-    private static async Task DownloadAsync(string url, string destination, CancellationToken cancellationToken)
+    private async Task DownloadAsync(string url, string destination, CancellationToken cancellationToken)
     {
-        // llama.cpp 在 GitHub：走 520 镜像链（GitHubDownloadProxy 内部逐个候选尝试）
+        // llama.cpp is hosted on GitHub: go through the 520 mirror chain
+        // (GitHubDownloadProxy tries each candidate in turn internally).
         await GitHubDownloadProxy.DownloadWithFallbackAsync(
             url,
             candidate => DownloadFileAsync(candidate, destination, cancellationToken),
             ex => ex is HttpRequestException or TaskCanceledException or IOException,
-            reason => Console.WriteLine($"[llama] GitHub mirror fallback: {reason}"),
+            reason => logger.LogInformation("[llama] GitHub mirror fallback: {Reason}", reason),
             cancellationToken);
     }
 
     private static async Task DownloadFileAsync(string url, string destination, CancellationToken cancellationToken)
     {
-        // 镜像候选通常不可达：短超时快速失败，让 GitHubDownloadProxy 尽快切到下一个候选（最终直连）
+        // Mirror candidates are usually unreachable: fail fast with a short timeout so
+        // GitHubDownloadProxy moves on to the next candidate quickly (ultimately a direct connection).
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Centurion/1.0");
         var bytes = await client.GetByteArrayAsync(url, cancellationToken);
         await File.WriteAllBytesAsync(destination, bytes, cancellationToken);
     }
 
-    /// <summary>解压 zip/7z 归档到目标目录，防 zip-slip。</summary>
+    /// <summary>Extracts a zip/7z archive into the destination directory, guarding against zip-slip.</summary>
     private static void ExtractArchive(string archivePath, string destinationDirectory)
     {
         var root = Path.GetFullPath(destinationDirectory);
@@ -145,7 +148,7 @@ public sealed class LlamaTtsManager(
         }
     }
 
-    /// <summary>将包含 llama-tts.exe 的子目录内容扁平化移动到工具根目录，删除空目录。</summary>
+    /// <summary>Flattens the contents of the subdirectory containing llama-tts.exe into the tool root directory, removing empty directories.</summary>
     private static void Flatten(string extractDir, string executablePath, string toolsRoot)
     {
         var sourceDir = Path.GetDirectoryName(executablePath)!;
@@ -183,7 +186,7 @@ public sealed class LlamaTtsManager(
                 }
                 catch (IOException)
                 {
-                    // 瞬时占用：保留目录不影响功能
+                    // Transient lock: leaving the directory in place does not affect functionality.
                 }
             }
         }

@@ -5,15 +5,15 @@ using Centurion.Core.Workflow.Strategy.Alignment;using Microsoft.Extensions.Dep
 namespace Centurion.Core.Workflow.Factories;
 
 /// <summary>
-/// 对齐策略工厂：按模型名称解析并创建对应的文本对齐策略实例。
+/// Alignment strategy factory: resolves and creates the matching text-alignment strategy instance by model name.
 /// </summary>
 public class AlignmentStrategyFactory(IServiceProvider serviceProvider) : IAlignmentStrategyFactory
 {
     /// <summary>
-    /// 按模型名称创建文本对齐策略。
+    /// Creates the text-alignment strategy for the given model name.
     /// </summary>
-    /// <param name="modelName">对齐所用的模型名称，将在运行时注入到策略实例中。</param>
-    /// <returns>已解析好模型名称的对齐策略实例。</returns>
+    /// <param name="modelName">The model name used for alignment; injected into the strategy instance at runtime.</param>
+    /// <returns>An alignment strategy instance with the model name resolved.</returns>
     public IAlignmentStrategy Create(string modelName)
     {
         // Use ActivatorUtilities to resolve the strategy with runtime modelName

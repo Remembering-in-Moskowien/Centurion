@@ -10,30 +10,30 @@ using Centurion.Models.Console;
 namespace Centurion.Core.Workflow.Pipeline;
 
 /// <summary>
-/// DAG 管线执行器：节点为算子、边为数据依赖。
-/// - 拓扑调度：依赖全部完成的节点并行执行（无依赖冲突即并发）。
-/// - 条件节点：When 谓词为 false 时跳过（Skipped，不记失败）。
-/// - 每节点支持：超时、失败重试（指数退避）、取消、降级（重试耗尽后跳过继续）。
-/// - 兼容旧接口：ExecuteAsync(IEnumerable&lt;IPipelineOperator&gt;) 自动构造成链式 DAG，行为与串行一致。
+/// DAG pipeline executor: nodes are operators, edges are data dependencies.
+/// - Topological scheduling: nodes whose dependencies have all completed run in parallel (concurrent whenever dependencies do not conflict).
+/// - Conditional nodes: skipped (Skipped, not counted as a failure) when the When predicate is false.
+/// - Per node supports: timeout, retry on failure (exponential backoff), cancellation, degradation (skip and continue once retries are exhausted).
+/// - Back-compat: ExecuteAsync(IEnumerable&lt;IPipelineOperator&gt;) automatically builds a chained DAG, behaving identically to sequential execution.
 /// </summary>
 public sealed class PipelineExecutor
 {
     private readonly ILogger<PipelineExecutor> _logger;
 
-    /// <summary>节点级重试退避基数（指数退避：base * 2^(attempt-1)）。</summary>
+    /// <summary>Per-node retry backoff base (exponential backoff: base * 2^(attempt-1)).</summary>
     private static readonly TimeSpan RetryBaseDelay = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
-    /// 创建管线执行器实例。
+    /// Creates a pipeline executor instance.
     /// </summary>
-    /// <param name="logger">用于记录执行过程的日志器。</param>
+    /// <param name="logger">Logger used to record the execution process.</param>
     public PipelineExecutor(ILogger<PipelineExecutor> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
-    /// 以链式 DAG 执行给定线性算子列表（保持原串行语义与退出行为）。
+    /// Executes the given linear operator list as a chained DAG (preserving the original sequential semantics and exit behavior).
     /// </summary>
     public async Task ExecuteAsync(IEnumerable<IPipelineOperator> operators,
         SubtitleWorkflowContext context,
@@ -47,10 +47,11 @@ public sealed class PipelineExecutor
     }
 
     /// <summary>
-    /// 执行 DAG 管线。所有节点成功完成返回；存在不可降级失败时抛出 <see cref="PipelineExecutionException"/>。
-    /// 节点执行结果写入 <paramref name="context"/> 的 StepTimings 及本方法返回值。
+    /// Executes the DAG pipeline. Returns when all nodes complete successfully; throws <see cref="PipelineExecutionException"/>
+    /// when a non-degradable failure occurs. Per-node execution results are written to <paramref name="context"/>'s
+    /// StepTimings and returned by this method.
     /// </summary>
-    /// <returns>每个节点的执行结果（状态/耗时/重试次数）。</returns>
+    /// <returns>The execution result of each node (status/elapsed/attempts).</returns>
     public async Task<IReadOnlyList<PipelineStepResult>> ExecuteAsync(PipelineDag dag,
         SubtitleWorkflowContext context,
         CancellationToken cancellationToken)
@@ -86,7 +87,7 @@ public sealed class PipelineExecutor
     }
 
     /// <summary>
-    /// 拓扑调度：维护就绪节点集合，就绪节点并行执行；依赖完成后唤醒下游。
+    /// Topological scheduling: maintains the set of ready nodes, runs ready nodes in parallel, and wakes downstream nodes once dependencies complete.
     /// </summary>
     private async Task<IReadOnlyList<PipelineStepResult>> ExecuteReadyNodesAsync(
         PipelineDag dag,
@@ -97,15 +98,15 @@ public sealed class PipelineExecutor
         var nodes = dag.Nodes;
         var byName = nodes.ToDictionary(n => n.Name, StringComparer.Ordinal);
 
-        // 依赖完成集合（含被跳过/降级的节点——跳过同样视为"依赖满足"）
+        // Completed-dependencies set (includes skipped/degraded nodes -- a skip also counts as "dependencies satisfied")
         var completed = new HashSet<string>(StringComparer.Ordinal);
-        // 每节点剩余依赖计数
+        // Remaining dependency count per node
         var remaining = nodes.ToDictionary(n => n.Name, n => n.DependsOn.Count, StringComparer.Ordinal);
         var ready = new Queue<PipelineNode>(nodes.Where(n => n.DependsOn.Count == 0));
         var results = new List<PipelineStepResult>(nodes.Count);
         var resultByNode = new Dictionary<string, PipelineStepResult>(StringComparer.Ordinal);
 
-        // 就绪节点的并行执行以 Task 形式运行；用信号量天然限流（不设上限即全并行）
+        // Ready nodes run in parallel as Tasks; a semaphore naturally throttles them (no cap = fully parallel)
         while (ready.Count > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -133,7 +134,7 @@ public sealed class PipelineExecutor
                     throw new PipelineExecutionException(
                         $"Pipeline node '{result.Name}' failed and is not degradable.", result.Name, result.Error);
 
-                // 唤醒依赖此节点的下游
+                // Wake downstream nodes that depend on this node
                 foreach (var node in nodes)
                 {
                     if (node.DependsOn.Contains(result.Name, StringComparer.Ordinal)
@@ -155,7 +156,7 @@ public sealed class PipelineExecutor
     }
 
     /// <summary>
-    /// 单节点执行策略：健康检查 → 条件判定 → 带超时执行 → 失败重试（指数退避）→ 降级/失败。
+    /// Single-node execution policy: health check -> condition check -> timed execution -> retry on failure (exponential backoff) -> degrade/fail.
     /// </summary>
     private async Task<PipelineStepResult> ExecuteNodeWithPolicyAsync(
         PipelineNode node,
@@ -166,7 +167,7 @@ public sealed class PipelineExecutor
         var stopwatch = Stopwatch.StartNew();
         var attempts = 0;
 
-        // 条件节点：不满足则跳过（不消耗重试，不计失败）
+        // Conditional node: skipped when not satisfied (consumes no retries, not counted as a failure)
         if (node.When is not null)
         {
             try
@@ -200,8 +201,8 @@ public sealed class PipelineExecutor
             }
         }
 
-        // 健康检查（如支持）：失败即抛——环境/模型缺失是硬错误（如模型未安装），
-        // 不重试、不降级，直接终止任务并向上传播（命令层报错退出并提示安装）
+        // Health check (if supported): throws on failure -- a missing environment/model is a hard error (e.g. model
+        // not installed); no retry, no degradation; terminate the task and propagate upward (the command layer exits with an error and prompts to install).
         try
         {
             if (node.Operator is IHealthCheckableOperator healthy)
@@ -259,7 +260,7 @@ public sealed class PipelineExecutor
 
         stopwatch.Stop();
 
-        // 重试耗尽：可降级则跳过继续，否则失败终止任务
+        // Retries exhausted: degrade by skipping and continuing if possible, otherwise fail and terminate the task
         if (node.DegradeOnFailure)
         {
             _logger.LogWarning("Step '{StepName}' exhausted retries ({Attempts}); degrading (skipping).",
@@ -284,7 +285,7 @@ public sealed class PipelineExecutor
         };
     }
 
-    /// <summary>节点级超时执行：超过 Timeout 的尝试视为失败（以 TimeoutException 形式抛出）。</summary>
+    /// <summary>Per-node timed execution: an attempt exceeding Timeout is treated as a failure (thrown as a TimeoutException).</summary>
     private static async Task ExecuteWithTimeoutAsync(
         PipelineNode node,
         SubtitleWorkflowContext context,
@@ -311,12 +312,12 @@ public sealed class PipelineExecutor
     private static TimeSpan RetryBackoff(int attempt) => RetryBaseDelay * Math.Pow(2, Math.Clamp(attempt - 1, 0, 5));
 }
 
-/// <summary>管线执行失败（不可降级节点失败）时抛出。</summary>
+/// <summary>Thrown when pipeline execution fails (a non-degradable node failed).</summary>
 public sealed class PipelineExecutionException(
     string message,
     string nodeName,
     Exception? innerException) : InvalidOperationException(message, innerException)
 {
-    /// <summary>失败节点名称。</summary>
+    /// <summary>The name of the failed node.</summary>
     public string NodeName { get; } = nodeName;
 }

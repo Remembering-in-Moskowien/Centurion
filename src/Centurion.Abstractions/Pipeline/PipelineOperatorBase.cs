@@ -6,48 +6,48 @@ using Centurion.Models.Console;
 namespace Centurion.Abstractions.Pipeline;
 
 /// <summary>
-/// 管道算子抽象基类。
-/// 提供名称、日志、进度事件及可选的健康检查虚方法。
-/// 子类只需重写 ExecuteAsync 核心业务逻辑。
+/// Base class for pipeline operators.
+/// Provides a name, logging, progress events, and an optional health-check method.
+/// Derived classes only need to implement the ExecuteAsync business logic.
 /// </summary>
 public abstract class PipelineOperatorBase<TLogger> : IPipelineOperator, IProgressReportableOperator
     where TLogger : class
 {
     /// <summary>
-    /// 使用指定的日志记录器初始化管道算子基类。
+    /// Initializes the pipeline operator base class with the specified logger.
     /// </summary>
-    /// <param name="logger">用于记录本算子日志的日志记录器。</param>
+    /// <param name="logger">Logger used by this operator.</param>
     protected PipelineOperatorBase(ILogger<TLogger> logger)
     {
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
-    /// 派生类可用的日志记录器，日志前缀会自动带上算子名称。
+    /// Logger available to derived classes; log entries are automatically prefixed with the operator name.
     /// </summary>
     protected ILogger<TLogger> Logger { get; }
 
-    // ---------- 核心抽象 ----------
+    // ---------- Core abstraction ----------
     /// <summary>
-    /// 算子名称（用于日志和进度展示）。
+    /// Operator name used in logs and progress displays.
     /// </summary>
     public abstract string Name { get; }
 
     /// <summary>
-    /// 执行管道变换：从工作流上下文读取输入并写回处理结果。
+    /// Executes the pipeline transformation by reading input from the workflow context and writing results back.
     /// </summary>
-    /// <param name="context">全量工作流上下文（引用传递）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">The complete workflow context, passed by reference.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public abstract Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken);
 
-    // ---------- 进度事件（由调用方订阅） ----------
+    // ---------- Progress events (subscribed to by the caller) ----------
     /// <summary>
-    /// 进度报告事件，调用方可订阅以渲染进度。
+    /// Progress event that callers can subscribe to for rendering progress.
     /// </summary>
     public event EventHandler<OperatorProgressEventArgs>? Progress;
 
     /// <summary>
-    /// 触发进度事件。子类在适当位置调用此方法报告进度。
+    /// Raises the progress event. Derived classes call this method when reporting progress.
     /// </summary>
     protected virtual void OnProgress(int percentage, string? message = null)
     {
@@ -57,34 +57,34 @@ public abstract class PipelineOperatorBase<TLogger> : IPipelineOperator, IProgre
             Percentage = Math.Clamp(percentage, 0, 100),
             StatusMessage = message
         });
-        // 可选：同时输出到控制台（便于调试）
+        // Optional console output for debugging.
         // ConsoleServices.Output?.WriteLine($"[{Name}] {percentage}% - {message}");
     }
 
     /// <summary>
-    /// 记录一条信息级日志，自动附带算子名称前缀。
+    /// Writes an information-level log entry prefixed with the operator name.
     /// </summary>
-    /// <param name="message">日志消息正文。</param>
+    /// <param name="message">Log message.</param>
     protected void LogInfo(string message)
     {
         Logger.LogInformation("[{Operator}] {Message}", Name, message);
     }
 
     /// <summary>
-    /// 记录一条警告级日志，自动附带算子名称前缀。
-    /// 算子内失败属内部细节：一律以 warn 记录并继续，由最外层统一输出一次 fail。
+    /// Writes a warning-level log entry prefixed with the operator name.
+    /// Operator failures are internal details: log them as warnings and continue; the outermost layer reports the single failure.
     /// </summary>
-    /// <param name="message">日志消息正文。</param>
+    /// <param name="message">Log message.</param>
     protected void LogWarning(string message)
     {
         Logger.LogWarning("[{Operator}] {Message}", Name, message);
     }
 
-    // ---------- 健康检查（可选重写） ----------
+    // ---------- Health check (optional override) ----------
     /// <summary>
-    /// 校验算子运行环境是否就绪；默认实现直接视为就绪，子类可按需重写。
+    /// Checks whether the operator runtime is ready; the default implementation succeeds, and derived classes can override it.
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public virtual Task CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;

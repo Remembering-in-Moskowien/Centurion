@@ -6,8 +6,9 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Core.Processing.SpellCheck;
 
 /// <summary>
-/// Hunspell 拼写检查器：按需加载/下载词典（默认 en_US，来自 LibreOffice 词典仓库），
-/// 对字幕句文本分词后逐词检查，过滤 CJK、数字与纯符号词，返回可疑词与候选建议。
+/// Hunspell spell checker: loads/downloads dictionaries on demand (default en_US, from the LibreOffice
+/// dictionaries repository), tokenizes subtitle sentence text and checks it word by word, filtering out
+/// CJK, digits and pure-symbol tokens, and returns suspect words with candidate suggestions.
 /// </summary>
 public sealed class HunspellSpellChecker(ILogger<HunspellSpellChecker> logger)
 {
@@ -16,12 +17,12 @@ public sealed class HunspellSpellChecker(ILogger<HunspellSpellChecker> logger)
     private static readonly char[] Ignored = ['\'', '-'];
 
     /// <summary>
-    /// 检查一句文本的拼写。
+    /// Checks the spelling of one sentence's text.
     /// </summary>
-    /// <param name="sentenceIndex">句子序号（用于结果定位）。</param>
-    /// <param name="text">句子文本。</param>
-    /// <param name="wordList">已加载的 Hunspell 词表。</param>
-    /// <returns>拼写疑点列表；无嫌疑词时为空列表。</returns>
+    /// <param name="sentenceIndex">The sentence index (used to locate results).</param>
+    /// <param name="text">The sentence text.</param>
+    /// <param name="wordList">The loaded Hunspell word list.</param>
+    /// <returns>The list of spelling issues; an empty list when no words are suspect.</returns>
     public static IReadOnlyList<SpellCheckIssue> CheckSentence(int sentenceIndex, string text, WordList wordList)
     {
         var issues = new List<SpellCheckIssue>();
@@ -45,12 +46,12 @@ public sealed class HunspellSpellChecker(ILogger<HunspellSpellChecker> logger)
     }
 
     /// <summary>
-    /// 确保指定前缀的词典可用：本地 tools/hunspell/{prefix}.dic|.aff 已存在则加载；
-    /// 缺失且前缀为 en_US 时自动下载；其余前缀缺失时记录警告并返回 null。
+    /// Ensures the dictionary for the given prefix is available: loads the local tools/hunspell/{prefix}.dic|.aff
+    /// if present; auto-downloads when missing and the prefix is en_US; logs a warning and returns null for any other missing prefix.
     /// </summary>
-    /// <param name="prefix">词典前缀（如 en_US）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>加载的 Hunspell 实例；不可用时为 null。</returns>
+    /// <param name="prefix">The dictionary prefix (e.g. en_US).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The loaded Hunspell instance; null when unavailable.</returns>
     public async Task<WordList?> EnsureDictionaryAsync(string prefix, CancellationToken cancellationToken)
     {
         var baseDir = Path.Combine(AppContext.BaseDirectory, "tools", "hunspell");
@@ -94,10 +95,10 @@ public sealed class HunspellSpellChecker(ILogger<HunspellSpellChecker> logger)
     {
         if (token.Length == 0)
             return false;
-        // 纯 CJK/非拉丁词（如中文单字）：跳过
+        // Pure CJK / non-Latin tokens (e.g. single Chinese characters): skip
         if (token.Any(ch => ch is > '\u2E80' and < '\uA000'))
             return false;
-        // 数字/含数字/纯符号：跳过
+        // Digits / digit-containing / pure-symbol tokens: skip
         if (token.Any(char.IsDigit))
             return false;
         if (token.All(ch => !char.IsLetter(ch)))

@@ -3,12 +3,14 @@ using Centurion.Models.Llm;
 namespace Centurion.Core.Capabilities.Infrastructure.Llm;
 
 /// <summary>
-/// LLM 提供商注册表：维护各提供商（<see cref="LlmProvider"/>）的默认 API 端点、默认模型与显示名。
-/// 模型名为空时由 <c>LlmEndpointParser</c> 据此补全；端点为空时同样据此补全。
+/// LLM provider registry: maintains each provider's (<see cref="LlmProvider"/>) default
+/// API endpoint, default model and display name. When the model name is empty,
+/// <c>LlmEndpointParser</c> fills it in from here; when the endpoint is empty it is
+/// filled in from here as well.
 /// </summary>
 public static class LlmProviderRegistry
 {
-    /// <summary>提供商 → (默认端点, 默认模型)。</summary>
+    /// <summary>Provider → (default endpoint, default model).</summary>
     private static readonly Dictionary<LlmProvider, (string BaseUrl, string? DefaultModel)> Known =
         new()
         {
@@ -25,21 +27,21 @@ public static class LlmProviderRegistry
             [LlmProvider.Ollama] = ("http://localhost:11434", "llama3.2")
         };
 
-    /// <summary>获取提供商的默认端点；未知提供商返回 null。</summary>
-    /// <param name="provider">目标提供商。</param>
-    /// <returns>默认端点 URL，未知时为 null。</returns>
+    /// <summary>Gets the provider's default endpoint; returns null for unknown providers.</summary>
+    /// <param name="provider">Target provider.</param>
+    /// <returns>The default endpoint URL, or null when unknown.</returns>
     public static string? GetDefaultBaseUrl(LlmProvider provider) =>
         Known.TryGetValue(provider, out var entry) ? entry.BaseUrl : null;
 
-    /// <summary>获取提供商的默认模型名；未知提供商或无默认模型时返回 null。</summary>
-    /// <param name="provider">目标提供商。</param>
-    /// <returns>默认模型名，无默认时为 null。</returns>
+    /// <summary>Gets the provider's default model name; returns null for unknown providers or when there is no default.</summary>
+    /// <param name="provider">Target provider.</param>
+    /// <returns>The default model name, or null when there is no default.</returns>
     public static string? GetDefaultModel(LlmProvider provider) =>
         Known.TryGetValue(provider, out var entry) ? entry.DefaultModel : null;
 
-    /// <summary>获取提供商的显示名（用于日志与帮助文本）。</summary>
-    /// <param name="provider">目标提供商。</param>
-    /// <returns>显示名。</returns>
+    /// <summary>Gets the provider's display name (used in logs and help text).</summary>
+    /// <param name="provider">Target provider.</param>
+    /// <returns>The display name.</returns>
     public static string GetDisplayName(LlmProvider provider) => provider switch
     {
         LlmProvider.OpenAI => "OpenAI",

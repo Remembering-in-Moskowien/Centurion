@@ -2,43 +2,43 @@ using Centurion.Models.Providers;
 namespace Centurion.Abstractions.Providers;
 
 /// <summary>
-/// 全部 Provider 的公共契约：名称、能力声明与可用性探测。
-/// 每个推理域（ASR/OCR/LLM/TTS/Diarization/VocalSeparation）的 Provider
-/// 继承本接口并按域扩展执行方法。
+/// Shared contract for all providers: name, capability declaration, and availability checks.
+/// Providers for ASR, OCR, LLM, TTS, diarization, and vocal separation
+/// extend this interface with domain-specific execution methods.
 /// </summary>
 public interface IProvider
 {
-    /// <summary>稳定标识（如 "whispercpp"、"openai"、"zhipu"），用于配置与命令。</summary>
+    /// <summary>Stable identifier, such as "whispercpp", "openai", or "zhipu", used by configuration and commands.</summary>
     string Name { get; }
 
-    /// <summary>人类可读显示名（用于 providers list 等）。</summary>
+    /// <summary>Human-readable display name, used by commands such as providers list.</summary>
     string DisplayName { get; }
 
-    /// <summary>能力声明：本地/云、语言、GPU、成本、延迟、质量档位。</summary>
+    /// <summary>Capabilities, including local/cloud execution, languages, GPU, cost, latency, and quality.</summary>
     ProviderCapabilities Capabilities { get; }
 
     /// <summary>
-    /// 探测当前是否可用：云端 Provider 检查 API 密钥与端点；本地 Provider 检查工具/模型是否就位。
+    /// Checks availability: cloud providers validate the API key and endpoint, while local providers check required tools and models.
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>可用返回 true；不可用返回 false（不抛异常）。</returns>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True when available, or false when unavailable; does not throw.</returns>
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// 语音识别（ASR）Provider：给定音频返回词级时间戳。
+/// Speech recognition (ASR) provider that returns word-level timestamps for audio.
 /// </summary>
 public interface IAsrProvider : IProvider
 {
     /// <summary>
-    /// 转录音频。
+    /// Transcribes audio.
     /// </summary>
-    /// <param name="audioPath">输入音频文件路径（WAV 16kHz 单声道）。</param>
-    /// <param name="language">语言代码（en/zh 等）。</param>
-    /// <param name="model">模型名；为空时使用 Provider 默认。</param>
-    /// <param name="initialPrompt">可选的初始提示词。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>词级结果与用量统计。</returns>
+    /// <param name="audioPath">Input audio file path (16 kHz mono WAV).</param>
+    /// <param name="language">Language code, such as en or zh.</param>
+    /// <param name="model">Model name; null uses the provider default.</param>
+    /// <param name="initialPrompt">Optional initial prompt.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Word-level results and usage statistics.</returns>
     Task<ProviderResult<IReadOnlyList<Centurion.Models.Word>>> TranscribeAsync(
         string audioPath,
         string language,
@@ -48,40 +48,40 @@ public interface IAsrProvider : IProvider
 }
 
 /// <summary>
-/// 光学字符识别（OCR）Provider：对图片提取字幕文本。
+/// Optical character recognition (OCR) provider that extracts subtitle text from images.
 /// </summary>
 public interface IOcrProvider : IProvider
 {
     /// <summary>
-    /// 对单张图片执行 OCR。
+    /// Runs OCR on a single image.
     /// </summary>
-    /// <param name="imagePath">图片文件路径。</param>
-    /// <param name="model">模型名；为空时使用 Provider 默认。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>提取的字幕文本（无字幕时可能返回占位文本）。</returns>
+    /// <param name="imagePath">Image file path.</param>
+    /// <param name="model">Model name; null uses the provider default.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Extracted subtitle text; placeholder text may be returned when no subtitles are found.</returns>
     Task<ProviderResult<string>> OcrImageAsync(
         string imagePath,
         string? model,
         CancellationToken cancellationToken);
 }
 
-/// <summary>LLM 对话消息。</summary>
-/// <param name="Role">角色（system/user/assistant）。</param>
-/// <param name="Content">消息内容。</param>
+/// <summary>LLM conversation message.</summary>
+/// <param name="Role">Message role: system, user, or assistant.</param>
+/// <param name="Content">Message content.</param>
 public sealed record ChatMessage(string Role, string Content);
 
 /// <summary>
-/// 大语言模型（LLM）Provider：统一 chat/completions 抽象。
+/// Large language model (LLM) provider with a unified chat/completions abstraction.
 /// </summary>
 public interface ILlmProvider : IProvider
 {
     /// <summary>
-    /// 发送一轮对话并返回助手回复文本。
+    /// Sends a conversation and returns the assistant response.
     /// </summary>
-    /// <param name="messages">对话消息列表。</param>
-    /// <param name="model">模型名；为空时使用 Provider 默认。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>回复文本与用量统计（token/成本）。</returns>
+    /// <param name="messages">Conversation messages.</param>
+    /// <param name="model">Model name; null uses the provider default.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Response text and usage statistics, including tokens and cost.</returns>
     Task<ProviderResult<string>> CompleteAsync(
         IReadOnlyList<ChatMessage> messages,
         string? model,
@@ -89,19 +89,19 @@ public interface ILlmProvider : IProvider
 }
 
 /// <summary>
-/// 文本转语音（TTS）Provider：合成单句语音。
+/// Text-to-speech (TTS) provider that synthesizes a single utterance.
 /// </summary>
 public interface ITtsProvider : IProvider
 {
     /// <summary>
-    /// 合成单句语音。
+    /// Synthesizes one utterance.
     /// </summary>
-    /// <param name="text">目标语言文本。</param>
-    /// <param name="referenceAudioPath">说话人参考音频路径；为空时使用默认音色。</param>
-    /// <param name="language">目标语言（ISO 639-1）。</param>
-    /// <param name="outputWavPath">输出 wav 路径。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>合成音频时长（秒）与用量统计。</returns>
+    /// <param name="text">Text in the target language.</param>
+    /// <param name="referenceAudioPath">Speaker reference audio path; null uses the default voice.</param>
+    /// <param name="language">Target language (ISO 639-1).</param>
+    /// <param name="outputWavPath">Output WAV path.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Synthesized audio duration in seconds and usage statistics.</returns>
     Task<ProviderResult<double>> SynthesizeAsync(
         string text,
         string? referenceAudioPath,
@@ -111,18 +111,18 @@ public interface ITtsProvider : IProvider
 }
 
 /// <summary>
-/// 说话人分割（Diarization）Provider：给定音频返回说话人时间片段。
+/// Diarization provider that returns speaker segments for audio.
 /// </summary>
 public interface IDiarizationProvider : IProvider
 {
     /// <summary>
-    /// 对音频执行说话人分割。
+    /// Performs diarization on audio.
     /// </summary>
-    /// <param name="audioPath">预处理后的音频路径。</param>
-    /// <param name="numSpeakers">预期说话人数（0 = 自动）。</param>
-    /// <param name="segmentModel">分割模型名；为空使用后端默认。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>说话人片段列表与用量统计。</returns>
+    /// <param name="audioPath">Path to preprocessed audio.</param>
+    /// <param name="numSpeakers">Expected number of speakers; 0 selects automatically.</param>
+    /// <param name="segmentModel">Segmentation model name; null uses the backend default.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Speaker segments and usage statistics.</returns>
     Task<ProviderResult<IReadOnlyList<Centurion.Abstractions.Strategy.SpeakerSegment>>> DiarizeAsync(
         string audioPath,
         int numSpeakers,
@@ -131,17 +131,17 @@ public interface IDiarizationProvider : IProvider
 }
 
 /// <summary>
-/// 人声分离（Vocal Separation）Provider：从音频中分离人声轨。
+/// Vocal separation provider that extracts a vocal track from audio.
 /// </summary>
 public interface IVocalSeparationProvider : IProvider
 {
     /// <summary>
-    /// 分离人声轨。
+    /// Separates the vocal track.
     /// </summary>
-    /// <param name="audioPath">输入音频路径。</param>
-    /// <param name="outputWavPath">输出人声 wav 路径。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>实际人声轨路径与用量统计。</returns>
+    /// <param name="audioPath">Input audio path.</param>
+    /// <param name="outputWavPath">Output vocal WAV path.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Actual vocal track path and usage statistics.</returns>
     Task<ProviderResult<string>> SeparateVocalsAsync(
         string audioPath,
         string outputWavPath,

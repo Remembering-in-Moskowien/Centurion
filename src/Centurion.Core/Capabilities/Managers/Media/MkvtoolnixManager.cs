@@ -8,9 +8,10 @@ using SharpCompress.Archives;
 namespace Centurion.Core.Capabilities.Managers.Media;
 
 /// <summary>
-/// MKVToolNix 管理器：确保 mkvmerge / mkvextract 可用。
-/// 本机或 PATH 中缺失时，按 metadata.json 注册表自动下载官方便携 7z 包，
-/// 解压并扁平化到 tools/mkvtoolnix/。下载为一次性动作，结果按进程缓存。
+/// MKVToolNix manager: ensures mkvmerge / mkvextract is available.
+/// When missing locally or on PATH, automatically downloads the official portable 7z package
+/// per the metadata.json registry, extracts and flattens it into tools/mkvtoolnix/.
+/// The download is a one-time action; the result is cached per process.
 /// </summary>
 public sealed class MkvtoolnixManager(
     ToolRegistry registry,
@@ -21,14 +22,15 @@ public sealed class MkvtoolnixManager(
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private string? _resolvedDirectory;
 
-    /// <summary>mkvtoolnix 是否已可用（mkvmerge.exe 在本机或 PATH 中）。</summary>
+    /// <summary>Whether mkvtoolnix is available (mkvmerge.exe present locally or on PATH).</summary>
     public bool IsInstalled => LocateExecutable() is not null;
 
     /// <summary>
-    /// 确保 mkvtoolnix 已安装：已存在则直接返回工具目录；
-    /// 缺失时自动下载官方 7z 并解压，返回工具目录；失败返回 null。
+    /// Ensures mkvtoolnix is installed: if already present, returns the tool directory directly;
+    /// if missing, automatically downloads and extracts the official 7z and returns the tool
+    /// directory; returns null on failure.
     /// </summary>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
     {
         var existing = LocateExecutable();
@@ -86,7 +88,7 @@ public sealed class MkvtoolnixManager(
         }
     }
 
-    /// <summary>定位 mkvmerge.exe（本地 tools/mkvtoolnix + PATH）。</summary>
+    /// <summary>Locates mkvmerge.exe (local tools/mkvtoolnix + PATH).</summary>
     private string? LocateExecutable()
     {
         if (_resolvedDirectory is { } cached && File.Exists(Path.Combine(cached, "mkvmerge.exe")))
@@ -111,7 +113,8 @@ public sealed class MkvtoolnixManager(
     }
 
     /// <summary>
-    /// 解压 7z/zip 归档到目标目录，防 zip-slip（条目路径逃逸拒绝）。
+    /// Extracts a 7z/zip archive into the destination directory, guarding against zip-slip
+    /// (rejects entries whose path escapes the target).
     /// </summary>
     private static void ExtractArchive(string archivePath, string destinationDirectory)
     {
@@ -137,7 +140,8 @@ public sealed class MkvtoolnixManager(
     }
 
     /// <summary>
-    /// 将包含 mkvmerge.exe 的子目录内容扁平化移动到工具根目录，删除空目录。
+    /// Flattens the contents of the subdirectory containing mkvmerge.exe into the tool root
+    /// directory, removing empty directories.
     /// </summary>
     private static void Flatten(string extractDir, string executablePath, string toolsRoot)
     {
@@ -176,7 +180,7 @@ public sealed class MkvtoolnixManager(
                 }
                 catch (IOException)
                 {
-                    // 文件占用等瞬时问题：保留目录不影响功能
+                    // Transient issues such as file locks: leaving the directory in place does not affect functionality.
                 }
             }
         }

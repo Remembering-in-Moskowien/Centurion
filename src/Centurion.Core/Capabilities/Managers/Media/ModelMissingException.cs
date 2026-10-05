@@ -1,8 +1,8 @@
 namespace Centurion.Core.Capabilities.Managers.Media;
 
 /// <summary>
-/// 模型缺失异常：模型本地文件/目录不存在时抛出，消息附带
-/// <c>Centurion models install &lt;model&gt;</c> 安装提示。
+/// Model-missing exception: thrown when the model's local file/directory does not exist; the
+/// message includes a prompt to install via <c>Centurion models install &lt;model&gt;</c>.
 /// </summary>
 public sealed class ModelMissingException(
     string modelName,
@@ -10,13 +10,13 @@ public sealed class ModelMissingException(
     IReadOnlyList<string> missingEntries)
     : InvalidOperationException(BuildMessage(modelName, expectedPath, missingEntries))
 {
-    /// <summary>缺失的模型名（注册表中的模型名）。</summary>
+    /// <summary>The missing model name (the model name in the registry).</summary>
     public string ModelName { get; } = modelName;
 
-    /// <summary>期望的本地路径（文件或目录）。</summary>
+    /// <summary>The expected local path (file or directory).</summary>
     public string ExpectedPath { get; } = expectedPath;
 
-    /// <summary>缺失的文件条目（单文件模式为模型文件名）。</summary>
+    /// <summary>The missing file entries (the model file name in single-file mode).</summary>
     public IReadOnlyList<string> MissingEntries { get; } = missingEntries;
 
     private static string BuildMessage(string modelName, string expectedPath, IReadOnlyList<string> missingEntries)

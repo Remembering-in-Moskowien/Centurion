@@ -21,6 +21,13 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <summary>--json mode switch: suppresses human-readable lines (logging still occurs); stdout keeps JSON only.</summary>
     public static bool SuppressHumanLines { get; set; }
 
+    /// <summary>
+    /// --agent mode switch: LLM-friendly plain-text output. Lines carry fixed
+    /// INFO/OK/WARN/ERROR prefixes, no ANSI colors, timestamps or decorative
+    /// symbols; ERROR goes to stderr, the rest to stdout (logging still occurs).
+    /// </summary>
+    public static bool AgentMode { get; set; }
+
     /// <summary>Builds the info prefix matching the log file (HH:mm:ss info:).</summary>
     private static string InfoPrefix => $"{DateTime.Now:HH:mm:ss} [blue]info[/]: ";
 
@@ -35,6 +42,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void Write(string message)
     {
         if (SuppressHumanLines) return;
+        if (AgentMode)
+        {
+            System.Console.Out.Write(message);
+            _logger.LogInformation(message);
+            return;
+        }
         AnsiConsole.Markup($"{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
@@ -46,6 +59,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteLine(string message)
     {
         if (SuppressHumanLines) return;
+        if (AgentMode)
+        {
+            System.Console.Out.WriteLine(message);
+            _logger.LogInformation(message);
+            return;
+        }
         AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
     }
@@ -58,6 +77,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">The error message text.</param>
     public void WriteError(string message)
     {
+        if (AgentMode)
+        {
+            System.Console.Error.WriteLine($"ERROR: {message}");
+            _logger.LogError(message);
+            return;
+        }
         if (!SuppressHumanLines)
             AnsiConsole.MarkupLine($"{DateTime.Now:HH:mm:ss} [{CliPalette.Error}]ERR[/]: {message.EscapeMarkup()}");
         _logger.LogError(message);
@@ -71,6 +96,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">The warning message text.</param>
     public void WriteWarning(string message)
     {
+        if (AgentMode)
+        {
+            System.Console.Out.WriteLine($"WARN: {message}");
+            _logger.LogWarning(message);
+            return;
+        }
         if (!SuppressHumanLines)
             AnsiConsole.MarkupLine($"{DateTime.Now:HH:mm:ss} [{CliPalette.Warning}]WARN[/]: {message.EscapeMarkup()}");
         _logger.LogWarning(message);
@@ -83,6 +114,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">The success message text.</param>
     public void WriteSuccess(string message)
     {
+        if (AgentMode)
+        {
+            System.Console.Out.WriteLine($"OK: {message}");
+            _logger.LogInformation($"{message}");
+            return;
+        }
         if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{SuccessPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation($"{message}");
@@ -94,6 +131,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     /// <param name="message">The hint message text.</param>
     public void WriteInfo(string message)
     {
+        if (AgentMode)
+        {
+            System.Console.Out.WriteLine($"INFO: {message}");
+            _logger.LogInformation(message);
+            return;
+        }
         if (SuppressHumanLines) return;
         AnsiConsole.MarkupLine($"{InfoPrefix}{message.EscapeMarkup()}");
         _logger.LogInformation(message);
@@ -106,6 +149,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteMarkup(string markup)
     {
         if (SuppressHumanLines) return;
+        if (AgentMode)
+        {
+            System.Console.Out.Write(StripMarkup(markup));
+            _logger.LogInformation(StripMarkup(markup));
+            return;
+        }
         try
         {
             AnsiConsole.Write(markup);
@@ -124,6 +173,12 @@ public class SpectreConsoleOutput(ILogger<SpectreConsoleOutput> logger) : IConso
     public void WriteMarkupLine(string markup)
     {
         if (SuppressHumanLines) return;
+        if (AgentMode)
+        {
+            System.Console.Out.WriteLine(StripMarkup(markup));
+            _logger.LogInformation(StripMarkup(markup));
+            return;
+        }
         try
         {
             AnsiConsole.MarkupLine($"{InfoPrefix}{markup}");
