@@ -8,7 +8,7 @@ using Centurion.Core.Workflow.Strategy.SentenceSplit;using Microsoft.Extensions
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 分句算子，使用管线组装阶段注入的策略及选项（规则/LLM 等）。
+/// Sentence-splitting operator that uses the strategy and options (rule-based/LLM, etc.) injected by the pipeline assembly stage.
 /// </summary>
 public class SentenceSplitOperator(
     ISentenceSplitStrategy strategy,
@@ -18,14 +18,14 @@ public class SentenceSplitOperator(
     private readonly ISentenceSplitStrategy _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
     private readonly SplitOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Sentence Splitting";
 
     /// <summary>
-    /// 执行分句：按配置经工厂创建分句策略，把当前词流切分为句子并写回工作流状态。
+    /// Runs sentence splitting: creates the split strategy via the factory as configured, splits the current word stream into sentences, and writes them back into the workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供输入词流与分句配置。</param>
-    /// <param name="cancellationToken">用于取消分句过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the input word stream and split configuration.</param>
+    /// <param name="cancellationToken">Token used to cancel the splitting process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.IsSplit)

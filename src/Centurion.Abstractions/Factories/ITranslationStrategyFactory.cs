@@ -1,5 +1,4 @@
 using Centurion.Abstractions.Strategy;
-using Centurion.Models.Llm;
 
 namespace Centurion.Abstractions.Factories;
 
@@ -11,8 +10,8 @@ public interface ITranslationStrategyFactory
     /// <summary>
     /// Creates a translation strategy for the specified strategy name.
     /// </summary>
-    /// <param name="strategy">Strategy name, such as "llm".</param>
-    /// <param name="llm">LLM connection options; when null, falls back to OpenAI if an API key is set, otherwise Ollama.</param>
+    /// <param name="strategy">Strategy name: "llm" (large language model) or "opus" (local OPUS-MT ONNX).</param>
+    /// <param name="options">Request options: LLM connection details, OPUS-MT model pair, beam size; when null, legacy defaults apply.</param>
     /// <returns>The translation strategy instance.</returns>
-    ITranslationStrategy Create(string strategy, LlmOptions? llm = null);
+    ITranslationStrategy Create(string strategy, TranslationRequestOptions? options = null);
 }

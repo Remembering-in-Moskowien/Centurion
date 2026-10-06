@@ -4,6 +4,7 @@ using Centurion.Core.Operators.Download.Request;
 using Centurion.Core.Operators.Download.Response;
 using Centurion.Core.Utils.Infrastructure;
 using Centurion.Models.Console;
+
 namespace Centurion.Core.Operators.Download;
 
 /// <summary>
@@ -39,6 +40,31 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
         if (!Uri.TryCreate(payload.Url, UriKind.Absolute, out var uri) || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Refusing to download from non-HTTPS URL: {payload.Url}");
 
+        // GitHub release URLs are frequently unreachable from CN networks (TLS resets), so the
+        // GitHubDownloadProxy candidate chain (user mirror -> default mirrors -> direct, configurable
+        // via --github-proxy / --no-github-proxy) is tried in order; hf-mirror model URLs pass through
+        // unchanged. This makes first-run tool downloads work out of the box.
+        var candidates = GitHubDownloadProxy.CandidateUrls(payload.Url).ToList();
+
+        Exception? lastError = null;
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                await DownloadCoreAsync(candidate, payload, cancellationToken);
+                return new DownloaderResponse { Success = true, FilePath = payload.FullSavePath };
+            }
+            catch (Exception ex) when (IsNetworkFailure(ex) && candidate != candidates[^1])
+            {
+                lastError = ex;
+            }
+        }
+        throw lastError ?? new InvalidOperationException($"Download failed for {payload.Url}.");
+    }
+
+    /// <summary>Downloads a single URL to the target path with progress reporting and optional SHA256 verification.</summary>
+    private static async Task DownloadCoreAsync(string url, AriaDownloadRequest payload, CancellationToken cancellationToken)
+    {
         // Ensure the target directory exists.
         var targetDir = Path.GetDirectoryName(payload.FullSavePath)!;
         if (!Directory.Exists(targetDir))
@@ -67,7 +93,7 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
         };
 
         // Start the download task (pass the cancellation token).
-        var downloadTask = downloader.DownloadFileTaskAsync(payload.Url, payload.FullSavePath, cancellationToken);
+        var downloadTask = downloader.DownloadFileTaskAsync(url, payload.FullSavePath, cancellationToken);
 
         // Use IProgressReporter to display progress.
         ConsoleServices.Progress.StartProgress("Downloading...", ctx =>
@@ -114,13 +140,11 @@ public class Downloader : IOperator<AriaDownloadRequest, DownloaderResponse>
                     $"Hash mismatch. Expected: {payload.FileHash}, Actual: {result.ActualHash}");
             }
         }
-
-        return new DownloaderResponse
-        {
-            Success = true,
-            FilePath = payload.FullSavePath
-        };
     }
+
+    /// <summary>Network-class failures eligible for switching to the next mirror candidate.</summary>
+    private static bool IsNetworkFailure(Exception ex) =>
+        ex is HttpRequestException or IOException or OperationCanceledException;
 
     /// <summary>
     /// Releases resources and suppresses the finalizer.

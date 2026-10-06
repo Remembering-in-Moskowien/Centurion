@@ -1,20 +1,20 @@
 namespace Centurion.Models.Workflow;
 
-/// <summary>音频预处理流水线的各项开关与阈值配置。</summary>
+/// <summary>Configuration of toggles and thresholds for the audio preprocessing pipeline.</summary>
 public record AudioPreprocessConfig
 {
-    /// <summary>是否启用重采样到模型要求的采样率，默认开启。</summary>
+    /// <summary>Whether to enable resampling to the sample rate required by the model; enabled by default.</summary>
     public bool EnableResampling { get; init; } = true;
-    /// <summary>是否启用多声道混音为单声道，默认开启。</summary>
+    /// <summary>Whether to enable downmixing multiple channels to mono; enabled by default.</summary>
     public bool EnableDownmixing { get; init; } = true;
-    /// <summary>是否启用高通滤波以去除低频噪声，默认开启。</summary>
+    /// <summary>Whether to enable a high-pass filter to remove low-frequency noise; enabled by default.</summary>
     public bool EnableHighPass { get; init; } = true;
-    /// <summary>是否启用响度归一化，默认开启。</summary>
+    /// <summary>Whether to enable loudness normalization; enabled by default.</summary>
     public bool EnableLoudnessNormalization { get; init; } = true;
-    /// <summary>是否启用噪声抑制，默认关闭。</summary>
+    /// <summary>Whether to enable noise reduction; disabled by default.</summary>
     public bool EnableNoiseReduction { get; init; } = false;
-    /// <summary>判定为低信噪比而触发噪声处理的阈值（分贝），默认 15。</summary>
+    /// <summary>Threshold in decibels below which low SNR triggers noise processing; defaults to 15.</summary>
     public double SnrThresholdDb { get; init; } = 15.0;
-    /// <summary>噪声抑制所使用的后端实现。</summary>
+    /// <summary>The backend implementation used for noise reduction.</summary>
     public AudioNoiseReductionBackend NoiseReductionBackend { get; init; } = AudioNoiseReductionBackend.BuiltInFfmpeg;
 }

@@ -5,26 +5,26 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 时间轴重叠消解算子：对当前句子列表按时间排序并消除相邻句的时间重叠，
-/// 确保最终输出的字幕时间轴严格单调（后块开始时间不小于前块结束时间）。
+/// Timeline overlap resolution operator: sorts the current sentence list by time and removes overlaps between adjacent sentences,
+/// ensuring the final subtitle timeline is strictly monotonic (a later block's start time is never before the previous block's end time).
 /// </summary>
 public sealed class OverlapResolutionOperator : PipelineOperatorBase<OverlapResolutionOperator>
 {
-    /// <summary>创建时间轴重叠消解算子实例。</summary>
-    /// <param name="logger">记录消解过程日志的记录器。</param>
+    /// <summary>Creates a timeline overlap resolution operator instance.</summary>
+    /// <param name="logger">Logger that records the resolution process.</param>
     public OverlapResolutionOperator(ILogger<OverlapResolutionOperator> logger) : base(logger)
     {
     }
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Resolve Overlaps";
 
     /// <summary>
-    /// 对 <see cref="SubtitleWorkflowContext"/> 当前句子执行时间轴重叠消解，
-    /// 就地修正并重排句子列表；无重叠时保持原状。
+    /// Resolves timeline overlaps among the current sentences of <see cref="SubtitleWorkflowContext"/>,
+    /// fixing and reordering the list in place; keeps it unchanged when there are no overlaps.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供当前句子列表。</param>
-    /// <param name="cancellationToken">用于取消消解过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the current sentence list.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the resolution process.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -12,9 +12,9 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// OCR 提取算子（ocr 命令）：用 GLM-OCR 从视频帧/图片中提取字幕文本。
-/// 视频按固定间隔抽帧（ffmpeg fps=1/interval），逐帧 OCR，合并相邻相同文本为句子，
-/// 写入 TranscribeSentences/CurrentSentences（与转录路径同一数据槽，后续分句/清洗照常可用）。
+/// OCR extraction operator (the ocr command): uses GLM-OCR to extract subtitle text from video frames or images.
+/// Videos are sampled at a fixed interval (ffmpeg fps=1/interval), OCR runs per frame, adjacent identical text is merged into sentences,
+/// and the result is written to TranscribeSentences/CurrentSentences (the same slots as the transcription path, so downstream sentence splitting / cleaning keep working).
 /// </summary>
 public sealed partial class OcrExtractOperator(
     OcrClient ocrClient,
@@ -26,15 +26,15 @@ public sealed partial class OcrExtractOperator(
     private static readonly HashSet<string> ImageExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "OCR Extraction (GLM-OCR)";
 
     /// <summary>
-    /// 执行 OCR 提取：抽帧（视频）或直接读图（图片），逐帧调用 GLM-OCR，
-    /// 合并相邻相同文本并按帧时间生成带时间戳的句子。
+    /// Runs OCR extraction: extracts frames (video) or reads the image directly, calls GLM-OCR per frame,
+    /// merges adjacent identical text and produces timestamped sentences from frame times.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供输入媒体路径与 OCR 配置。</param>
-    /// <param name="cancellationToken">用于取消 OCR 过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the input media path and OCR configuration.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the OCR process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.IsTranscribed)
@@ -174,8 +174,8 @@ public sealed partial class OcrExtractOperator(
         try
         {
             OnProgress(1, "Detecting subtitle frames with VideoSubFinder...");
-            // VSF WXW（wxWidgets GUI 程序）即使正常完成也返回退出码 -1，
-            // 因此忽略退出码，仅以输出产物（RGBImages + SRT）判定成功。
+            // VSF WXW (a wxWidgets GUI program) returns exit code -1 even on success,
+            // so ignore the exit code and judge success only by the outputs (RGBImages + SRT).
             var vsfArgs = BuildVideoSubFinderArguments(config, inputPath, timecodesPath, outputDir);
             await processManager.ExecuteAsync(executablePath, vsfArgs, cancellationToken, throwOnNonZeroExit: false);
 
@@ -195,20 +195,20 @@ public sealed partial class OcrExtractOperator(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // VideoSubFinder 是增强路径：任何失败（进程错误/输出缺失/时间配对不一致）
-            // 都降级为固定间隔抽帧，不让 OCR 主链路被辅助工具阻断。
+            // VideoSubFinder is an enhancement path: any failure (process error / missing output /
+            // timing mismatch) falls back to fixed-interval extraction, so the main OCR pipeline is never blocked by this helper tool.
             LogWarning($"VideoSubFinder subtitle-frame detection failed ({ex.Message}); will use fixed-interval extraction.");
             return [];
         }
     }
 
     /// <summary>
-    /// 构建 VideoSubFinder 命令行参数（字幕检测区域来自配置，未设置时使用默认字幕区）。
+    /// Builds VideoSubFinder command-line arguments (subtitle detection region comes from config, falling back to the default subtitle area when unset).
     /// </summary>
-    /// <param name="config">工作流配置（OCR ROI 四个边缘比例，可空）。</param>
-    /// <param name="inputPath">输入视频路径。</param>
-    /// <param name="timecodesPath">时间码 SRT 输出路径（--create_empty_sub）。</param>
-    /// <param name="outputDir">输出目录。</param>
+    /// <param name="config">Workflow configuration (the four OCR ROI edge ratios, may be null).</param>
+    /// <param name="inputPath">Input video path.</param>
+    /// <param name="timecodesPath">Timecode SRT output path (--create_empty_sub).</param>
+    /// <param name="outputDir">Output directory.</param>
     internal static IReadOnlyList<string> BuildVideoSubFinderArguments(
         WorkflowConfig config, string inputPath, string timecodesPath, string outputDir) =>
     [
@@ -223,7 +223,7 @@ public sealed partial class OcrExtractOperator(
         "-re", FormatRoi(config.OcrRoiRight, 1.0)
     ];
 
-    /// <summary>把 ROI 比例值格式化为 VSF 参数（未设置时用默认值，不变式文化与固定小数位）。</summary>
+    /// <summary>Formats an ROI ratio value as a VSF argument (fallback when unset, invariant culture, fixed decimals).</summary>
     internal static string FormatRoi(double? value, double fallback) =>
         (value ?? fallback).ToString("0.####", CultureInfo.InvariantCulture);
 
@@ -232,14 +232,14 @@ public sealed partial class OcrExtractOperator(
             path, index * intervalSeconds * 1000, (index + 1) * intervalSeconds * 1000)).ToList();
 
     /// <summary>
-    /// 把 VideoSubFinder 输出的字幕帧图片与时间码配对。
-    /// 图片文件名内嵌开始/结束时间（VSF 格式：<c>h_mm_ss_mmm__h_mm_ss_mmm_坐标.jpg</c>），
-    /// 因此以文件名为时间源排序，再与 <c>--create_empty_sub</c> 生成的 SRT 交叉校验：
-    /// 数量一致且各帧开始时间与 SRT 对齐（容差 <see cref="VsTimeToleranceMs"/>），否则视为输出异常。
+    /// Pairs VideoSubFinder's subtitle frame images with their timecodes.
+    /// The image filenames embed start/end times (VSF format: <c>h_mm_ss_mmm__h_mm_ss_mmm_coords.jpg</c>),
+    /// so filenames are used as the time source for ordering, then cross-checked against the SRT generated by
+    /// <c>--create_empty_sub</c>: counts must match and each frame's start time must align with the SRT (within <see cref="VsTimeToleranceMs"/>), otherwise the output is treated as abnormal.
     /// </summary>
     internal static List<OcrFrame> CreateVideoSubFinderFrames(IEnumerable<string> imagePaths, string timingSrt)
     {
-        // 1. 从文件名解析内嵌时间并按时间排序（不依赖文件名字符串顺序，避免小时字段位数变化导致错位）
+        // 1. Parse embedded times from filenames and sort by time (not by filename string order, to avoid misalignment when the hour field's digit count changes)
         var parsedImages = new List<(string Path, double StartMs, double EndMs)>();
         foreach (var path in imagePaths)
         {
@@ -260,13 +260,13 @@ public sealed partial class OcrExtractOperator(
             return cmp != 0 ? cmp : a.EndMs.CompareTo(b.EndMs);
         });
 
-        // 2. 解析 SRT 时间码
+        // 2. Parse the SRT timecodes
         var timecodes = VideoSubFinderTimecodeRegex().Matches(timingSrt);
         if (parsedImages.Count != timecodes.Count)
             throw new InvalidOperationException(
                 $"VideoSubFinder output mismatch: found {parsedImages.Count} images and {timecodes.Count} time ranges.");
 
-        // 3. 交叉校验：文件名内嵌开始时间必须与 SRT 对应段一致（同源生成，应完全匹配）
+        // 3. Cross-check: the embedded filename start time must match the corresponding SRT entry (same source, should match exactly)
         for (var index = 0; index < parsedImages.Count; index++)
         {
             var srtStart = ParseVideoSubFinderTimecode(timecodes[index], 1);
@@ -278,10 +278,10 @@ public sealed partial class OcrExtractOperator(
         return parsedImages.Select(x => new OcrFrame(x.Path, x.StartMs, x.EndMs)).ToList();
     }
 
-    /// <summary>文件名内嵌时间与 SRT 时间允许的最大偏差（毫秒，防毫秒舍入差异）。</summary>
+    /// <summary>Max allowed deviation (ms) between embedded filename time and SRT time, guarding against millisecond rounding differences.</summary>
     private const double VsTimeToleranceMs = 5;
 
-    /// <summary>解析 VSF 图片文件名内嵌时间（组偏移 1=开始，5=结束；h_mm_ss_mmm 四位字段）。</summary>
+    /// <summary>Parses the embedded time in a VSF image filename (group offset 1=start, 5=end; four fields h_mm_ss_mmm).</summary>
     private static double ParseVideoSubFinderImageTime(Match match, int groupOffset) =>
         ParseTimeComponents(match.Groups[groupOffset].Value,
             match.Groups[groupOffset + 1].Value,
@@ -300,14 +300,14 @@ public sealed partial class OcrExtractOperator(
            long.Parse(seconds, CultureInfo.InvariantCulture)) * 1000) +
         long.Parse(milliseconds, CultureInfo.InvariantCulture);
 
-    /// <summary>VSF RGBImages 文件名：&lt;h&gt;_&lt;mm&gt;_&lt;ss&gt;_&lt;mmm&gt;__&lt;h&gt;_&lt;mm&gt;_&lt;ss&gt;_&lt;mmm&gt;_&lt;坐标等&gt;。</summary>
+    /// <summary>VSF RGBImages filename: &lt;h&gt;_&lt;mm&gt;_&lt;ss&gt;_&lt;mmm&gt;__&lt;h&gt;_&lt;mm&gt;_&lt;ss&gt;_&lt;mmm&gt;_&lt;coords etc.&gt;.</summary>
     [GeneratedRegex(@"^(\d+)_(\d{2})_(\d{2})_(\d{3})__(\d+)_(\d{2})_(\d{2})_(\d{3})_")]
     private static partial Regex VsfImageNameRegex();
 
     [GeneratedRegex(@"(?m)^\s*(\d{2,}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})[,.](\d{3})")]
     private static partial Regex VideoSubFinderTimecodeRegex();
 
-    /// <summary>用 ffmpeg 按 fps=1/interval 抽帧到临时目录（frame_%04d.jpg）。</summary>
+    /// <summary>Extracts frames to the temp directory with ffmpeg at fps=1/interval (frame_%04d.jpg).</summary>
     private async Task<List<string>> ExtractFramesAsync(
         string inputPath, string tempDir, double intervalSeconds, CancellationToken cancellationToken)
     {
@@ -329,9 +329,9 @@ public sealed partial class OcrExtractOperator(
             .ToList();
     }
 
-    /// <summary>把配置中的后端字符串解析为枚举（未知值回退智谱云端）。</summary>
-    /// <param name="value">后端名：zhipu / ollama / llamacpp。</param>
-    /// <returns>对应的后端枚举。</returns>
+    /// <summary>Parses the configured backend string into the enum (unknown values fall back to the Zhipu cloud).</summary>
+    /// <param name="value">Backend name: zhipu / ollama / llamacpp.</param>
+    /// <returns>The corresponding backend enum.</returns>
     public static OcrBackend ParseBackend(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "ollama" => OcrBackend.Ollama,
@@ -340,7 +340,7 @@ public sealed partial class OcrExtractOperator(
         _ => OcrBackend.Zhipu
     };
 
-    /// <summary>归一化 OCR 文本：去 [NO_TEXT]、去空行、清理常见 OCR 噪声。</summary>
+    /// <summary>Normalizes OCR text: drops [NO_TEXT], removes blank lines, and cleans common OCR noise.</summary>
     internal static string NormalizeText(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -356,7 +356,7 @@ public sealed partial class OcrExtractOperator(
         return string.Join("\n", lines);
     }
 
-    /// <summary>合并相邻相同文本片段为句子（时间取首帧起、末帧止）。</summary>
+    /// <summary>Merges adjacent identical-text segments into sentences (time spans from the first to the last frame).</summary>
     internal static List<Sentence> MergeSegments(List<OcrSegment> segments, string? language)
     {
         var sentences = new List<Sentence>();
@@ -382,7 +382,7 @@ public sealed partial class OcrExtractOperator(
         return sentences;
     }
 
-    /// <summary>片段 → 句子（文本按语言切词）。</summary>
+    /// <summary>Segment to sentence (text is split into words per language).</summary>
     internal static Sentence ToSentence(OcrSegment segment, string? language)
     {
         var text = segment.Text.Replace("\n", " ", StringComparison.Ordinal).Trim();
@@ -395,12 +395,12 @@ public sealed partial class OcrExtractOperator(
         };
     }
 
-    /// <summary>OCR 片段：帧窗口内的字幕文本与时间（毫秒）。</summary>
-    /// <param name="Text">字幕文本（可能多行）。</param>
-    /// <param name="StartMs">起始时间（毫秒）。</param>
-    /// <param name="EndMs">结束时间（毫秒）。</param>
+    /// <summary>An OCR segment: subtitle text within a frame window and its timing (ms).</summary>
+    /// <param name="Text">Subtitle text (may span multiple lines).</param>
+    /// <param name="StartMs">Start time (ms).</param>
+    /// <param name="EndMs">End time (ms).</param>
     internal sealed record OcrSegment(string Text, double StartMs, double EndMs);
 
-    /// <summary>待 OCR 图像及检测到的时间范围（毫秒）。</summary>
+    /// <summary>An image pending OCR and the detected time range (ms).</summary>
     internal sealed record OcrFrame(string Path, double StartMs, double EndMs);
 }

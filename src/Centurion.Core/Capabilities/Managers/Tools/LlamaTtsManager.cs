@@ -44,7 +44,9 @@ public sealed class LlamaTtsManager(
 
             if (!registry.Tools.TryGetValue("llama", out var meta))
             {
-                logger.LogWarning("llama.cpp is not registered in metadata.json; TTS auto-download unavailable.");
+                logger.LogWarning(
+                    "llama.cpp is not registered in metadata.json; TTS auto-download unavailable. "
+                    + "Use the self-contained QORA engine instead: dub --tts-engine qora (auto-downloads).");
                 return null;
             }
 

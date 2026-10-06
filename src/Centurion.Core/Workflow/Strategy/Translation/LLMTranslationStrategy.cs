@@ -9,37 +9,37 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Strategy.Translation;
 
 /// <summary>
-/// 基于大语言模型（OpenAI/Ollama）的翻译策略：
-/// 逐批调用 LLM 把源句翻译到目标语言并填充 <see cref="Sentence.TranslatedText"/>，
-/// 保持每句时间轴与词级明细不变。
-/// 支持术语表强制约束与目标语言台本措辞参考；
-/// 目标台本行数与源句一致时按行号 1:1 直接对齐采用（纯文本对齐，不调用 LLM）。
-/// 单批失败时降级为逐句重试，仍失败的句子保留原文并记录警告。
+/// Translation strategy based on a large language model (OpenAI/Ollama):
+/// calls the LLM batch by batch to translate source sentences into the target language and fill <see cref="Sentence.TranslatedText"/>,
+/// keeping each sentence's timeline and word-level details unchanged.
+/// Supports mandatory glossary constraints and target-language script wording reference;
+/// when the target script line count matches the source sentence count, it adopts script lines 1:1 by line number (plain-text alignment, no LLM call).
+/// On a batch failure it falls back to retrying sentence by sentence; sentences still failing keep the original text and log a warning.
 /// </summary>
 public class LLMTranslationStrategy : ITranslationStrategy
 {
     private readonly IChatClient _chatClient;
     private readonly ILogger<LLMTranslationStrategy>? _logger;
 
-    /// <summary>创建基于 LLM 的翻译策略实例。</summary>
-    /// <param name="chatClient">用于调用大语言模型的对话客户端。</param>
-    /// <param name="logger">可选的日志记录器，为 null 时不记录日志。</param>
+    /// <summary>Creates an LLM-based translation strategy instance.</summary>
+    /// <param name="chatClient">The chat client used to call the large language model.</param>
+    /// <param name="logger">Optional logger; when null, nothing is logged.</param>
     public LLMTranslationStrategy(IChatClient chatClient, ILogger<LLMTranslationStrategy>? logger = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
         _logger = logger;
     }
 
-    /// <summary>策略的显示名称。</summary>
+    /// <summary>Display name of the strategy.</summary>
     public string StrategyName => "LLM";
 
     /// <summary>
-    /// 执行翻译：先尝试目标台本 1:1 对齐（数量一致时），否则分批调用 LLM 翻译。
+    /// Performs translation: first tries 1:1 target-script alignment (when counts match), otherwise calls the LLM in batches.
     /// </summary>
-    /// <param name="sentences">待翻译的句子列表（就地填充译文，时间轴不变）。</param>
-    /// <param name="options">翻译选项：目标语言、术语表、目标语言台本等。</param>
-    /// <param name="cancellationToken">用于取消翻译过程的取消标记。</param>
-    /// <returns>翻译完成后的句子列表。</returns>
+    /// <param name="sentences">The sentences to translate (their translations are filled in place; the timeline is unchanged).</param>
+    /// <param name="options">Translation options: target language, glossary, target-language script, etc.</param>
+    /// <param name="cancellationToken">Token used to cancel the translation process.</param>
+    /// <returns>The sentence list after translation.</returns>
     public async Task<List<Sentence>> TranslateAsync(
         List<Sentence> sentences,
         TranslationOptions options,
@@ -48,7 +48,7 @@ public class LLMTranslationStrategy : ITranslationStrategy
         if (sentences.Count == 0)
             return sentences;
 
-        // 1) 目标语言台本 1:1 对齐：行数与源句一致时直接采用台本措辞（纯文本对齐）
+        // 1) 1:1 target-script alignment: when the line count matches the source sentences, adopt the script wording directly (plain-text alignment)
         if (AlignToScript(sentences, options.TargetScriptLines))
         {
             _logger?.LogInformation("Target script matches {Count} sentences; using 1:1 script alignment.", sentences.Count);
@@ -62,8 +62,8 @@ public class LLMTranslationStrategy : ITranslationStrategy
                 options.TargetScriptLines.Count, sentences.Count);
         }
 
-        // 2) 分批 LLM 翻译：批次间互相独立（每批独立 prompt、独立填充译文），
-        //    以 MaxConcurrency 并行执行，翻译结果与串行逐批完全一致
+        // 2) Batched LLM translation: batches are independent (each has its own prompt and fills its own translations),
+        //    run in parallel up to MaxConcurrency; the result is identical to serial, batch-by-batch translation
         var batchSize = Math.Max(1, options.BatchSize);
         var batches = new List<(int Offset, List<Sentence> Batch)>();
         for (var offset = 0; offset < sentences.Count; offset += batchSize)
@@ -92,7 +92,7 @@ public class LLMTranslationStrategy : ITranslationStrategy
         TranslationOptions options,
         CancellationToken cancellationToken)
     {
-        // 批次内索引 → 句子
+        // Batch index -> sentence
         var prompt = BuildPrompt(batch, options);
 
         try
@@ -133,7 +133,7 @@ public class LLMTranslationStrategy : ITranslationStrategy
         }
     }
 
-    /// <summary>对批内未译句子逐句重试；仍失败的保留原文并记录警告。</summary>
+    /// <summary>Retries each untranslated sentence in the batch one by one; sentences still failing keep the original text and log a warning.</summary>
     private async Task RetryMissingAsync(List<Sentence> batch, TranslationOptions options, CancellationToken cancellationToken)
     {
         for (var i = 0; i < batch.Count; i++)
@@ -163,12 +163,12 @@ public class LLMTranslationStrategy : ITranslationStrategy
     }
 
     /// <summary>
-    /// 目标语言台本 1:1 对齐：台本行数与源句数一致时，按行号直接把台本行作为译文填入。
-    /// 行数不一致时返回 false，交由 LLM 翻译。
+    /// 1:1 target-script alignment: when the script line count matches the source sentence count, script lines are
+    /// filled in directly as translations by line number. Returns false when the counts differ, falling back to LLM translation.
     /// </summary>
-    /// <param name="sentences">待翻译句子（就地填充译文）。</param>
-    /// <param name="scriptLines">目标语言台本行。</param>
-    /// <returns>是否完成 1:1 对齐。</returns>
+    /// <param name="sentences">The sentences to translate (translations filled in place).</param>
+    /// <param name="scriptLines">The target-language script lines.</param>
+    /// <returns>Whether the 1:1 alignment was completed.</returns>
     internal static bool AlignToScript(List<Sentence> sentences, IReadOnlyList<string> scriptLines)
     {
         if (scriptLines.Count != sentences.Count)
@@ -180,11 +180,11 @@ public class LLMTranslationStrategy : ITranslationStrategy
     }
 
     /// <summary>
-    /// 构造翻译提示词：角色设定、源/目标语言、术语表约束、台本措辞参考与严格 JSON 输出要求。
+    /// Builds the translation prompt: role setting, source/target language, glossary constraints, script wording reference, and strict JSON output requirement.
     /// </summary>
-    /// <param name="sentences">本批待翻译句子。</param>
-    /// <param name="options">翻译选项。</param>
-    /// <returns>完整的提示词字符串。</returns>
+    /// <param name="sentences">The sentences to translate in this batch.</param>
+    /// <param name="options">Translation options.</param>
+    /// <returns>The complete prompt string.</returns>
     internal static string BuildPrompt(List<Sentence> sentences, TranslationOptions options)
     {
         var sb = new StringBuilder();
@@ -221,9 +221,9 @@ public class LLMTranslationStrategy : ITranslationStrategy
         return sb.ToString();
     }
 
-    /// <summary>解析 LLM 返回的翻译 JSON 数组。</summary>
-    /// <param name="responseText">LLM 原始响应文本。</param>
-    /// <returns>解析出的翻译条目列表。</returns>
+    /// <summary>Parses the translation JSON array returned by the LLM.</summary>
+    /// <param name="responseText">The raw LLM response text.</param>
+    /// <returns>The list of parsed translation items.</returns>
     internal static List<TranslationItem> ParseResponse(string responseText)
     {
         try
@@ -232,7 +232,7 @@ public class LLMTranslationStrategy : ITranslationStrategy
         }
         catch (JsonException)
         {
-            // 兼容代码块包裹等多余内容：提取首个 JSON 数组
+            // Tolerate extra content such as a code fence: extract the first JSON array
             var start = responseText.IndexOf('[');
             var end = responseText.LastIndexOf(']');
             if (start < 0 || end <= start)
@@ -243,14 +243,14 @@ public class LLMTranslationStrategy : ITranslationStrategy
         }
     }
 
-    /// <summary>LLM 翻译响应的单条条目（id 对应输入批次索引，translation 为译文）。</summary>
+    /// <summary>A single entry in the LLM translation response (id is the input batch index, translation is the translated text).</summary>
     public sealed class TranslationItem
     {
-        /// <summary>对应输入批次内的 0 基索引。</summary>
+        /// <summary>The 0-based index within the input batch.</summary>
         [JsonProperty("id")]
         public int Id { get; set; }
 
-        /// <summary>翻译后的文本。</summary>
+        /// <summary>The translated text.</summary>
         [JsonProperty("translation")]
         public string? Translation { get; set; }
     }

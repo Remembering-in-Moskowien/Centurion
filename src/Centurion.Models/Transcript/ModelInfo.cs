@@ -2,60 +2,60 @@ using Newtonsoft.Json;
 
 namespace Centurion.Models.Transcript;
 
-// model 节点
-/// <summary>whisper.cpp 输出 JSON 中 model 节点的模型结构信息。</summary>
+// model node
+/// <summary>Model architecture info from the model node in whisper.cpp output JSON.</summary>
 public class ModelInfo
 {
-    /// <summary>模型类型名（如 "whisper"）。</summary>
+    /// <summary>Model type name (e.g. "whisper").</summary>
     [JsonProperty("type")] public required string Type { get; set; }
 
-    /// <summary>模型是否支持多语言。</summary>
+    /// <summary>Whether the model supports multiple languages.</summary>
     [JsonProperty("multilingual")] public bool Multilingual { get; set; }
 
-    /// <summary>词表大小。</summary>
+    /// <summary>Vocabulary size.</summary>
     [JsonProperty("vocab")] public int Vocab { get; set; }
 
-    /// <summary>音频编码器结构信息。</summary>
+    /// <summary>Audio encoder architecture info.</summary>
     [JsonProperty("audio")] public required AudioInfo Audio { get; set; }
 
-    /// <summary>文本解码器结构信息。</summary>
+    /// <summary>Text decoder architecture info.</summary>
     [JsonProperty("text")] public required TextInfo Text { get; set; }
 
-    /// <summary>Mel 频带数量。</summary>
+    /// <summary>Number of Mel bands.</summary>
     [JsonProperty("mels")] public int Mels { get; set; }
 
-    /// <summary>模型文件类型（量化精度标识）。</summary>
+    /// <summary>Model file type (quantization precision identifier).</summary>
     [JsonProperty("ftype")] public int Ftype { get; set; }
 }
 
-/// <summary>音频编码器的 Transformer 结构超参。</summary>
+/// <summary>Transformer hyperparameters of the audio encoder.</summary>
 public class AudioInfo
 {
-    /// <summary>上下文长度。</summary>
+    /// <summary>Context length.</summary>
     [JsonProperty("ctx")] public int Ctx { get; set; }
 
-    /// <summary>状态维度。</summary>
+    /// <summary>State dimension.</summary>
     [JsonProperty("state")] public int State { get; set; }
 
-    /// <summary>注意力头数。</summary>
+    /// <summary>Number of attention heads.</summary>
     [JsonProperty("head")] public int Head { get; set; }
 
-    /// <summary>编码器层数。</summary>
+    /// <summary>Number of encoder layers.</summary>
     [JsonProperty("layer")] public int Layer { get; set; }
 }
 
-/// <summary>文本解码器的 Transformer 结构超参。</summary>
+/// <summary>Transformer hyperparameters of the text decoder.</summary>
 public class TextInfo
 {
-    /// <summary>上下文长度。</summary>
+    /// <summary>Context length.</summary>
     [JsonProperty("ctx")] public int Ctx { get; set; }
 
-    /// <summary>状态维度。</summary>
+    /// <summary>State dimension.</summary>
     [JsonProperty("state")] public int State { get; set; }
 
-    /// <summary>注意力头数。</summary>
+    /// <summary>Number of attention heads.</summary>
     [JsonProperty("head")] public int Head { get; set; }
 
-    /// <summary>解码器层数。</summary>
+    /// <summary>Number of decoder layers.</summary>
     [JsonProperty("layer")] public int Layer { get; set; }
 }

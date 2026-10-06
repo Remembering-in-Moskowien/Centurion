@@ -1,17 +1,17 @@
 namespace Centurion.Models.Workflow;
 
-/// <summary>噪声抑制后端实现的选择。</summary>
+/// <summary>Selection of the noise reduction backend implementation.</summary>
 public enum AudioNoiseReductionBackend
 {
-    /// <summary>使用 FFmpeg 内置滤镜进行降噪。</summary>
+    /// <summary>Use the built-in FFmpeg filters for noise reduction.</summary>
     BuiltInFfmpeg,
-    /// <summary>调用外部命令行工具进行降噪。</summary>
+    /// <summary>Invoke an external command-line tool for noise reduction.</summary>
     ExternalCli
 }
 
-/// <summary>音频探测（probe）得到的基础流信息。</summary>
-/// <param name="SampleRate">采样率（Hz）。</param>
-/// <param name="Channels">声道数。</param>
-/// <param name="Codec">音频编码格式标识。</param>
-/// <param name="Format">容器/封装格式标识。</param>
+/// <summary>Basic stream information obtained by audio probing.</summary>
+/// <param name="SampleRate">Sample rate in Hz.</param>
+/// <param name="Channels">Number of channels.</param>
+/// <param name="Codec">Audio codec identifier.</param>
+/// <param name="Format">Container/muxing format identifier.</param>
 public record AudioProbeInfo(int SampleRate, int Channels, string Codec, string Format);

@@ -7,24 +7,24 @@ using SubtitlesParserV2;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 双语字幕解析算子（dub 专用）：解析主字幕（源语言或目标语言），
-/// 并在提供译文轨文件时按时间窗把译文匹配到句子（存 Sentence.TranslatedText）。
-/// 无译文轨时整个文件视为已翻译字幕，直接以句子文本为配音文本。
+/// Bilingual subtitle parser operator (dub-only): parses the main subtitle (source or target
+/// language); when a translation track file is given, matches translations to sentences by time window (stored in Sentence.TranslatedText);
+/// otherwise the whole file is treated as translated subtitles and its sentence text is used directly as the dub text.
 /// </summary>
 public sealed class BilingualSubtitleParserOperator(ILogger<BilingualSubtitleParserOperator> logger)
     : PipelineOperatorBase<BilingualSubtitleParserOperator>(logger)
 {
-    /// <summary>译文匹配时间窗（毫秒）：|主句中心 - 译文中心| 小于该值即视为对应句。</summary>
+    /// <summary>Translation matching time window (ms): |main-sentence center - translation center| below this value counts as a pair.</summary>
     private const double MatchWindowMs = 1500;
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Bilingual Subtitle Parse";
 
     /// <summary>
-    /// 解析输入字幕并（可选）按时间窗匹配译文轨。
+    /// Parses the input subtitle and optionally matches a translation track by time window.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var subtitlePath = context.Config.SubtitleFilePath ?? context.Config.InputFilePath;
@@ -35,7 +35,7 @@ public sealed class BilingualSubtitleParserOperator(ILogger<BilingualSubtitlePar
         if (sentences.Count == 0)
             throw new InvalidOperationException("No subtitle items parsed.");
 
-        // 译文轨匹配
+        // Match the translation track
         var translationPath = context.Config.TranslationSubtitlePath;
         if (!string.IsNullOrWhiteSpace(translationPath) && File.Exists(translationPath))
         {
@@ -45,7 +45,7 @@ public sealed class BilingualSubtitleParserOperator(ILogger<BilingualSubtitlePar
         }
         else if (string.IsNullOrWhiteSpace(translationPath))
         {
-            // 无译文轨：整文件即目标语言，配音文本 = 句子文本
+            // No translation track: the whole file is the target language, so dub text = sentence text
         }
         else
         {
@@ -56,7 +56,7 @@ public sealed class BilingualSubtitleParserOperator(ILogger<BilingualSubtitlePar
         context.State.CurrentSentences = sentences;
     }
 
-    /// <summary>解析字幕文件为句子（时间单位毫秒，与全项目一致）。</summary>
+    /// <summary>Parses a subtitle file into sentences (timing in milliseconds, consistent with the whole project).</summary>
     internal static async Task<List<Sentence>> ParseAsync(string path, CancellationToken cancellationToken)
     {
         await using var stream = File.OpenRead(path);
@@ -72,7 +72,7 @@ public sealed class BilingualSubtitleParserOperator(ILogger<BilingualSubtitlePar
             .ToList();
     }
 
-    /// <summary>按时间窗把译文句匹配到主句（中心点距离最小且小于窗口）。</summary>
+    /// <summary>Matches translation sentences to main sentences by time window (smallest center-point distance below the window).</summary>
     internal static void MatchTranslations(List<Sentence> source, List<Sentence> translations)
     {
         foreach (var sentence in source)

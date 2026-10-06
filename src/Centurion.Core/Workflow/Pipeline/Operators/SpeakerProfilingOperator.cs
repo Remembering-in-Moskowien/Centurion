@@ -7,10 +7,10 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 说话人画像算子（dub Phase 2）：为每个说话人挑选参考音频并写入 State.DubSpeakerReferences。
-/// 选段策略升级为 SNR 智能选段：在时长合适（2~8s，目标 4s）的候选句里，用 ffmpeg astats 估算语音 RMS，
-/// 以媒体静音底噪为噪声底计算 SNR，选信噪比最高的一段；ffmpeg 分析失败时回退到最长句（Phase 1 行为）。
-/// 手动指定 <c>--speaker-reference</c> 目录时直接使用目录中的 SPEAKER_xx.wav。
+/// Speaker profiling operator (dub Phase 2): picks a reference audio clip for each speaker and writes it to State.DubSpeakerReferences.
+/// Selection is upgraded to SNR-based smart picking: among candidate sentences of suitable duration (2~8s, target 4s), estimates speech RMS with ffmpeg astats,
+/// computes SNR against the media's silence noise floor, and picks the segment with the highest SNR; if ffmpeg analysis fails, falls back to the longest sentence (Phase 1 behavior).
+/// When <c>--speaker-reference</c> is set manually, the SPEAKER_xx.wav files in that directory are used directly.
 /// </summary>
 public sealed class SpeakerProfilingOperator(
     IBinaryLocator binaryLocator,
@@ -18,32 +18,32 @@ public sealed class SpeakerProfilingOperator(
     ILogger<SpeakerProfilingOperator> logger)
     : PipelineOperatorBase<SpeakerProfilingOperator>(logger)
 {
-    /// <summary>参考音频最少时长（秒）：过短则跳过该句。</summary>
+    /// <summary>Minimum reference audio duration (seconds): shorter sentences are skipped.</summary>
     internal const double MinReferenceSeconds = 2.0;
 
-    /// <summary>参考音频目标时长（秒）：选段优先接近该值。</summary>
+    /// <summary>Target reference audio duration (seconds): selection prefers clips close to this value.</summary>
     internal const double TargetReferenceSeconds = 4.0;
 
-    /// <summary>参考音频最大时长（秒）：裁剪时截断。</summary>
+    /// <summary>Maximum reference audio duration (seconds): longer clips are truncated when cropped.</summary>
     private const double MaxReferenceSeconds = 8.0;
 
-    /// <summary>每说话人参与 SNR 评分的候选句数量上限。</summary>
+    /// <summary>Maximum number of candidate sentences scored per speaker by SNR.</summary>
     private const int MaxCandidatesPerSpeaker = 3;
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Speaker Profiling";
 
     /// <summary>
-    /// 为每个说话人挑选参考音频并写入 State.Extensions["DubSpeakerReferences"]（Dictionary&lt;string, string&gt;）。
+    /// Picks a reference audio clip for each speaker and writes it to State.Extensions["DubSpeakerReferences"] (Dictionary&lt;string, string&gt;).
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var sentences = context.State.CurrentSentences;
         var references = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1) 手动指定参考目录优先
+        // 1) A manually specified reference directory takes precedence
         var manualDir = context.Config.SpeakerReferenceDir;
         if (!string.IsNullOrWhiteSpace(manualDir) && Directory.Exists(manualDir))
         {
@@ -57,7 +57,7 @@ public sealed class SpeakerProfilingOperator(
             return;
         }
 
-        // 2) 从媒体裁剪：SNR 智能选段
+        // 2) Crop from the media: SNR-based smart selection
         var mediaPath = context.Config.InputFilePath;
         if (!string.IsNullOrWhiteSpace(mediaPath) && File.Exists(mediaPath) && sentences.Count > 0)
         {
@@ -100,13 +100,13 @@ public sealed class SpeakerProfilingOperator(
     }
 
     /// <summary>
-    /// 对某说话人的候选句评分：时长越接近 <see cref="TargetReferenceSeconds"/> 越好，且 SNR（语音 RMS - 噪声底）越高越好。
-    /// 无 SNR 数据时按时长接近度评分。
+    /// Scores a candidate sentence for a given speaker: the closer the duration is to <see cref="TargetReferenceSeconds"/>, the better, and the higher the SNR (speech RMS - noise floor), the better.
+    /// Falls back to duration closeness when no SNR data is available.
     /// </summary>
-    /// <param name="candidate">候选句。</param>
-    /// <param name="noiseFloorDb">噪声底 RMS（dB），null 表示不可用。</param>
-    /// <param name="speechRmsDb">该句语音 RMS（dB），null 表示分析失败。</param>
-    /// <returns>评分（越高越优）。</returns>
+    /// <param name="candidate">Candidate sentence.</param>
+    /// <param name="noiseFloorDb">Noise floor RMS (dB); null means unavailable.</param>
+    /// <param name="speechRmsDb">Speech RMS of this sentence (dB); null means analysis failed.</param>
+    /// <returns>The score (higher is better).</returns>
     internal static double ScoreCandidate(Sentence candidate, double? noiseFloorDb, double? speechRmsDb)
     {
         var duration = Math.Max(0, candidate.End - candidate.Start) / 1000.0;
@@ -120,11 +120,11 @@ public sealed class SpeakerProfilingOperator(
         else
             snrScore = 0.5;
 
-        // SNR 权重更高：清晰度优先于时长完美度
+        // SNR carries more weight: clarity takes priority over a perfect duration match
         return 0.65 * snrScore + 0.35 * durationScore;
     }
 
-    /// <summary>估算媒体整体噪声底（dB）：取媒体开头 0.6s 的 RMS；失败返回 null。</summary>
+    /// <summary>Estimates the media's overall noise floor (dB): takes the RMS of the first 0.6s; returns null on failure.</summary>
     private async Task<double?> EstimateNoiseFloorDbAsync(string ffmpeg, string mediaPath, CancellationToken ct)
     {
         try
@@ -144,7 +144,7 @@ public sealed class SpeakerProfilingOperator(
         }
     }
 
-    /// <summary>分析单段音频的 RMS（dB）。</summary>
+    /// <summary>Analyzes the RMS (dB) of a single audio segment.</summary>
     private async Task<double?> AnalyzeRmsDbAsync(string ffmpeg, string mediaPath, double startSeconds, double durationSeconds, CancellationToken ct)
     {
         try
@@ -166,7 +166,7 @@ public sealed class SpeakerProfilingOperator(
         }
     }
 
-    /// <summary>从 ffmpeg astats/metadata 输出解析 RMS dB 值（形如 "lavfi.astats.Overall.RMS_level=-23.5dB"）。</summary>
+    /// <summary>Parses the RMS dB value from ffmpeg astats/metadata output (of the form "lavfi.astats.Overall.RMS_level=-23.5dB").</summary>
     internal static double? ParseRmsDb(string ffmpegOutput)
     {
         foreach (var line in ffmpegOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -182,8 +182,8 @@ public sealed class SpeakerProfilingOperator(
     }
 
     /// <summary>
-    /// 为该说话人挑选最佳参考句：候选 = 时长 2~8s 且最接近目标时长的最多 <see cref="MaxCandidatesPerSpeaker"/> 句；
-    /// 逐句分析 RMS 后按 <see cref="ScoreCandidate"/> 评分。无可用候选或全部分析失败时回退最长句（Phase 1 行为）。
+    /// Picks the best reference sentence for this speaker: candidates are at most <see cref="MaxCandidatesPerSpeaker"/> sentences of 2~8s duration closest to the target duration;
+    /// each is analyzed for RMS and scored via <see cref="ScoreCandidate"/>. Falls back to the longest sentence when no usable candidate exists or all analyses fail (Phase 1 behavior).
     /// </summary>
     private async Task<Sentence?> PickBestReferenceAsync(
         string ffmpeg, string mediaPath, List<Sentence> sentences, string speaker, double? noiseFloorDb, CancellationToken ct)
@@ -197,7 +197,7 @@ public sealed class SpeakerProfilingOperator(
 
         if (candidates.Count == 0)
         {
-            // 无合适候选：回退最长句（Phase 1 语义）
+            // No suitable candidates: fall back to the longest sentence (Phase 1 semantics)
             return sentences
                 .Where(s => s.Speaker != null && s.Speaker.Equals(speaker, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(s => Math.Max(0, s.End - s.Start))
@@ -219,7 +219,7 @@ public sealed class SpeakerProfilingOperator(
             }
         }
 
-        // 若评分未明显优于第一个候选（都不可用时），保留最长句语义：best 已是首候选，无需额外处理
+        // If the score is not clearly better than the first candidate (all unavailable), keep the longest-sentence semantics: best is already the first candidate, no extra handling needed
         return best;
     }
 

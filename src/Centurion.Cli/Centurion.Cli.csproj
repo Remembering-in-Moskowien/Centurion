@@ -6,6 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 发行名统一为 Centurion：安装包/命令（centurion）与 README 一致，替代项目名 Centurion.Cli -->
+        <AssemblyName>Centurion</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
@@ -77,7 +79,7 @@
       构建号：以 git HEAD 提交计数作为"第几号构建"，构建后写入输出目录 build-number.txt，
       启动横幅显示 Build #N。发布包可用 -p:CenturionBuildNumber=N 显式覆盖；无 git 时按 0。
     -->
-    <Target Name="WriteBuildNumber" AfterTargets="AfterBuild" Condition="Exists('$(OutputPath)Centurion.Cli.dll')">
+    <Target Name="WriteBuildNumber" AfterTargets="AfterBuild" Condition="Exists('$(OutputPath)$(TargetFileName)')">
         <Exec Command="git rev-list --count HEAD" ConsoleToMsBuild="true" IgnoreExitCode="true"
               WorkingDirectory="$(MSBuildProjectDirectory)" StandardOutputImportance="Low">
             <Output TaskParameter="ConsoleOutput" PropertyName="CenturionBuildNumberRaw" />

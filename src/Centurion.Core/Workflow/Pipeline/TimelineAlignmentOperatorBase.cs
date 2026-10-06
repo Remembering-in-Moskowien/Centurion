@@ -11,7 +11,7 @@ namespace Centurion.Core.Workflow.Pipeline;
 /// Provides word-level Needleman-Wunsch (NW) global alignment, sentence-level
 /// aggregation, gap filling, and time-monotonicity checks, shared by
 /// ScriptTimelineMapperOperator (script time-stamping) and the
-/// timeline mapping & correction operator.
+/// timeline mapping &amp; correction operator.
 ///
 /// NW scoring (unified convention):
 ///   Exact match           -> 3

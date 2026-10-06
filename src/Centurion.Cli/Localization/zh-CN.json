@@ -48,7 +48,7 @@
   "Validate Centurion intermediate files against the IR schema": "校验 Centurion 中间文件是否符合 IR Schema",
   "IR schema migration: upgrade older intermediate files to a target version (--to)": "IR Schema 迁移：把旧版本中间文件升级到指定版本（--to）",
   "Self-update: check/download/apply new releases from GitHub Releases": "自更新：从 GitHub Releases 检查/下载/应用新版本",
-  "Model registry management: list/install/verify/remove local models (whisper/qwen3/diarization/bert/tts)": "模型注册表管理：列出/安装/校验/移除本地模型（whisper/qwen3/diarization/bert/tts）",
+  "Model registry management: list/install/verify/remove local models (whisper/qwen3/diarization/bert/tts/opus-mt)": "模型注册表管理：列出/安装/校验/移除本地模型（whisper/qwen3/diarization/bert/tts/opus-mt）",
   "List all registered models and local readiness (table + badges)": "列出全部注册模型与本地就绪状态（表格 + 徽章）",
   "Download and install the given model (suggested when a run fails on missing models)": "下载安装指定模型（缺失时运行会提示此命令）",
   "Verify local model files are ready (exit code 1 when missing)": "校验模型本地文件是否就绪（缺失返回退出码 1）",

@@ -10,8 +10,8 @@ using Centurion.Core.Utils.Reporting;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 质量报告算子：在所有处理完成后，从工作流上下文提取指标并写出 .quality.json。
-/// 各路径（spawn/from-script/correct/convert/translate/dub）在管线末尾统一追加本算子。
+/// Quality report operator: after all processing completes, collects metrics from the workflow context and writes .quality.json.
+/// Every pipeline path (spawn/from-script/correct/convert/translate/dub) appends this operator at the end of the pipeline.
 /// </summary>
 public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
     : PipelineOperatorBase<QualityReportOperator>(logger)
@@ -26,14 +26,14 @@ public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
 
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Quality Report";
 
     /// <summary>
-    /// 构建质量报告并写出 .quality.json，路径与输出字幕同名。
+    /// Builds the quality report and writes .quality.json next to the output subtitle.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var outputPath = context.Config.OutputFilePath ?? Path.ChangeExtension(context.Config.InputFilePath, ".ass");
@@ -55,8 +55,8 @@ public sealed class QualityReportOperator(ILogger<QualityReportOperator> logger)
     }
 
     /// <summary>
-    /// 输出 Provider 用量汇总（token/音频分钟/缓存命中/估算成本）。
-    /// 数据来自 <see cref="WorkflowState.ProviderUsages"/>（进程内聚合）。
+    /// Logs a provider usage summary (tokens / audio minutes / cache hits / estimated cost).
+    /// Data comes from <see cref="WorkflowState.ProviderUsages"/> (in-process aggregation).
     /// </summary>
     private void LogProviderUsage(SubtitleWorkflowContext context)
     {

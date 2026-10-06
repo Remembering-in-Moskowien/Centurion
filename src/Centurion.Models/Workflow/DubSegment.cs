@@ -1,51 +1,51 @@
 namespace Centurion.Models.Workflow;
 
 /// <summary>
-/// dub（媒体译制）管道中的单个合成段：目标文本 + 说话人参考 + 时间轴约束 + 合成产物。
-/// 由 TTS 合成算子产出，供时间对齐与混音算子消费。
+/// A single synthesis segment in the dub (media localization) pipeline: target text, speaker reference, timeline constraints, and synthesized output.
+/// Produced by the TTS synthesis operator and consumed by the time-alignment and mixing operators.
 /// </summary>
 public class DubSegment
 {
-    /// <summary>要配音的目标语言文本（去空白）。</summary>
+    /// <summary>Target language text to be dubbed, with surrounding whitespace removed.</summary>
     public string Text { get; set; } = string.Empty;
 
-    /// <summary>说话人 ID（无分割时为 null）。</summary>
+    /// <summary>Speaker ID; null when no diarization was performed.</summary>
     public string? SpeakerId { get; set; }
 
-    /// <summary>说话人参考音频路径（说话人分割且媒体可用时提供）。</summary>
+    /// <summary>Path to the speaker reference audio; provided when diarization ran and the media is available.</summary>
     public string? ReferenceAudioPath { get; set; }
 
-    /// <summary>目标起始时间（毫秒，来自字幕时间轴）。</summary>
+    /// <summary>Target start time in milliseconds, taken from the subtitle timeline.</summary>
     public double TargetStartMs { get; set; }
 
-    /// <summary>目标结束时间（毫秒）。</summary>
+    /// <summary>Target end time in milliseconds.</summary>
     public double TargetEndMs { get; set; }
 
-    /// <summary>合成产出的 wav 路径（TTS 后）。</summary>
+    /// <summary>Path of the synthesized wav output after TTS.</summary>
     public string? SynthesizedWavPath { get; set; }
 
-    /// <summary>TTS 原始合成时长（秒，ffprobe 探测）。</summary>
+    /// <summary>Raw TTS synthesis duration in seconds, probed by ffprobe.</summary>
     public double SynthesizedDurationSec { get; set; }
 
-    /// <summary>时间对齐后的时长（秒，atempo 调整后）。</summary>
+    /// <summary>Duration after time alignment in seconds, after atempo adjustment.</summary>
     public double AlignedDurationSec { get; set; }
 
-    /// <summary>本段最终混音位置偏移（毫秒；仅当相邻段重叠时用于压叠）。</summary>
+    /// <summary>Final mix position offset in milliseconds; used to overlap adjacent segments when they overlap.</summary>
     public double MixOffsetMs { get; set; }
 
-    /// <summary>最终应用的变速比（atempo；未调整时为 1.0）。</summary>
+    /// <summary>Final applied tempo ratio via atempo; 1.0 when no adjustment was needed.</summary>
     public double AlignmentTempo { get; set; } = 1.0;
 
-    /// <summary>情感提示（从字幕文本检测：excited/sad/angry/neutral；当前仅记录，不改变合成）。</summary>
+    /// <summary>Emotion hint detected from the subtitle text: excited/sad/angry/neutral; currently recorded only and does not affect synthesis.</summary>
     public string? EmotionHint { get; set; }
 
-    /// <summary>合成是否跳过（TTS 失败时标记，避免混音阶段空引用）。</summary>
+    /// <summary>Whether synthesis was skipped; set when TTS fails to avoid null references during the mixing stage.</summary>
     public bool Skipped { get; set; }
 
-    /// <summary>跳过/处理说明（TTS 失败原因等）。</summary>
+    /// <summary>Note on skipping or processing, such as the TTS failure reason.</summary>
     public string? Note { get; set; }
 
-    /// <summary>目标时长（秒）。</summary>
+    /// <summary>Target duration in seconds.</summary>
 [System.Text.Json.Serialization.JsonIgnore]
     public double TargetDurationSec => Math.Max(0, (TargetEndMs - TargetStartMs) / 1000.0);
 }

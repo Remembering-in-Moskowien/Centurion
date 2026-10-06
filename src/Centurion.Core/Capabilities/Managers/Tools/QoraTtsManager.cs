@@ -71,30 +71,22 @@ public sealed class QoraTtsManager(
             var url = ReleaseBase + "/" + file;
             try
             {
-                if (file == "model.qora-tts")
+                // All files go through Downloader (which routes github.com sources through the
+                // CENTURION_DOWNLOAD_PROXY mirror automatically); plain HttpClient cannot reach
+                // github.com from CN networks (TLS reset).
+                using var downloader = serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
+                await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
                 {
-                    // Large files go through aria's multithreaded segmented download.
-                    using var downloader = serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
-                    await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
+                    Payload = new AriaDownloadRequest
                     {
-                        Payload = new AriaDownloadRequest
-                        {
-                            Url = url,
-                            FullSavePath = savePath,
-                            SplitThread = 8,
-                            ServerConnection = 8,
-                            MaxRetry = 5,
-                            ProgressRefreshMs = 100
-                        }
-                    }, cancellationToken);
-                }
-                else
-                {
-                    using var client = serviceProvider.GetRequiredService<HttpClient>();
-                    using var resp = await client.GetStreamAsync(url, cancellationToken);
-                    await using var fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                    await resp.CopyToAsync(fs, cancellationToken);
-                }
+                        Url = url,
+                        FullSavePath = savePath,
+                        SplitThread = file == "model.qora-tts" ? 8 : 2,
+                        ServerConnection = 8,
+                        MaxRetry = 5,
+                        ProgressRefreshMs = 100
+                    }
+                }, cancellationToken);
             }
             catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
             {

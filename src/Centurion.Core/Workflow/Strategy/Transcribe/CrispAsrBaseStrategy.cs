@@ -17,21 +17,21 @@ namespace Centurion.Core.Workflow.Strategy.Transcribe;
 /// </summary>
 public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 {
-    /// <summary>按设备创建 CrispASR 工具管理器的工厂。</summary>
+    /// <summary>Factory that creates the CrispASR tool manager per device.</summary>
     protected readonly IToolManagerFactory _toolManagerFactory;
-    /// <summary>负责启动并管理外部 CLI 进程的执行器。</summary>
+    /// <summary>Executor that starts and manages external CLI processes.</summary>
     protected readonly ProcessManager _processManager;
-    /// <summary>用于解析模型文件本地路径的解析器。</summary>
+    /// <summary>Resolver for the local paths of model files.</summary>
     protected readonly IModelPathResolver _modelResolver;
-    /// <summary>记录转录过程日志的记录器。</summary>
+    /// <summary>Logger for recording the transcription process.</summary>
     protected readonly ILogger<CrispAsrBaseStrategy> _logger;
     private ToolManager? _toolManager;
 
-    /// <summary>策略的显示名称。</summary>
+    /// <summary>Display name of the strategy.</summary>
     public abstract string StrategyName { get; }
 
-    /// <summary>从依赖注入容器解析所需服务，初始化基类共享依赖。</summary>
-    /// <param name="serviceProvider">用于解析工具工厂、进程管理器、模型解析器与日志记录器的容器。</param>
+    /// <summary>Resolves the required services from the dependency injection container and initializes the shared base dependencies.</summary>
+    /// <param name="serviceProvider">Container used to resolve the tool factory, process manager, model resolver, and logger.</param>
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)
     {
         _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
@@ -40,7 +40,7 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         _logger = serviceProvider.GetRequiredService<ILogger<CrispAsrBaseStrategy>>();
     }
 
-    /// <summary>按推理设备创建（懒加载）CrispASR 工具管理器。</summary>
+    /// <summary>Creates (lazily) the CrispASR tool manager for the given inference device.</summary>
     protected ToolManager GetToolManager(InferenceDevice device) =>
         _toolManager ??= _toolManagerFactory.Create("crispasr", device);
 
@@ -62,8 +62,8 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
 
     /// <summary>
     /// Build the command-line arguments. Override if needed.
-    /// 返回参数列表（不含引号），由 <see cref="ProcessManager"/> 以 ArgumentList 方式
-    /// 安全传递，避免路径/提示词中的引号破坏参数边界。
+    /// Returns the argument list (without quoting), safely passed by <see cref="ProcessManager"/> as an ArgumentList,
+    /// so that quotes in paths or prompts do not break the argument boundaries.
     /// </summary>
     protected virtual IReadOnlyList<string> BuildArguments(string audioPath, string language, string modelPath, string? alignerPath, string? initialPrompt)
     {
@@ -100,15 +100,15 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     }
 
     /// <summary>
-    /// 执行转录：确保 CrispASR 就绪、解析模型与可选对齐器、构建并运行 CLI，
-    /// 解析输出 JSON 为词级时间戳列表。
+    /// Performs transcription: ensures CrispASR is ready, resolves the model and optional aligner, builds and
+    /// runs the CLI, then parses the output JSON into a list of word-level timestamps.
     /// </summary>
-    /// <param name="audioPath">待转录音频文件路径。</param>
-    /// <param name="language">音频语言代码；为空时由模型自动判断。</param>
-    /// <param name="modelName">转录模型名；为空时使用实现的默认模型。</param>
-    /// <param name="initialPrompt">可选的初始提示词。</param>
-    /// <param name="cancellationToken">用于取消转录过程的取消标记。</param>
-    /// <param name="device">推理设备，决定选用 CPU/GPU 变体工具。</param>
+    /// <param name="audioPath">Path to the audio file to transcribe.</param>
+    /// <param name="language">Audio language code; when empty the model auto-detects it.</param>
+    /// <param name="modelName">Transcription model name; when empty the implementation's default model is used.</param>
+    /// <param name="initialPrompt">Optional initial prompt.</param>
+    /// <param name="cancellationToken">Token used to cancel the transcription process.</param>
+    /// <param name="device">Inference device, which selects the CPU/GPU tool variant.</param>
     public async Task<List<Word>> TranscribeAsync(
         string audioPath,
         string language,
@@ -117,7 +117,7 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         CancellationToken cancellationToken = default,
         InferenceDevice device = InferenceDevice.Auto)
     {
-        // 1. Ensure CrispASR tool is downloaded（GPU 变体按设备自动选择）
+        // 1. Ensure the CrispASR tool is downloaded (the GPU variant is auto-selected by device)
         var toolManager = GetToolManager(device);
         await toolManager.EnsureToolAsync(cancellationToken);
 
@@ -153,14 +153,14 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     }
 
     /// <summary>
-    /// 解析 CrispASR 输出 JSON（实体模型反序列化），提取词级时间戳列表。
-    /// 同时兼容 whisper 与 qwen3 后端。qwen3 后端的词级时间戳来自 forced-aligner，
-    /// 长音频上可能出现"对齐坍缩"（大量零时长词、段内词覆盖不全），
-    /// 此时回退到段级时间戳插值：按段文本的词长度比例在段 [From,To] 内分配时间。
-    /// 段级时间戳（CrispASR 按音频分块输出）经实测可靠。
+    /// Parses CrispASR output JSON (entity-model deserialization) and extracts the word-level timestamps.
+    /// Compatible with both the whisper and qwen3 backends. The qwen3 word-level timestamps come from a forced
+    /// aligner, and on long audio "alignment collapse" can occur (many zero-duration words, incomplete in-segment
+    /// coverage); in that case it falls back to segment-level interpolation: time is allocated within the segment
+    /// [From,To] proportionally to each word's length. Segment-level timestamps (CrispASR chunks by audio) are proven reliable.
     /// </summary>
-    /// <param name="json">CrispASR -ojf 格式的 JSON 字符串。</param>
-    /// <returns>解析得到的词级时间戳列表。</returns>
+    /// <param name="json">The CrispASR -ojf format JSON string.</param>
+    /// <returns>The list of word-level timestamps after parsing.</returns>
     private List<Word> ParseJsonOutput(string json)
     {
         var root = JsonParser.Deserialize<CrispAsrTranscriptJson>(json);
@@ -171,7 +171,7 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         var words = new List<Word>();
         foreach (var segment in root.Transcription)
         {
-            // 词级时间戳健康则直接采用；不健康（零时长占比高/覆盖不全）则段级插值
+            // Use word-level timestamps when healthy; otherwise (high zero-duration ratio / incomplete coverage) fall back to segment interpolation
             var segmentWords = ParseSegmentWords(segment);
             if (segmentWords.Count > 0 && IsWordTimingHealthy(segmentWords, segment))
             {
@@ -190,10 +190,10 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     }
 
     /// <summary>
-    /// 从段内 words 提取词（跳过空白文本）。
+    /// Extracts words from the segment's words array (skipping blank text).
     /// </summary>
-    /// <param name="segment">CrispASR 输出中的一个转录段。</param>
-    /// <returns>该段的词列表（时间戳未校验）。</returns>
+    /// <param name="segment">One transcription segment from the CrispASR output.</param>
+    /// <returns>The word list of this segment (timestamps not yet validated).</returns>
     private static List<Word> ParseSegmentWords(CrispAsrTranscriptionItem segment)
     {
         var result = new List<Word>();
@@ -219,12 +219,12 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     }
 
     /// <summary>
-    /// 判定段内词级时间戳是否健康：零时长（或负时长）词占比不超过阈值，
-    /// 且词时间范围基本覆盖段时间范围（末尾覆盖不足意味着对齐坍缩）。
+    /// Determines whether the segment's word-level timestamps are healthy: zero-duration (or negative-duration) words
+    /// stay under a threshold ratio, and the word time range basically covers the segment range (poor tail coverage means alignment collapse).
     /// </summary>
-    /// <param name="segmentWords">该段的词列表。</param>
-    /// <param name="segment">对应的转录段（提供段级时间戳）。</param>
-    /// <returns>词级时间戳可信时为 true。</returns>
+    /// <param name="segmentWords">The word list of this segment.</param>
+    /// <param name="segment">The corresponding transcription segment (provides segment-level timestamps).</param>
+    /// <returns>true when the word-level timestamps are trustworthy.</returns>
     private static bool IsWordTimingHealthy(IReadOnlyList<Word> segmentWords, CrispAsrTranscriptionItem segment)
     {
         if (segmentWords.Count == 0)
@@ -241,17 +241,17 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
         var covered = segmentWords[^1].End - segmentWords[0].Start;
         var coverageRatio = segmentDuration > 0 ? covered / (double)segmentDuration : 0.0;
 
-        // 零时长词占比 ≤ 20% 且 词覆盖段时长 ≥ 80% 视为健康
+        // Healthy when zero-duration words are ≤ 20% and words cover ≥ 80% of the segment duration
         return zeroDuration / (double)segmentWords.Count <= 0.2 && coverageRatio >= 0.8;
     }
 
     /// <summary>
-    /// 段级插值：把段文本按空白切分为词（保留标点），
-    /// 按各词文本长度占段文本总长度的比例，在段 [From,To] 内线性分配时间。
-    /// 保证时间轴单调、无零时长、覆盖整段。
+    /// Segment-level interpolation: splits the segment text into words by whitespace (keeping punctuation),
+    /// and linearly allocates time within the segment [From,To] by each word's share of the total text length.
+    /// Guarantees a monotonic timeline, no zero durations, and full coverage of the segment.
     /// </summary>
-    /// <param name="segment">CrispASR 输出中的一个转录段。</param>
-    /// <returns>插值得到的词列表。</returns>
+    /// <param name="segment">One transcription segment from the CrispASR output.</param>
+    /// <returns>The interpolated word list.</returns>
     private static List<Word> InterpolateSegmentWords(CrispAsrTranscriptionItem segment)
     {
         var result = new List<Word>();

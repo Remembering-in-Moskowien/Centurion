@@ -90,12 +90,20 @@ public sealed class TranslateCommand(
                 Glossary = glossary,
                 TargetScriptLines = targetScriptLines
             };
-            var strategy = strategyFactory.Create(settings.Strategy, new Centurion.Models.Llm.LlmOptions
+            var strategy = strategyFactory.Create(settings.Strategy, new TranslationRequestOptions
             {
+                SourceLanguage = settings.SourceLanguage ?? "auto",
+                TargetLanguage = settings.TargetLanguage,
                 Model = settings.Model,
-                ApiKey = settings.ApiKey,
-                ProviderName = settings.LlmProvider,
-                BaseUrl = settings.LlmBaseUrl
+                BeamSize = settings.Beam,
+                MaxLength = settings.MaxLength,
+                Llm = new Centurion.Models.Llm.LlmOptions
+                {
+                    Model = settings.Model,
+                    ApiKey = settings.ApiKey,
+                    ProviderName = settings.LlmProvider,
+                    BaseUrl = settings.LlmBaseUrl
+                }
             });
             logger.LogInformation("Using translation strategy: {Strategy}", strategy.StrategyName);
             var translationOp = ActivatorUtilities.CreateInstance<TranslationOperator>(

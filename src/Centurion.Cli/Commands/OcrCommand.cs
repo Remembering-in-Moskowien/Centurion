@@ -76,6 +76,7 @@ public sealed class OcrCommand(
                 MergeGapSeconds = 1.5,
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
+                SplitterThreshold = settings.SplitterThreshold,
                 SplitterApiKey = settings.SplitterApiKey,
                 SplitterProvider = settings.LlmProvider,
                 SplitterBaseUrl = settings.LlmBaseUrl,

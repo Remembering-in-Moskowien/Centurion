@@ -12,57 +12,62 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Strategy.Diarization;
 
 /// <summary>
-/// CrispASR 说话人分割策略基类。
-/// 两类方案（crispasr 内置方法 / Pyannote + TitaNet）共用同一 CLI 调用与 JSON 解析流程，
-/// 仅命令行参数不同（方法、嵌入器、分割模型）。
+/// Base class for CrispASR speaker diarization strategies.
+/// The two schemes (CrispASR built-in methods / Pyannote + TitaNet) share the same CLI invocation and
+/// JSON parsing flow, differing only in command-line arguments (method, embedder, segmentation model).
 /// </summary>
 public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
 {
-    /// <summary>按设备创建 CrispASR 工具管理器的工厂。</summary>
+    /// <summary>Factory that creates the CrispASR tool manager per device.</summary>
     protected readonly IToolManagerFactory _toolManagerFactory;
-    /// <summary>负责启动并管理外部 CLI 进程的执行器。</summary>
+    /// <summary>Executor that starts and manages external CLI processes.</summary>
     protected readonly ProcessManager _processManager;
-    /// <summary>用于解析模型文件本地路径的解析器。</summary>
+    /// <summary>Resolver for the local paths of model files.</summary>
     protected readonly IModelPathResolver _modelResolver;
-    /// <summary>记录说话人分割过程日志的记录器。</summary>
+    /// <summary>Logger for recording the diarization process.</summary>
     protected readonly ILogger _logger;
+    private readonly IServiceProvider _serviceProvider;
     private ToolManager? _toolManager;
 
-    /// <summary>传给 --diarize-method 的方法名（energy/xcorr/vad-turns/foxnose/pyannote）。</summary>
+    /// <summary>hf-mirror URL of the WeSpeaker embedder required by the foxnose method (crispasr auto-downloads it from huggingface.co, which is unreachable from CN networks).</summary>
+    private const string WespeakerEmbedderUrl = "https://hf-mirror.com/cstr/wespeaker-resnet34-lm-GGUF/resolve/main/wespeaker-resnet34-lm.gguf";
+
+    /// <summary>Method name passed to --diarize-method (energy/xcorr/vad-turns/foxnose/pyannote).</summary>
     protected abstract string DiarizeMethod { get; }
 
-    /// <summary>传给 --diarize-embedder 的嵌入器（"auto" = TitaNet；null = 不传）。</summary>
+    /// <summary>Embedder passed to --diarize-embedder ("auto" = TitaNet; null = not passed).</summary>
     protected virtual string? DiarizeEmbedder => null;
 
-    /// <summary>pyannote 方法所需的分割模型名（如 "pyannote-seg-3.0"，由 CrispASR 自动下载）。</summary>
+    /// <summary>Segmentation model name required by the pyannote method (e.g. "pyannote-seg-3.0", auto-downloaded by CrispASR).</summary>
     protected virtual string? DefaultSegmentModel => null;
 
-    /// <summary>从依赖注入容器解析所需服务，初始化基类共享依赖。</summary>
-    /// <param name="serviceProvider">用于解析工具工厂、进程管理器、模型解析器与日志记录器的容器。</param>
+    /// <summary>Resolves the required services from the dependency injection container and initializes the shared base dependencies.</summary>
+    /// <param name="serviceProvider">Container used to resolve the tool factory, process manager, model resolver, and logger.</param>
     protected CrispAsrDiarizationBase(IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         _toolManagerFactory = serviceProvider.GetRequiredService<IToolManagerFactory>();
         _processManager = serviceProvider.GetRequiredService<ProcessManager>();
         _modelResolver = serviceProvider.GetRequiredService<IModelPathResolver>();
         _logger = serviceProvider.GetRequiredService<ILogger<CrispAsrDiarizationBase>>();
     }
 
-    /// <summary>按推理设备创建（懒加载）CrispASR 工具管理器。</summary>
+    /// <summary>Creates (lazily) the CrispASR tool manager for the given inference device.</summary>
     protected ToolManager GetToolManager(InferenceDevice device) =>
         _toolManager ??= _toolManagerFactory.Create("crispasr", device);
 
-    /// <summary>策略的显示名称。</summary>
+    /// <summary>Display name of the strategy.</summary>
     public abstract string StrategyName { get; }
 
     /// <summary>
-    /// 对音频执行说话人分割：确保 CrispASR 就绪、解析模型、构建并运行 CLI，
-    /// 解析输出 JSON 为说话人片段列表。
+    /// Performs speaker diarization on the audio: ensures CrispASR is ready, resolves the model, builds and
+    /// runs the CLI, then parses the output JSON into a list of speaker segments.
     /// </summary>
-    /// <param name="audioPath">待分割音频文件路径。</param>
-    /// <param name="numSpeakers">预期说话人数；大于 0 时作为最大说话人限制传入。</param>
-    /// <param name="segmentModel">分割模型名；为 null 时回退到实现的默认模型。</param>
-    /// <param name="cancellationToken">用于取消分割过程的取消标记。</param>
-    /// <param name="device">推理设备，决定选用 CPU/GPU 变体工具。</param>
+    /// <param name="audioPath">Path to the audio file to diarize.</param>
+    /// <param name="numSpeakers">Expected number of speakers; when greater than 0 it is passed as the max-speaker limit.</param>
+    /// <param name="segmentModel">Segmentation model name; falls back to the implementation's default model when null.</param>
+    /// <param name="cancellationToken">Token used to cancel the diarization process.</param>
+    /// <param name="device">Inference device, which selects the CPU/GPU tool variant.</param>
     public virtual async Task<IReadOnlyList<SpeakerSegment>> DiarizeAsync(
         string audioPath,
         int numSpeakers,
@@ -73,26 +78,27 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
         if (!File.Exists(audioPath))
             throw new FileNotFoundException($"Audio file not found: {audioPath}");
 
-        // 1. 确保 CrispASR 工具已就绪（GPU 变体按设备自动选择）
+        // 1. Ensure the CrispASR tool is ready (the GPU variant is auto-selected by device)
         var toolManager = GetToolManager(device);
         await toolManager.EnsureToolAsync(cancellationToken);
 
-        // 2. 分割使用与主转录一致的 qwen3 模型（whisper tiny 分段边界不稳定，
-        //    导致说话人片段每次运行漂移；同模型同后端输出更确定）
+        // 2. Diarization uses the same qwen3 model as the main transcription (whisper tiny gives unstable
+        //    segment boundaries that drift between runs; the same model/backend is more deterministic)
         var modelPath = await _modelResolver.GetQwen3AsrModelPathAsync("qwen3-asr-1.7b", cancellationToken);
         if (!File.Exists(modelPath))
             throw new FileNotFoundException($"Qwen3 ASR model not found: {modelPath}");
 
-        // 3. 构建参数并执行（--diarize-speakers 将说话人标签写入 transcription 条目的 speaker 字段）
+        // 3. Build arguments and run (--diarize-speakers writes speaker labels into the speaker field of each transcription entry)
         var jsonBasePath = Path.Combine(
             Path.GetDirectoryName(audioPath) ?? string.Empty,
             Path.GetFileNameWithoutExtension(audioPath) + "_diar");
-        var args = BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel, DiarizeMethod, DiarizeEmbedder, DefaultSegmentModel, backend: "qwen3");
+        var embedder = await EnsureEmbedderAsync(cancellationToken) ?? DiarizeEmbedder;
+        var args = BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel, DiarizeMethod, embedder, DefaultSegmentModel, backend: "qwen3");
 
         _logger.LogDebug("Executing diarization: {Exe} {Args}", toolManager.ExecutablePath, args);
         await _processManager.ExecuteAsync(toolManager.ExecutablePath, args, cancellationToken);
 
-        // 4. 读取并解析输出
+        // 4. Read and parse the output
         var jsonPath = jsonBasePath + ".json";
         if (!File.Exists(jsonPath))
             throw new DiarizationException($"Diarization output JSON not found at: {jsonPath}");
@@ -102,10 +108,10 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
     }
 
     /// <summary>
-    /// 构建 CrispASR 说话人分割命令行参数（internal，便于单元测试）。
-    /// 使用 --diarize-speakers 使说话人标签写入 transcription 条目的 speaker 字段；
-    /// --diarize-method 仍可选用 foxnose（WeSpeaker 嵌入）或 pyannote（TitaNet 嵌入）。
-    /// 分割模型（如 pyannote-seg-3.0.gguf）由 CrispASR 自动下载并缓存，无需 --sherpa-segment-model。
+    /// Builds the CrispASR diarization command-line arguments (internal, for unit testing).
+    /// Uses --diarize-speakers so that speaker labels are written into the speaker field of each transcription entry;
+    /// --diarize-method may still be foxnose (WeSpeaker embeddings) or pyannote (TitaNet embeddings).
+    /// The segmentation model (e.g. pyannote-seg-3.0.gguf) is auto-downloaded and cached by CrispASR, no --sherpa-segment-model needed.
     /// </summary>
     internal static string BuildArguments(
         string audioPath,
@@ -130,13 +136,54 @@ public abstract class CrispAsrDiarizationBase : IDiarizationStrategy
     }
 
     /// <summary>
-    /// 使用当前实现的方法与嵌入器构建 CLI 参数（供派生类调用）。
+    /// Resolves the --diarize-embedder path for the foxnose method. CrispASR auto-downloads the
+    /// WeSpeaker embedder from huggingface.co, which is unreachable from CN networks (WinHTTP/curl/wget
+    /// all fail), so we pre-seed its cache (%USERPROFILE%\.cache\crispasr\wespeaker-resnet34-lm.gguf)
+    /// from hf-mirror when missing. Returns null when not applicable or the download failed.
     /// </summary>
-    /// <param name="audioPath">待分割音频文件路径。</param>
-    /// <param name="modelPath">CrispASR CLI 所需的 ASR 模型路径。</param>
-    /// <param name="jsonBasePath">输出 JSON 的基础路径（不含扩展名）。</param>
-    /// <param name="numSpeakers">预期说话人数；大于 0 时作为最大说话人限制。</param>
-    /// <param name="segmentModel">预留的分割模型名（由 CrispASR 自动下载管理，当前不参与命令行）。</param>
+    private async Task<string?> EnsureEmbedderAsync(CancellationToken cancellationToken)
+    {
+        if (!string.Equals(DiarizeMethod, "foxnose", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var cacheDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "crispasr");
+        var path = Path.Combine(cacheDir, "wespeaker-resnet34-lm.gguf");
+        if (File.Exists(path) && new FileInfo(path).Length > 0)
+            return path;
+
+        Directory.CreateDirectory(cacheDir);
+        _logger.LogInformation("WeSpeaker embedder missing; downloading from hf-mirror to {Path} ...", path);
+        try
+        {
+            using var downloader = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
+            await downloader.ProcessAsync(new OperatorsRequest<Centurion.Core.Operators.Download.Request.AriaDownloadRequest>
+            {
+                Payload = new Centurion.Core.Operators.Download.Request.AriaDownloadRequest
+                {
+                    Url = WespeakerEmbedderUrl,
+                    FullSavePath = path,
+                    MaxRetry = 3,
+                    ProgressRefreshMs = 100
+                }
+            }, cancellationToken);
+            return File.Exists(path) && new FileInfo(path).Length > 0 ? path : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("WeSpeaker embedder download failed: {Error}", ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Builds CLI arguments using the current implementation's method and embedder (called by derived classes).
+    /// </summary>
+    /// <param name="audioPath">Path to the audio file to diarize.</param>
+    /// <param name="modelPath">Path to the ASR model required by the CrispASR CLI.</param>
+    /// <param name="jsonBasePath">Base path for the output JSON (without extension).</param>
+    /// <param name="numSpeakers">Expected number of speakers; when greater than 0 it is used as the max-speaker limit.</param>
+    /// <param name="segmentModel">Reserved segmentation model name (auto-managed by CrispASR; not part of the command line currently).</param>
     protected string BuildArguments(
         string audioPath, string modelPath, string jsonBasePath, int numSpeakers, string? segmentModel) =>
         BuildArguments(audioPath, modelPath, jsonBasePath, numSpeakers, segmentModel,

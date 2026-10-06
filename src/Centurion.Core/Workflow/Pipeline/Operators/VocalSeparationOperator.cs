@@ -11,16 +11,16 @@ using Centurion.Core.Operators.Download.Request;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 人声分离算子（Demucs-rs，可选增强）。
-/// 将音频分离出人声轨（--stems vocals），写入 State.VocalsPath，
-/// 供转录与说话人分割优先消费。仅在 WorkflowConfig.VocalSeparation 开启时执行；
-/// 失败为非致命错误，仅记录警告并回退原始音频继续。
+/// Vocal separation operator (Demucs-rs, optional enhancement).
+/// Separates the vocals track from the audio (--stems vocals) and writes it to State.VocalsPath,
+/// for preferential consumption by transcription and speaker diarization. Runs only when WorkflowConfig.VocalSeparation is enabled;
+/// a failure is non-fatal: it only logs a warning and falls back to the original audio.
 /// <para>
-/// 模型获取：demucs-rs 的 safetensors 权重 URL 硬编码且不支持镜像环境变量，
-/// 因此本算子会在运行 demucs 前将模型预下载到 demucs-rs 的缓存目录
-/// （Windows: %LOCALAPPDATA%\demucs-rs\，Linux: ~/.cache/demucs-rs\，macOS: ~/Library/Caches/demucs-rs\），
-/// 官方源下载失败时自动回退 hf-mirror.com 镜像，保证国内网络可用。
-/// 模型基础地址可通过 metadata.json 中 demucsrs 条目的 modelBaseUrl 覆盖。
+/// Model acquisition: demucs-rs has hardcoded safetensors weight URLs and does not support a mirror environment variable,
+/// so this operator pre-downloads the model into demucs-rs's cache directory before running demucs
+/// (Windows: %LOCALAPPDATA%\demucs-rs\, Linux: ~/.cache/demucs-rs\, macOS: ~/Library/Caches/demucs-rs\);
+/// if the official source download fails, it automatically falls back to the hf-mirror.com mirror so domestic networks can work.
+/// The model base URL can be overridden via the modelBaseUrl of the demucsrs entry in metadata.json.
 /// </para>
 /// </summary>
 public sealed class VocalSeparationOperator(
@@ -29,34 +29,34 @@ public sealed class VocalSeparationOperator(
     Centurion.Core.Operators.Download.Downloader downloader,
     ILogger<VocalSeparationOperator> logger) : PipelineOperatorBase<VocalSeparationOperator>(logger)
 {
-    /// <summary>demucs-rs 内置的模型下载基础地址（对应 HF_BASE_URL）。</summary>
+    /// <summary>The model download base address built into demucs-rs (corresponds to HF_BASE_URL).</summary>
     public const string DefaultModelBaseUrl = "https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/";
 
     private readonly IToolManagerFactory _toolFactory = toolFactory ?? throw new ArgumentNullException(nameof(toolFactory));
     private readonly ProcessManager _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
     private readonly Centurion.Core.Operators.Download.Downloader _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Vocal Separation";
 
     /// <summary>
-    /// 执行人声分离：在开关开启且无既有产物时，用 demucs-rs 将输入音频分离出人声轨，
-    /// 并将结果写入 <see cref="SubtitleWorkflowContext"/> 状态；分离失败为非致命错误，仅记录警告并回退原始音频。
+    /// Runs vocal separation: when the switch is on and no existing artifact is present, uses demucs-rs to separate the vocals track from the input audio,
+    /// and writes the result into the <see cref="SubtitleWorkflowContext"/> state; a separation failure is non-fatal, only logging a warning and falling back to the original audio.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供配置、状态与输入音频路径。</param>
-    /// <param name="cancellationToken">用于取消人声分离过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing configuration, state, and the input audio path.</param>
+    /// <param name="cancellationToken">Token used to cancel the vocal separation process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var config = context.Config;
 
-        // 1. 开关（默认关闭：对纯语音素材无价值且耗时长）
+        // 1. Switch (off by default: no value for pure speech material and time-consuming)
         if (!config.VocalSeparation)
         {
             LogInfo("Vocal separation disabled (VocalSeparation = false).");
             return;
         }
 
-        // 2. 检查点：已完成且产物存在则跳过
+        // 2. Checkpoint: skip when already done and the artifact exists
         if (context.State.IsVocalsSeparated
             && !string.IsNullOrEmpty(context.State.VocalsPath)
             && File.Exists(context.State.VocalsPath))
@@ -65,7 +65,7 @@ public sealed class VocalSeparationOperator(
             return;
         }
 
-        // 3. 输入音频（优先预处理后的音频，再退到转换后的音频）
+        // 3. Input audio (prefer the preprocessed audio, fall back to the converted audio)
         var inputPath = context.State.PreprocessedAudioPath
             ?? context.State.ConvertedAudioPath
             ?? config.InputFilePath;
@@ -85,11 +85,11 @@ public sealed class VocalSeparationOperator(
         var tool = _toolFactory.Create("demucsrs", config.Device);
         try
         {
-            // 4. 确保工具已就绪（首次自动下载）
+            // 4. Ensure the tool is ready (auto-download on first run)
             OnProgress(5, "Ensuring demucs-rs tool...");
             await tool.EnsureToolAsync(cancellationToken);
 
-            // 5. 确保模型已缓存（官方源失败自动回退镜像；失败则不运行 demucs）
+            // 5. Ensure the model is cached (auto-fallback to mirror when the official source fails; skip demucs on failure)
             OnProgress(10, $"Ensuring demucs model '{config.VocalSeparationModel}'...");
             if (!await EnsureDemucsModelAsync(tool, config.VocalSeparationModel, cancellationToken))
             {
@@ -97,7 +97,7 @@ public sealed class VocalSeparationOperator(
                 return;
             }
 
-            // 6. 执行分离
+            // 6. Run separation
             var outputDir = Path.Combine(tempDir, $"vocalsep_{Guid.NewGuid():N}");
             Directory.CreateDirectory(outputDir);
             var args = BuildArguments(config.VocalSeparationModel, inputPath, outputDir);
@@ -106,7 +106,7 @@ public sealed class VocalSeparationOperator(
             OnProgress(20, "Separating vocals (this may take a while)...");
             await _processManager.ExecuteAsync(tool.ExecutablePath, args, cancellationToken);
 
-            // 7. 定位人声轨（递归查找，兼容不同输出目录布局）
+            // 7. Locate the vocals track (recursive search, tolerant of different output directory layouts)
             var vocalsFile = FindVocalsFile(outputDir);
             if (vocalsFile is null)
             {
@@ -125,14 +125,14 @@ public sealed class VocalSeparationOperator(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // 非致命：分离失败不中断字幕生成
+            // Non-fatal: a separation failure does not interrupt subtitle generation
             LogWarning($"Vocal separation failed; continuing with original audio. {ex.Message}");
         }
     }
 
     /// <summary>
-    /// 确保 demucs-rs 的模型权重已缓存到其期望的缓存目录。
-    /// 已缓存直接返回；否则依次尝试官方源与 hf-mirror 镜像下载。
+    /// Ensures the demucs-rs model weights are cached in its expected cache directory.
+    /// Returns directly when already cached; otherwise tries the official source and the hf-mirror mirror in turn.
     /// </summary>
     private async Task<bool> EnsureDemucsModelAsync(ToolManager tool, string model, CancellationToken cancellationToken)
     {
@@ -193,15 +193,15 @@ public sealed class VocalSeparationOperator(
     }
 
     /// <summary>
-    /// 构建 Demucs-rs 命令行参数（internal，便于单元测试）。
-    /// 真实 CLI：demucs.exe -m &lt;model&gt; -s vocals -o &lt;outputDir&gt; &lt;input&gt;
-    /// 输出布局：&lt;outputDir&gt;/&lt;model&gt;/&lt;input-basename&gt;/vocals.wav（由 FindVocalsFile 递归定位）。
+    /// Builds Demucs-rs command-line arguments (internal for unit testing).
+    /// Real CLI: demucs.exe -m &lt;model&gt; -s vocals -o &lt;outputDir&gt; &lt;input&gt;
+    /// Output layout: &lt;outputDir&gt;/&lt;model&gt;/&lt;input-basename&gt;/vocals.wav (located recursively by FindVocalsFile).
     /// </summary>
     internal static IReadOnlyList<string> BuildArguments(string model, string inputPath, string outputDir) =>
         ["-m", model, "-s", "vocals", "-o", outputDir, inputPath];
 
     /// <summary>
-    /// 在 Demucs 输出目录中递归查找人声轨文件（兼容不同版本/布局差异）。
+    /// Recursively searches the Demucs output directory for the vocals track file (tolerant of version/layout differences).
     /// </summary>
     internal static string? FindVocalsFile(string outputDir)
     {
@@ -215,7 +215,7 @@ public sealed class VocalSeparationOperator(
     }
 
     /// <summary>
-    /// 模型名称 → safetensors 文件名映射（与 demucs-rs metadata.rs 一致；unknown 返回 null）。
+    /// Model name to safetensors file name mapping (consistent with demucs-rs metadata.rs; unknown returns null).
     /// </summary>
     internal static string? GetDemucsModelFileName(string model) => model.Trim().ToLowerInvariant() switch
     {
@@ -226,8 +226,8 @@ public sealed class VocalSeparationOperator(
     };
 
     /// <summary>
-    /// demucs-rs 的模型缓存目录（对应其 dirs::cache_dir().join("demucs-rs")）。
-    /// Windows: %LOCALAPPDATA%\demucs-rs；Linux: ~/.cache/demucs-rs；macOS: ~/Library/Caches/demucs-rs。
+    /// The demucs-rs model cache directory (corresponds to its dirs::cache_dir().join("demucs-rs")).
+    /// Windows: %LOCALAPPDATA%\demucs-rs; Linux: ~/.cache/demucs-rs; macOS: ~/Library/Caches/demucs-rs.
     /// </summary>
     internal static string GetDemucsCacheDir()
     {
@@ -246,7 +246,7 @@ public sealed class VocalSeparationOperator(
     }
 
     /// <summary>
-    /// 将 HuggingFace 官方地址转换为 hf-mirror.com 镜像地址；非官方地址原样返回。
+    /// Converts a HuggingFace official URL into an hf-mirror.com mirror URL; non-official URLs are returned unchanged.
     /// </summary>
     internal static string BuildMirrorUrl(string url) =>
         url.Replace("https://huggingface.co/", "https://hf-mirror.com/", StringComparison.OrdinalIgnoreCase);
@@ -260,7 +260,7 @@ public sealed class VocalSeparationOperator(
         }
         catch
         {
-            // 忽略清理失败，不影响主流程
+            // Ignore cleanup failures; they do not affect the main flow
         }
     }
 }

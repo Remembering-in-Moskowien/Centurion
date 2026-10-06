@@ -120,7 +120,7 @@ public sealed class PipelineGraphCommand(
     private PipelineDag BuildTranslateDagForGraph()
     {
         var options = new Centurion.Abstractions.Strategy.TranslationOptions { TargetLanguage = "zh" };
-        var strategy = strategyFactory.Create("llm", new Centurion.Models.Llm.LlmOptions());
+        var strategy = strategyFactory.Create("llm", new TranslationRequestOptions { Llm = new Centurion.Models.Llm.LlmOptions() });
         var translationOp = ActivatorUtilities.CreateInstance<TranslationOperator>(serviceProvider, strategy, options);
         return TranslateCommand.BuildTranslateDag(translationOp, qualityReportOp);
     }

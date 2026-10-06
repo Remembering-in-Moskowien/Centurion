@@ -96,6 +96,8 @@ public sealed class PipelineOperatorFactory(
         EnablePunctuationRewrite = config.EnablePunctuationRewrite,
         Language = config.Language,
         ModelCachePath = config.CacheDirectory,
-        ChunkGranularity = Math.Clamp(config.ChunkGranularity, 0f, 1f)
+        ChunkGranularity = Math.Clamp(config.ChunkGranularity, 0f, 1f),
+        ModelName = config.SplitterModel,
+        Threshold = config.SplitterThreshold
     };
 }

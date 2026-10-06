@@ -1,236 +1,238 @@
 namespace Centurion.Models.Workflow;
 
 /// <summary>
-/// 工作流配置（不可变，合并了 MediaGenerationRequest + SplitOptions + 各 Payload 参数）
+/// Workflow configuration; immutable and merging MediaGenerationRequest, SplitOptions, and the various Payload parameters.
 /// </summary>
 public class WorkflowConfig
 {
-    // ---------- 输入/输出 ----------
-    /// <summary>待处理音视频文件的完整路径。</summary>
+    // ---------- Input / Output ----------
+    /// <summary>Full path of the audio or video file to process.</summary>
     public string InputFilePath { get; init; } = string.Empty;
 
-    /// <summary>触发本次运行的子命令名（如 "spawn"、"dub"），供质量报告等元信息使用。</summary>
+    /// <summary>Name of the subcommand that triggered this run, such as "spawn" or "dub"; used in metadata such as the quality report.</summary>
     public string CommandName { get; init; } = string.Empty;
-    /// <summary>作为校正基线的已有字幕文件路径（SRT/ASS 等），可为空。</summary>
+    /// <summary>Path of an existing subtitle file used as the correction baseline, such as SRT/ASS; may be null.</summary>
     public string? SubtitleFilePath { get; init; }
-    /// <summary>最终输出字幕文件路径，可为空（独立算子命令链中会被更新为当前命令的输出）。</summary>
+    /// <summary>Path of the final output subtitle file; may be null and is updated to the current command's output in standalone operator chains.</summary>
     public string? OutputFilePath { get; set; }
-    /// <summary>用于校正的脚本/文稿文件路径，可为空。</summary>
+    /// <summary>Path of the script or transcript file used for correction; may be null.</summary>
     public string? ScriptFilePath { get; init; }
     /// <summary>
-    /// 推理设备偏好（auto/cpu/cuda/vulkan/directml）。
-    /// Auto 时由系统自动检测（NVIDIA GPU → CUDA 构建的工具自动下载）。
+    /// Inference device preference: auto/cpu/cuda/vulkan/directml.
+    /// With Auto the system detects automatically, and CUDA builds auto-download an NVIDIA GPU tool.
     /// </summary>
     public InferenceDevice Device { get; init; } = InferenceDevice.Auto;
-    /// <summary>字幕校正所采用的策略（仅时间轴/仅文本/两者）。</summary>
+    /// <summary>The subtitle correction strategy: timeline-only / text-only / both.</summary>
     public CorrectionStrategy CorrectStrategy { get; init; } = CorrectionStrategy.Both;
-    /// <summary>允许的最大时间轴漂移（毫秒），超过即视为对齐异常。</summary>
+    /// <summary>Maximum allowed timeline drift in milliseconds, beyond which alignment is considered abnormal.</summary>
     public int MaxDriftMs { get; init; } = 1500;
-    /// <summary>模糊匹配的相似度阈值（0-1），低于此值不认为匹配成功。</summary>
+    /// <summary>Similarity threshold for fuzzy matching, from 0 to 1; below it a match is not accepted.</summary>
     public double FuzzyThreshold { get; init; } = 0.72;
-    /// <summary>Hunspell 拼写检查词典前缀（如 en_US），默认 en_US；缺失时自动下载（仅支持默认前缀）。</summary>
+    /// <summary>Hunspell spell-check dictionary prefix, such as en_US; defaults to en_US and is downloaded automatically when missing; only the default prefix is supported.</summary>
     public string HunspellDictionary { get; init; } = "en_US";
-    /// <summary>脚本与音频词对齐所使用的映射策略标识（如 "rule"）。</summary>
+    /// <summary>Identifier of the mapping strategy used for word-level alignment between script and audio, such as "rule".</summary>
     public string MapperStrategy { get; init; } = "rule";
-    /// <summary>文本覆盖率阈值（0-1），低于此比例判定为对齐不充分。</summary>
+    /// <summary>Text coverage threshold from 0 to 1; below it the alignment is judged insufficient.</summary>
     public double CoverageThreshold { get; init; } = 0.92;
-    /// <summary>字幕最大每秒字符数（CPS），用于可读性约束。</summary>
+    /// <summary>Maximum characters per second (CPS) for subtitles, used for readability constraints.</summary>
     public double MaxCps { get; init; } = 5.0;
-    /// <summary>单行字幕最大字符数。</summary>
+    /// <summary>Maximum number of characters per subtitle line.</summary>
     public int MaxCharsPerLine { get; init; } = 18;
-    /// <summary>脚本缺失词的空隙是否以省略号 "[...]" 填充。</summary>
+    /// <summary>Whether gaps for words missing from the script are filled with the ellipsis "[...]".</summary>
     public bool FillGapWithEllipsis { get; init; } = true;
 
-    // ---------- 音频预处理 ----------
-    /// <summary>音频预处理流水线的开关与阈值配置。</summary>
+    // ---------- Audio Preprocessing ----------
+    /// <summary>Toggles and thresholds for the audio preprocessing pipeline.</summary>
     public AudioPreprocessConfig AudioPreprocess { get; init; } = new();
 
-    // ---------- 转录模块 ----------
-    /// <summary>转录引擎选择（如 "crispasr"、"whisper"、"qwen"、"api"）。</summary>
+    // ---------- Transcription ----------
+    /// <summary>Transcription engine selection, such as "crispasr", "whisper", "qwen", or "api".</summary>
     public string TranscriberEngine { get; init; } = "crispasr";   // whisper, qwen, api
-    /// <summary>所选引擎使用的模型规格名（如 qwen3-asr-1.7b、large-v3）。</summary>
+    /// <summary>Model spec name used by the selected engine, such as qwen3-asr-1.7b or large-v3.</summary>
     public string? TranscriberModel { get; init; } = "qwen3-asr-1.7b";     // e.g., base, large
-    /// <summary>云端 ASR 提供商名（openai/groq/dashscope/deepgram）；本地引擎忽略。</summary>
+    /// <summary>Cloud ASR provider name: openai/groq/dashscope/deepgram; ignored by local engines.</summary>
     public string AsrProvider { get; set; } = "crispasr";
-    /// <summary>云端 ASR API 密钥。</summary>
+    /// <summary>Cloud ASR API key.</summary>
     public string? AsrApiKey { get; init; }
-    /// <summary>云端 ASR 端点；为空时按提供商默认。</summary>
+    /// <summary>Cloud ASR endpoint; when empty the provider default is used.</summary>
     public string? AsrBaseUrl { get; init; }
-    /// <summary>识别语言代码（如 "en"、"zh"）。</summary>
+    /// <summary>Recognition language code, such as "en" or "zh".</summary>
     public string Language { get; init; } = "en";
-    /// <summary>喂给模型的初始提示词，用于引导风格/术语，可为空。</summary>
+    /// <summary>Initial prompt fed to the model to guide style and terminology; may be null.</summary>
     public string? InitialPrompt { get; init; }
 
-    // ---------- 分句模块 ----------
-    /// <summary>分句策略（如 "rule"、"llm"、"nlp/catalyst"）。</summary>
-    public string SplitStrategy { get; init; } = "rule";    // llm, rule, nlp/catalyst
-    /// <summary>单句最大字符长度，超过则切分。</summary>
+    // ---------- Sentence Splitting ----------
+    /// <summary>Sentence splitting strategy, such as "rule", "llm", "sat" (local SaT model), or "nlp/catalyst".</summary>
+    public string SplitStrategy { get; init; } = "rule";    // llm, rule, nlp/catalyst, sat
+    /// <summary>Maximum character length of a single sentence; longer ones are split.</summary>
     public int MaxSentenceLength { get; init; } = 80;
-    /// <summary>期望的目标句长（字符），切分时尽量靠拢。</summary>
+    /// <summary>Desired target sentence length in characters, which splitting tries to approach.</summary>
     public int TargetSentenceLength { get; init; } = 50;
-    /// <summary>句长在目标值附近允许的浮动范围。</summary>
+    /// <summary>Allowable spread of sentence length around the target.</summary>
     public int SpreadRange { get; init; } = 10;
-    /// <summary>按时间轴合并相邻短句时的时间粒度（秒）。</summary>
+    /// <summary>Time granularity in seconds when merging short adjacent sentences along the timeline.</summary>
     public float ChunkGranularity { get; init; } = 0.5f;
-    /// <summary>相邻短句间隔小于该秒数时合并为一句。</summary>
+    /// <summary>Adjacent short sentences closer than this many seconds apart are merged into one.</summary>
     public double MergeGapSeconds { get; init; } = 1.5;
-    /// <summary>是否在分句时重写/规整标点。</summary>
+    /// <summary>Whether to rewrite and normalize punctuation during sentence splitting.</summary>
     public bool EnablePunctuationRewrite { get; init; } = true;
-    /// <summary>LLM 分句时使用的模型名，可为空。</summary>
-    public string? SplitterModel { get; init; }                 // 用于LLM
-    /// <summary>LLM 分句所需的 API 密钥，可为空。</summary>
-    public string? SplitterApiKey { get; init; }                // 用于LLM
-    /// <summary>LLM 分句服务提供商名（如 deepseek、moonshot、openrouter；为空自动推断）。</summary>
+    /// <summary>Model name used for LLM-based splitting; may be null.</summary>
+    public string? SplitterModel { get; init; }                 // for LLM
+    /// <summary>API key required for LLM-based splitting; may be null.</summary>
+    public string? SplitterApiKey { get; init; }                // for LLM
+    /// <summary>LLM splitting service provider name, such as deepseek, moonshot, or openrouter; inferred automatically when empty.</summary>
     public string? SplitterProvider { get; init; }
-    /// <summary>LLM 分句自定义端点；为空时使用所选提供商默认端点。</summary>
+    /// <summary>Custom endpoint for LLM-based splitting; when empty the selected provider's default endpoint is used.</summary>
     public string? SplitterBaseUrl { get; init; }
+    /// <summary>Boundary probability threshold (0.0–1.0) for the SaT split strategy; default 0.5.</summary>
+    public double SplitterThreshold { get; init; } = 0.5;
 
-    // ---------- 人声分离（可选增强，默认关闭） ----------
+    // ---------- Vocal Separation (optional enhancement, off by default) ----------
     /// <summary>
-    /// 是否启用 Demucs 人声分离（将人声与伴奏/音乐分离后再转录）。
-    /// 仅对含明显音乐/BGM 的素材有价值；纯语音素材开启会显著增加耗时。
+    /// Whether to enable Demucs vocal separation, separating vocals from accompaniment/music before transcription.
+    /// Valuable only for material with noticeable music or BGM; enabling it on pure speech significantly increases runtime.
     /// </summary>
     public bool VocalSeparation { get; set; } = false;
     /// <summary>
-    /// Demucs 分离模型名（如 htdemucs），由 demucs-rs 首次运行时自动从 HuggingFace 下载缓存。
+    /// Demucs separation model name, such as htdemucs; downloaded and cached automatically from HuggingFace by demucs-rs on first run.
     /// </summary>
     public string VocalSeparationModel { get; set; } = "htdemucs";
 
-    // ---------- OCR 命令配置 ----------
-    /// <summary>OCR 命令：抽帧间隔（秒），默认 2 秒。</summary>
+    // ---------- OCR Command Settings ----------
+    /// <summary>OCR command: frame extraction interval in seconds; defaults to 2 seconds.</summary>
     public double OcrIntervalSeconds { get; init; } = 2.0;
-    /// <summary>OCR 命令：可选 VideoSubFinder CLI 可执行文件路径。</summary>
+    /// <summary>OCR command: optional path to the VideoSubFinder CLI executable.</summary>
     public string? OcrVideoSubFinderPath { get; init; }
-    /// <summary>OCR 命令：OCR 后端："zhipu"（云端 GLM-OCR，默认）| "ollama"（本地 Ollama 视觉模型）| "llamacpp"（本地 llama-server）。</summary>
+    /// <summary>OCR command: OCR backend: "zhipu" (cloud GLM-OCR, default) | "ollama" (local Ollama vision model) | "llamacpp" (local llama-server).</summary>
     public string OcrBackend { get; init; } = "zhipu";
-    /// <summary>OCR 命令：OCR 模型名（默认随后端：zhipu→glm-ocr，ollama→qwen2.5vl:7b，llamacpp→local-model）。</summary>
+    /// <summary>OCR command: OCR model name; follows the backend by default: zhipu→glm-ocr, ollama→qwen2.5vl:7b, llamacpp→local-model.</summary>
     public string? OcrModel { get; init; }
-    /// <summary>OCR 命令：GLM-OCR API 密钥。</summary>
+    /// <summary>OCR command: GLM-OCR API key.</summary>
     public string? OcrApiKey { get; init; }
-    /// <summary>OCR 命令：GLM-OCR 端点地址（默认智谱 v4 chat/completions）。</summary>
+    /// <summary>OCR command: GLM-OCR endpoint address; defaults to the Zhipu v4 chat/completions endpoint.</summary>
     public string? OcrBaseUrl { get; init; }
-    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——顶部边缘（视频高度比例 0-1，默认 0.2102 为字幕区顶部，VSF -te）。</summary>
+    /// <summary>OCR command: VideoSubFinder subtitle detection region, top edge as a fraction of video height from 0 to 1; defaults to 0.2102, the top of the subtitle area (VSF -te).</summary>
     public double? OcrRoiTop { get; init; }
-    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——底部边缘（视频高度比例 0-1，默认 0，VSF -be）。</summary>
+    /// <summary>OCR command: VideoSubFinder subtitle detection region, bottom edge as a fraction of video height from 0 to 1; defaults to 0 (VSF -be).</summary>
     public double? OcrRoiBottom { get; init; }
-    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——左侧边缘（视频宽度比例 0-1，默认 0，VSF -le）。</summary>
+    /// <summary>OCR command: VideoSubFinder subtitle detection region, left edge as a fraction of video width from 0 to 1; defaults to 0 (VSF -le).</summary>
     public double? OcrRoiLeft { get; init; }
-    /// <summary>OCR 命令：VideoSubFinder 字幕检测区域——右侧边缘（视频宽度比例 0-1，默认 1，VSF -re）。</summary>
+    /// <summary>OCR command: VideoSubFinder subtitle detection region, right edge as a fraction of video width from 0 to 1; defaults to 1 (VSF -re).</summary>
     public double? OcrRoiRight { get; init; }
 
-    // ---------- 说话人分割 ----------
+    // ---------- Diarization ----------
     /// <summary>
-    /// 说话人分割后端："none"（关闭，默认）| "crispasr"（内置方法）| "pyannote"（Pyannote 分割 + TitaNet 嵌入）。
+    /// Diarization backend: "none" (off, default) | "crispasr" (built-in method) | "pyannote" (Pyannote segmentation plus TitaNet embeddings).
     /// </summary>
     public string DiarizationBackend { get; init; } = "none";
     /// <summary>
-    /// crispasr 后端的分割方法：energy / xcorr / vad-turns / foxnose（默认 foxnose，精度最高且无需立体声）。
+    /// Segmentation method for the crispasr backend: energy / xcorr / vad-turns / foxnose; foxnose is the default and most accurate and needs no stereo.
     /// </summary>
     public string DiarizationMethod { get; init; } = "foxnose";
     /// <summary>
-    /// pyannote 后端使用的分割模型名（由 CrispASR 模型注册表自动下载，如 "pyannote-seg-3.0"）。
+    /// Segmentation model name used by the pyannote backend, downloaded automatically by the CrispASR model registry, such as "pyannote-seg-3.0".
     /// </summary>
     public string DiarizationModel { get; init; } = "pyannote-seg-3.0";
-    /// <summary>预期说话人数量，0 表示自动估计。</summary>
+    /// <summary>Expected number of speakers; 0 means automatic estimation.</summary>
     public int NumSpeakers { get; init; } = 0;
 
     /// <summary>
-    /// 说话人分割后处理：短于该秒数的片段视为碎片参与平滑合并，
-    /// 消除逐段交替抖动与边界词错标。默认 0.5 秒。
+    /// Diarization post-processing: segments shorter than this many seconds are treated as fragments and smoothed together,
+    /// eliminating per-segment alternating jitter and boundary-word mislabeling. Defaults to 0.5 seconds.
     /// </summary>
     public double DiarizationMinSegmentSeconds { get; init; } = 0.5;
 
-    // ---------- 输出风格 ----------
-    /// <summary>是否输出卡拉OK模式（逐词 \k 时间标签）。</summary>
+    // ---------- Output Style ----------
+    /// <summary>Whether to output karaoke mode with per-word \k timing tags.</summary>
     public bool KaraokeMode { get; init; } = false;
     /// <summary>
-    /// 是否在字幕文本前显示说话人标签（如 "[SPEAKER_01] 文本"）。
-    /// 说话人信息始终写入 ASS 的 Name 字段；本开关仅控制文本前缀的显隐，默认开启。
+    /// Whether to show a speaker label before the subtitle text, such as "[SPEAKER_01] text".
+    /// Speaker information is always written to the ASS Name field; this switch only controls the visibility of the text prefix and is on by default.
     /// </summary>
     public bool ShowSpeakerLabels { get; init; } = true;
 
-    // ---------- 其他 ----------
-    /// <summary>模型/临时文件缓存目录。</summary>
+    // ---------- Miscellaneous ----------
+    /// <summary>Cache directory for model and temporary files.</summary>
     public string CacheDirectory { get; init; } = "./cache";
-    /// <summary>是否启用词级强制对齐阶段。</summary>
+    /// <summary>Whether to enable the word-level forced alignment stage.</summary>
     public bool EnableAlignment { get; init; } = true;
-    /// <summary>强制对齐使用的模型名，可为空。</summary>
+    /// <summary>Model name used for forced alignment; may be null.</summary>
     public string? AlignmentModel { get; init; } = "qwen3-forced-aligner-0.6b-f16";
     /// <summary>
-    /// 强制对齐分段：相邻句子的时间间隙超过该秒数时，把句子切分为独立的分段块。
-    /// 分段后每块仅启动一次对齐进程，显著降低长音频的进程/模型加载开销。默认 2.0 秒。
+    /// Forced alignment chunking: when the time gap between adjacent sentences exceeds this many seconds, the sentences are split into independent chunk blocks.
+    /// Each chunk launches the alignment process only once, greatly reducing process and model loading overhead for long audio. Defaults to 2.0 seconds.
     /// </summary>
     public double AlignmentChunkGapSeconds { get; init; } = 2.0;
     /// <summary>
-    /// 强制对齐分段：单个分段块的最大音频时长（秒）。
-    /// 超过后强制另起一块，避免单次对齐超出模型的上下文窗口。默认 120 秒。
+    /// Forced alignment chunking: maximum audio duration in seconds per chunk block.
+    /// Beyond it a new block is forced, keeping a single alignment within the model's context window. Defaults to 120 seconds.
     /// </summary>
     public double AlignmentMaxChunkSeconds { get; init; } = 120.0;
 
-    // ---------- 对齐前文本清洗 ----------
-    /// <summary>是否在对齐前启用文本清洗。</summary>
+    // ---------- Pre-alignment Text Cleaning ----------
+    /// <summary>Whether to enable text cleaning before alignment.</summary>
     public bool EnableTextCleaning { get; init; } = true;
-    /// <summary>清洗时是否移除标点。</summary>
+    /// <summary>Whether to remove punctuation during cleaning.</summary>
     public bool RemovePunctuation { get; init; } = false;
-    /// <summary>清洗时是否把数字展开为文字。</summary>
+    /// <summary>Whether to expand numbers into words during cleaning.</summary>
     public bool ExpandNumbers { get; init; } = true;
-    /// <summary>清洗时是否把缩写展开为全称。</summary>
+    /// <summary>Whether to expand abbreviations into full forms during cleaning.</summary>
     public bool ExpandAbbreviations { get; init; } = false;
-    /// <summary>自定义清洗词典文件路径，可为空。</summary>
+    /// <summary>Path of a custom cleaning dictionary file; may be null.</summary>
     public string? CustomDictPath { get; init; }
 
-    // ---------- 翻译模块（translate 子命令） ----------
-    /// <summary>翻译的目标语言代码（如 zh、en、ja），translate 命令必填。</summary>
+    // ---------- Translation Module (translate subcommand) ----------
+    /// <summary>Target language code for translation, such as zh, en, or ja; required by the translate command.</summary>
     public string TargetLanguage { get; init; } = string.Empty;
-    /// <summary>翻译策略名称（如 llm），默认 llm。</summary>
+    /// <summary>Translation strategy name, such as llm; defaults to llm.</summary>
     public string TranslationStrategy { get; init; } = "llm";
-    /// <summary>LLM 翻译使用的模型名，可为空（OpenAI 默认 gpt-4o-mini，Ollama 默认 llama3.1）。</summary>
+    /// <summary>Model name used for LLM translation; may be null (OpenAI defaults to gpt-4o-mini, Ollama defaults to llama3.1).</summary>
     public string? TranslationModel { get; init; }
-    /// <summary>LLM 翻译所需的 API 密钥；为空时回退本地 Ollama。</summary>
+    /// <summary>API key required for LLM translation; falls back to local Ollama when empty.</summary>
     public string? TranslationApiKey { get; init; }
-    /// <summary>LLM 翻译服务提供商名（如 deepseek、moonshot、openrouter；为空自动推断）。</summary>
+    /// <summary>LLM translation service provider name, such as deepseek, moonshot, or openrouter; inferred automatically when empty.</summary>
     public string? TranslationProvider { get; init; }
-    /// <summary>LLM 翻译自定义端点；为空时使用所选提供商默认端点。</summary>
+    /// <summary>Custom endpoint for LLM translation; when empty the selected provider's default endpoint is used.</summary>
     public string? TranslationBaseUrl { get; init; }
-    /// <summary>术语表文件路径（JSON：源语言术语与目标语言术语的映射），可为空。</summary>
+    /// <summary>Glossary file path, a JSON mapping source-language terms to target-language terms; may be null.</summary>
     public string? GlossaryPath { get; init; }
-    /// <summary>目标语言台本文件路径（每行一句目标语言译文），可为空。</summary>
+    /// <summary>Target-language script file path, one target-language translation per line; may be null.</summary>
     public string? TargetScriptPath { get; init; }
-    /// <summary>是否输出双语字幕（原文 \\N 译文），默认仅目标语言。</summary>
+    /// <summary>Whether to output bilingual subtitles, source \\N translation; defaults to target language only.</summary>
     public bool Bilingual { get; init; } = false;
 
-    // ── dub（媒体译制）相关 ──
+    // ── Dub (media localization) ──
 
-    /// <summary>TTS 引擎（当前仅 "llama"，即 llama.cpp llama-tts）。</summary>
+    /// <summary>TTS engine; currently only "llama", i.e. llama.cpp llama-tts.</summary>
     public string TtsEngine { get; init; } = "llama";
 
-    /// <summary>TTS 模型（metadata.json Models 中注册的名称，如 1.7b-base-q4）。</summary>
+    /// <summary>TTS model; the name registered in metadata.json Models, such as 1.7b-base-q4.</summary>
     public string TtsModel { get; init; } = "1.7b-base-q4";
 
-    /// <summary>配音目标语言（ISO 639-1，如 zh/en/ja），用于 llama-tts --tts-lang。</summary>
+    /// <summary>Dubbing target language in ISO 639-1, such as zh/en/ja, used for llama-tts --tts-lang.</summary>
     public string TtsLanguage { get; init; } = "zh";
 
-    /// <summary>可选：手动指定说话人参考音频目录（每说话人一个 wav，文件名 SPEAKER_xx.wav）。</summary>
+    /// <summary>Optional: manually specify the speaker reference audio directory, one wav per speaker, named SPEAKER_xx.wav.</summary>
     public string? SpeakerReferenceDir { get; init; }
 
-    /// <summary>可选：双语模式下的译文轨文件路径（与主字幕按时间窗匹配）。</summary>
+    /// <summary>Optional: path of the translation subtitle track file in bilingual mode, matched to the main subtitle by time window.</summary>
     public string? TranslationSubtitlePath { get; init; }
 
-    /// <summary>TTS 语速调整范围之外时使用的处理策略（true=钳制到 0.5x~2.0x 边界，false=保留原合成时长）。</summary>
+    /// <summary>Strategy when TTS speech rate falls outside the allowed range: true clamps to the 0.5x~2.0x boundaries, false keeps the original synthesis duration.</summary>
     public bool DubStrictTiming { get; init; } = true;
 
-    /// <summary>可选：伴奏/背景音频路径（提供后启用 ducking 混音）。</summary>
+    /// <summary>Optional: path of accompaniment/background audio; providing it enables ducking mixing.</summary>
     public string? DubBackgroundPath { get; init; }
 
-    /// <summary>输出响度目标（LUFS，默认 -16）。</summary>
+    /// <summary>Output loudness target in LUFS; defaults to -16.</summary>
     public double DubLoudnessTarget { get; init; } = -16;
 
-    /// <summary>TTS 合成并行度（默认 2；内存吃紧时调 1）。</summary>
+    /// <summary>TTS synthesis parallelism; defaults to 2, lower to 1 when memory is tight.</summary>
     public int TtsParallelism { get; init; } = 2;
 
-    /// <summary>长句分块阈值（秒，默认 15；目标时长超过时按比例拆分子段）。</summary>
+    /// <summary>Long-sentence chunking threshold in seconds; defaults to 15, and longer target durations are split into sub-segments proportionally.</summary>
     public double DubMaxChunkSeconds { get; init; } = 15;
 
-    /// <summary>是否启用 ducking（有伴奏时默认开启）。</summary>
+    /// <summary>Whether to enable ducking; on by default when accompaniment is present.</summary>
     public bool DubDucking { get; init; } = true;
 }

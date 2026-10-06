@@ -13,9 +13,9 @@ using Centurion.Core.Capabilities.Managers.Tools;
 namespace Centurion.Core.Workflow.Strategy.Alignment;
 
 /// <summary>
-/// 基于 CrispASR 的强制对齐策略：将句子按时间间隙/时长聚合为分段块（chunk），
-/// 每个块裁剪一段音频并仅启动一次对齐进程，再把词级时间戳按词数切分映射回各句。
-/// 分段处理显著降低长音频的进程与模型加载开销；单块失败时保留块内各句的粗时间。
+/// Forced alignment strategy based on CrispASR: aggregates sentences into chunks by time gap or duration,
+/// clips one audio segment per chunk, runs the alignment process once, then splits word-level timestamps
+/// back across sentences by word count. Chunked processing cuts overhead; on failure, coarse timings are kept.
 /// </summary>
 public sealed class CrispAsrAlignmentStrategy(
     IModelPathResolver modelPathResolver,
@@ -23,22 +23,22 @@ public sealed class CrispAsrAlignmentStrategy(
     ILogger<CrispAsrAlignmentStrategy> logger,
     string modelName) : IAlignmentStrategy
 {
-    /// <summary>分段块内最大句子数，超过后强制另起一块。</summary>
+    /// <summary>Maximum number of sentences per chunk; a new chunk is forced once this is exceeded.</summary>
     private const int MaxSentencesPerChunk = 50;
 
-    /// <summary>相邻句子的时间间隙超过该秒数时切分为独立块（默认 2.0 秒）。</summary>
+    /// <summary>Split into a new chunk when the time gap between adjacent sentences exceeds this many seconds (default 2.0 seconds).</summary>
     public double ChunkGapSeconds { get; set; } = 2.0;
 
-    /// <summary>单个分段块的最大音频时长（秒），超过后强制另起一块（默认 120 秒）。</summary>
+    /// <summary>Maximum audio duration (seconds) per chunk; a new chunk is forced once this is exceeded (default 120 seconds).</summary>
     public double MaxChunkSeconds { get; set; } = 120.0;
 
     /// <summary>
-    /// 对给定句子执行强制对齐，返回时间戳细化后的句子列表。
-    /// 句子按间隙/时长聚合成块，逐块裁剪音频并对齐，词级时间戳切分回各句。
+    /// Performs forced alignment on the given sentences and returns the list with refined timestamps.
+    /// Sentences are aggregated into chunks by gap or duration; audio is clipped and aligned per chunk, then word-level timings are split back across the sentences.
     /// </summary>
-    /// <param name="sentences">待对齐的句子集合（就地更新时间戳）。</param>
-    /// <param name="audioPath">对应的音频文件路径。</param>
-    /// <param name="cancellationToken">用于取消对齐过程的取消标记。</param>
+    /// <param name="sentences">The sentences to align; their timestamps are updated in place.</param>
+    /// <param name="audioPath">Path to the corresponding audio file.</param>
+    /// <param name="cancellationToken">Token used to cancel the alignment process.</param>
     public async Task<List<Sentence>> AlignAsync(List<Sentence> sentences, string audioPath, CancellationToken cancellationToken)
     {
         if (sentences.Count == 0)
@@ -105,10 +105,10 @@ public sealed class CrispAsrAlignmentStrategy(
     }
 
     /// <summary>
-    /// 将句子按时间间隙、块时长与块内句数上限聚合为对齐分段（internal，便于单元测试）。
-    /// 切分条件（满足任一即另起一块）：与上一句间隙超过 <paramref name="chunkGapSeconds"/>；
-    /// 块累计时长超过 <paramref name="maxChunkSeconds"/>；块内句数达到 <paramref name="maxSentencesPerChunk"/>。
-    /// 无有效时间窗口的句子（End &lt;= Start）被排除在块外。
+    /// Aggregates sentences into chunks by time gap, chunk duration, and per-chunk sentence cap (internal, for unit testing).
+    /// Split conditions (any one starts a new chunk): gap from the previous sentence exceeds <paramref name="chunkGapSeconds"/>;
+    /// accumulated duration exceeds <paramref name="maxChunkSeconds"/>; sentence count reaches <paramref name="maxSentencesPerChunk"/>.
+    /// Sentences with no valid time window (End &lt;= Start) are excluded from the chunks.
     /// </summary>
     internal static List<AlignmentChunk> BuildChunks(
         List<Sentence> sentences,
@@ -158,12 +158,12 @@ public sealed class CrispAsrAlignmentStrategy(
     }
 
     /// <summary>
-    /// 把一个块的词级时间序列按各句词数切分并写回各句（internal，便于单元测试）。
-    /// 时间条目不足的句子按现有容错逻辑截断（部分词保留粗时间）；无词且无文本的句子跳过。
+    /// Splits a chunk's word-level timings across its sentences by word count and writes them back (internal, for unit testing).
+    /// Sentences with insufficient timing entries are truncated by existing fallback logic (some words keep coarse timings); sentences with no words and no text are skipped.
     /// </summary>
-    /// <param name="chunkSentences">块内句子（就地更新）。</param>
-    /// <param name="timings">对齐器返回的词级时间（块内音频的相对秒数）。</param>
-    /// <param name="offsetMilliseconds">块内音频相对原始音频的时间偏移（毫秒）。</param>
+    /// <param name="chunkSentences">The sentences within the chunk (updated in place).</param>
+    /// <param name="timings">Word-level timings returned by the aligner, in relative seconds within the chunk audio.</param>
+    /// <param name="offsetMilliseconds">Time offset of the chunk audio relative to the original audio, in milliseconds.</param>
     internal static void SplitTimingsAcrossSentences(
         List<Sentence> chunkSentences,
         List<(double Start, double End)> timings,
@@ -190,7 +190,7 @@ public sealed class CrispAsrAlignmentStrategy(
         }
     }
 
-    /// <summary>把块内句子文本以空格连接为单行参考文本，并转义引号/反斜杠。</summary>
+    /// <summary>Joins the chunk's sentence texts with spaces into a single-line reference text, escaping quotes and backslashes.</summary>
     private static string BuildReferenceText(List<Sentence> chunkSentences) =>
         string.Join(" ", chunkSentences
             .Where(sentence => !string.IsNullOrWhiteSpace(sentence.Text))
@@ -272,5 +272,5 @@ public sealed class CrispAsrAlignmentStrategy(
     }
 }
 
-/// <summary>一个对齐分段块：块内句子列表及其覆盖的时间窗口（秒）。</summary>
+/// <summary>An alignment chunk: the list of sentences in the chunk and the time window (seconds) it covers.</summary>
 internal sealed record AlignmentChunk(List<Sentence> Sentences, double StartSeconds, double EndSeconds);

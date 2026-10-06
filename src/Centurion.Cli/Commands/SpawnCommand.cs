@@ -97,6 +97,7 @@ public sealed class SpawnCommand(
                 MergeGapSeconds = 1.5,
                 EnablePunctuationRewrite = true,
                 SplitterModel = settings.SplitterModel,
+                SplitterThreshold = settings.SplitterThreshold,
                 SplitterApiKey = settings.SplitterApiKey,
                 SplitterProvider = settings.LlmProvider,
                 SplitterBaseUrl = settings.LlmBaseUrl,

@@ -27,6 +27,12 @@ public record ModelMeta
     /// <summary>Optional subdirectory for the model within the download root.</summary>
     public string? Subdirectory { get; init; }
     /// <summary>
+    /// Optional per-file absolute download URLs, overriding the base <see cref="DownloadUrl"/> prefix for
+    /// directory models. Used when some files live in a different repository (e.g. a shared tokenizer).
+    /// Keys are the relative file names from <see cref="Files"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? FileUrls { get; init; }
+    /// <summary>
     /// Optional SHA-256 hash for the downloaded file or package, in lowercase hexadecimal.
     /// Null disables verification; when provided, the download is verified and deleted on mismatch.
     /// </summary>
@@ -87,7 +93,9 @@ public sealed class ModelRegistry
         BuildDefaultDict(BuildDefaultDiarizationModels()),
         BuildDefaultDict(BuildDefaultBertOnnxModels()),
         BuildDefaultDict(BuildDefaultQwen3TtsModels()),
-        BuildDefaultDict(BuildDefaultIndexTtsModels()));
+        BuildDefaultDict(BuildDefaultIndexTtsModels()),
+        BuildDefaultDict(BuildDefaultOpusMtModels()),
+        BuildDefaultDict(BuildDefaultSatModels()));
 
     /// <summary>Whisper.cpp single-file models, keyed by model size (tiny/base/.../large).</summary>
     public IReadOnlyDictionary<string, ModelMeta> WhisperModels { get; }
@@ -105,6 +113,19 @@ public sealed class ModelRegistry
     public IReadOnlyDictionary<string, ModelMeta> Qwen3TtsModels { get; }
     /// <summary>IndexTTS-Rust models used by dub --tts-engine indextts, keyed by model name.</summary>
     public IReadOnlyDictionary<string, ModelMeta> IndexTtsModels { get; }
+    /// <summary>
+    /// OPUS-MT (Helsinki-NLP) local machine-translation models converted to ONNX (Xenova), keyed by language
+    /// pair ("zh-en", "en-zh", "en-jap", ...). The plain key selects the int8 quantized build; the
+    /// "-fp32" suffix selects the full-precision build. Downloaded on first use via
+    /// <c>Centurion models install &lt;pair&gt;</c> or automatically by <c>translate --strategy opus</c>.
+    /// </summary>
+    public IReadOnlyDictionary<string, ModelMeta> OpusMtModels { get; }
+    /// <summary>
+    /// SaT (segment-any-text) sentence-segmentation ONNX models for the "sat" split strategy, keyed by
+    /// model name ("sat-3l-sm"). Files come from the segment-any-text repository; the XLM-R tokenizer
+    /// files are shared from the xlm-roberta-base repository via <see cref="ModelMeta.FileUrls"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, ModelMeta> SatModels { get; }
 
     /// <summary>Creates a registry from model dictionaries.</summary>
     /// <param name="whisperModels">Whisper.cpp models.</param>
@@ -115,6 +136,8 @@ public sealed class ModelRegistry
     /// <param name="bertOnnxModels">BERT ONNX models.</param>
     /// <param name="qwen3TtsModels">Qwen3-TTS models.</param>
     /// <param name="indexttsModels">IndexTTS-Rust models.</param>
+    /// <param name="opusMtModels">OPUS-MT ONNX translation models.</param>
+    /// <param name="satModels">SaT sentence-segmentation ONNX models.</param>
     public ModelRegistry(
         IReadOnlyDictionary<string, ModelMeta> whisperModels,
         IReadOnlyDictionary<string, ModelMeta> fasterWhisperModels,
@@ -123,7 +146,9 @@ public sealed class ModelRegistry
         IReadOnlyDictionary<string, ModelMeta> diarizationModels,
         IReadOnlyDictionary<string, ModelMeta> bertOnnxModels,
         IReadOnlyDictionary<string, ModelMeta> qwen3TtsModels,
-        IReadOnlyDictionary<string, ModelMeta> indexttsModels)
+        IReadOnlyDictionary<string, ModelMeta> indexttsModels,
+        IReadOnlyDictionary<string, ModelMeta> opusMtModels,
+        IReadOnlyDictionary<string, ModelMeta>? satModels = null)
     {
         WhisperModels = whisperModels ?? throw new ArgumentNullException(nameof(whisperModels));
         FasterWhisperModels = fasterWhisperModels ?? throw new ArgumentNullException(nameof(fasterWhisperModels));
@@ -133,6 +158,8 @@ public sealed class ModelRegistry
         BertOnnxModels = bertOnnxModels ?? throw new ArgumentNullException(nameof(bertOnnxModels));
         Qwen3TtsModels = qwen3TtsModels ?? throw new ArgumentNullException(nameof(qwen3TtsModels));
         IndexTtsModels = indexttsModels ?? throw new ArgumentNullException(nameof(indexttsModels));
+        OpusMtModels = opusMtModels ?? throw new ArgumentNullException(nameof(opusMtModels));
+        SatModels = satModels ?? new Dictionary<string, ModelMeta>(StringComparer.OrdinalIgnoreCase);
     }
 
     // ---------- Built-in defaults (formerly hard-coded registry data) ----------
@@ -287,6 +314,62 @@ public sealed class ModelRegistry
         }
     };
 
+    // OPUS-MT (Helsinki-NLP) translation models, ONNX conversions published by Xenova for Transformers.js.
+    // Each language pair ships two builds: int8 quantized (default, ~160 MB) and full-precision fp32 (~640 MB).
+    // Tokenizers are SentencePiece (source.spm shared by both sides; separate_vocabs=false for all pairs here).
+    private static Dictionary<string, ModelMeta> BuildDefaultOpusMtModels()
+    {
+        const string opusMtBase = "https://hf-mirror.com/Xenova/opus-mt-{pair}/resolve/main";
+        string[] pairs = ["zh-en", "en-zh", "en-jap", "ja-en", "en-fr", "fr-en", "en-de", "de-en", "en-es", "en-ru", "en-it"];
+        var dict = new Dictionary<string, ModelMeta>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in pairs)
+        {
+            var baseUrl = opusMtBase.Replace("{pair}", pair, StringComparison.Ordinal);
+            var shared = new List<string> { "source.spm", "target.spm", "vocab.json", "config.json" };
+
+            // int8 quantized build (default): fast CPU inference, ~160 MB total.
+            var int8Files = new List<string>
+            {
+                "onnx/encoder_model_quantized.onnx",
+                "onnx/decoder_model_quantized.onnx",
+                "onnx/decoder_with_past_model_quantized.onnx"
+            };
+            int8Files.AddRange(shared);
+            dict[pair] = new ModelMeta(baseUrl, int8Files, "translation");
+
+            // fp32 build: full precision, ~640 MB total.
+            var fp32Files = new List<string>
+            {
+                "onnx/encoder_model.onnx",
+                "onnx/decoder_model.onnx",
+                "onnx/decoder_with_past_model.onnx"
+            };
+            fp32Files.AddRange(shared);
+            dict[pair + "-fp32"] = new ModelMeta(baseUrl, fp32Files, "translation");
+        }
+        return dict;
+    }
+
     private static IReadOnlyDictionary<string, ModelMeta> BuildDefaultDict(Dictionary<string, ModelMeta> source) =>
         new Dictionary<string, ModelMeta>(source, StringComparer.OrdinalIgnoreCase);
+
+    // SaT (segment-any-text) sentence-segmentation models. The official repos publish the ONNX graph
+    // directly (model.onnx, fp16) but no tokenizer; the XLM-R SentencePiece BPE model and the
+    // tokenizer vocab (id order) are shared from the xlm-roberta-base repositories via FileUrls.
+    private static Dictionary<string, ModelMeta> BuildDefaultSatModels() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["sat-3l-sm"] = new ModelMeta(
+            "https://hf-mirror.com/segment-any-text/sat-3l-sm/resolve/main",
+            ["model.onnx", "config.json", "sentencepiece.bpe.model", "tokenizer.json"],
+            "token_classification")
+        {
+            FileUrls = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["sentencepiece.bpe.model"] =
+                    "https://hf-mirror.com/FacebookAI/xlm-roberta-base/resolve/main/sentencepiece.bpe.model",
+                ["tokenizer.json"] =
+                    "https://hf-mirror.com/Xenova/xlm-roberta-base/resolve/main/tokenizer.json"
+            }
+        }
+    };
 }

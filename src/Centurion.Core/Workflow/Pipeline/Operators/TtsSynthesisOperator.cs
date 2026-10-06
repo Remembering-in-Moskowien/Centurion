@@ -9,29 +9,29 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// TTS 合成算子（dub Phase 3）：为每句调用 TTS 引擎合成 wav 片段。
-/// 支持并行合成（按说话人分桶，桶内保序、桶间并行，受 <c>DubConfig.TtsParallelism</c> 全局限流）
-/// 与长句分块（目标时长超过阈值时按比例拆分子段，连续放置后由混音阶段拼接）。
-/// 单句合成失败记录 Warning 并标记 Skipped，不阻断整条管道。
-/// 结果写入 State.DubSegments（List&lt;DubSegment&gt;，按原句序）。
+/// TTS synthesis operator (dub Phase 3): synthesizes a wav clip for each sentence by calling the TTS engine.
+/// Supports parallel synthesis (bucketed by speaker; order preserved within a bucket, parallel across buckets, bounded by the <c>DubConfig.TtsParallelism</c> global limit)
+/// and long-sentence chunking (when the target duration exceeds a threshold, splits the text into sub-segments proportionally, places them contiguously, and splices them in the mixing stage).
+/// A failed single-sentence synthesis logs a Warning and marks it Skipped, without blocking the whole pipeline.
+/// Results are written to State.DubSegments (List&lt;DubSegment&gt;, in original sentence order).
 /// </summary>
 public sealed class TtsSynthesisOperator(
     IServiceProvider serviceProvider,
     ILogger<TtsSynthesisOperator> logger)
     : PipelineOperatorBase<TtsSynthesisOperator>(logger)
 {
-    /// <summary>单句最大字符数：超过则截断（避免 TTS 超长句失败）。</summary>
+    /// <summary>Maximum characters per sentence: longer text is truncated (to avoid TTS failures on overly long sentences).</summary>
     private const int MaxCharsPerSentence = 200;
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "TTS Synthesis";
 
     /// <summary>
-    /// 合成全部句子：先按目标时长/字符数把长句拆成多个工作项（分块），
-    /// 再按说话人分组并行合成（同一说话人串行保序），最后按原始句序重组 DubSegments。
+    /// Synthesizes all sentences: first splits long sentences into multiple work items (chunking) by target duration/character count,
+    /// then synthesizes in parallel grouped by speaker (same speaker serialized in order), and finally reassembles DubSegments in original sentence order.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var sentences = context.State.CurrentSentences;
@@ -48,7 +48,7 @@ public sealed class TtsSynthesisOperator(
         var maxChunkSeconds = Math.Max(5, context.Config.DubMaxChunkSeconds);
         var tempDir = context.State.PipelineTempDirectory ?? throw new InvalidOperationException("Pipeline temp directory is not initialized.");
 
-        // 1) 构造工作项（长句分块）：保留原始顺序索引
+        // 1) Build work items (long-sentence chunking): keep the original order index
         var workItems = new List<WorkItem>();
         for (var i = 0; i < sentences.Count; i++)
         {
@@ -57,9 +57,10 @@ public sealed class TtsSynthesisOperator(
             if (text.Length == 0)
                 continue;
 
-            var targetMs = Math.Max(0, sentence.End - sentence.Start);
-            var chunks = SplitLongSentence(text, targetMs, maxChunkSeconds);
-            var chunkDuration = targetMs / (double)chunks.Count;
+            // sentence.Start/End are seconds; DubSegment.TargetStartMs/TargetEndMs are milliseconds.
+            var targetSec = Math.Max(0, sentence.End - sentence.Start);
+            var chunks = SplitLongSentence(text, targetSec * 1000, maxChunkSeconds);
+            var chunkDurationSec = targetSec / (double)chunks.Count;
             for (var c = 0; c < chunks.Count; c++)
             {
                 workItems.Add(new WorkItem
@@ -68,13 +69,13 @@ public sealed class TtsSynthesisOperator(
                     Text = chunks[c],
                     Speaker = sentence.Speaker,
                     Reference = sentence.Speaker != null && references.TryGetValue(sentence.Speaker, out var r) ? r : null,
-                    TargetStartMs = sentence.Start + c * chunkDuration,
-                    TargetEndMs = c == chunks.Count - 1 ? sentence.End : sentence.Start + (c + 1) * chunkDuration
+                    TargetStartMs = (sentence.Start + c * chunkDurationSec) * 1000,
+                    TargetEndMs = (c == chunks.Count - 1 ? sentence.End : sentence.Start + (c + 1) * chunkDurationSec) * 1000
                 });
             }
         }
 
-        // 2) 按说话人分桶（null 说话人合并为一桶），桶内保序
+        // 2) Bucket by speaker (null speakers merged into one bucket); order preserved within each bucket
         var buckets = workItems
             .GroupBy(w => w.Speaker ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.OrderBy(w => w.SentenceIndex).ThenBy(w => w.TargetStartMs).ToList())
@@ -84,7 +85,7 @@ public sealed class TtsSynthesisOperator(
         using var gate = new SemaphoreSlim(parallelism, parallelism);
         var lockObject = new object();
 
-        // 3) 桶间并行合成；同桶串行（按序）
+        // 3) Synthesize in parallel across buckets; serialized within a bucket (in order)
         var bucketTasks = buckets.Select(async bucket =>
         {
             foreach (var item in bucket)
@@ -132,7 +133,7 @@ public sealed class TtsSynthesisOperator(
 
         await Task.WhenAll(bucketTasks);
 
-        // 4) 按原始顺序（句子索引升序，同一句内子段按时序）重组
+        // 4) Reassemble in original order (sentence index ascending; sub-segments within a sentence ordered by time)
         var finalSegments = segments
             .OrderBy(s => GetSentenceOrder(s.TargetStartMs, sentences))
             .ThenBy(s => s.TargetStartMs)
@@ -145,9 +146,9 @@ public sealed class TtsSynthesisOperator(
     }
 
     /// <summary>
-    /// 按 <see cref="WorkflowConfig.TtsEngine"/> 解析 TTS 引擎（"indextts" → IndexTTS-Rust，其他 → llama-tts）。
+    /// Resolves the TTS engine according to <see cref="WorkflowConfig.TtsEngine"/> ("indextts" -> IndexTTS-Rust, others -> llama-tts).
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
+    /// <param name="context">Workflow context.</param>
     private ITtsEngine ResolveEngine(SubtitleWorkflowContext context)
     {
         var name = context.Config.TtsEngine?.Trim().ToLowerInvariant() ?? "llama";
@@ -163,20 +164,21 @@ public sealed class TtsSynthesisOperator(
     {
         for (var i = 0; i < sentences.Count; i++)
         {
-            if (Math.Abs(sentences[i].Start - targetStartMs) < 1)
+            // sentences[].Start is seconds; targetStartMs is milliseconds.
+            if (Math.Abs(sentences[i].Start * 1000 - targetStartMs) < 1)
                 return i;
         }
         return sentences.Count;
     }
 
     /// <summary>
-    /// 长句分块：目标时长超过 maxChunkSeconds 时按时长比例把文本切成若干子句。
-    /// 中文/日文按字符切，其他按空格/标点切；子句数下限 1、上限 8。
+    /// Long-sentence chunking: when the target duration exceeds maxChunkSeconds, splits the text into sub-segments proportionally by duration.
+    /// Chinese/Japanese split by character; others split by whitespace/punctuation; sub-segment count has a lower bound of 1 and an upper bound of 8.
     /// </summary>
-    /// <param name="text">目标文本。</param>
-    /// <param name="targetMs">目标时长（毫秒）。</param>
-    /// <param name="maxChunkSeconds">单块最大目标时长（秒）。</param>
-    /// <returns>子句列表（至少一项）。</returns>
+    /// <param name="text">Target text.</param>
+    /// <param name="targetMs">Target duration (milliseconds).</param>
+    /// <param name="maxChunkSeconds">Maximum target duration per chunk (seconds).</param>
+    /// <returns>The list of sub-segments (at least one item).</returns>
     internal static List<string> SplitLongSentence(string text, double targetMs, double maxChunkSeconds)
     {
         if (targetMs <= 0 || targetMs / 1000.0 <= maxChunkSeconds || text.Length <= 2)
@@ -190,11 +192,11 @@ public sealed class TtsSynthesisOperator(
     }
 
     /// <summary>
-    /// 把文本按字符数尽量均匀地切成 n 块，优先在空白/标点处断开（英文），CJK 直接按字符切。
+    /// Splits the text into n chunks as evenly as possible by character count, preferring breaks at whitespace/punctuation (English); CJK is split directly by character.
     /// </summary>
-    /// <param name="text">输入文本。</param>
-    /// <param name="chunkCount">目标块数。</param>
-    /// <returns>切分后的子句列表。</returns>
+    /// <param name="text">Input text.</param>
+    /// <param name="chunkCount">Target number of chunks.</param>
+    /// <returns>The split sub-segments.</returns>
     internal static List<string> SplitText(string text, int chunkCount)
     {
         var isCjk = text.Any(ch => ch > 0x2E80);
@@ -202,7 +204,7 @@ public sealed class TtsSynthesisOperator(
 
         if (!isCjk)
         {
-            // 英文等空格语系：优先在标点/空格断开
+            // English and other whitespace-script languages: prefer breaking at punctuation/whitespace
             var tokens = text.Split(' ');
             var targetPerChunk = Math.Ceiling(tokens.Length / (double)chunkCount);
             var current = new List<string>();
@@ -222,14 +224,14 @@ public sealed class TtsSynthesisOperator(
             return results;
         }
 
-        // CJK：按字符均匀切
+        // CJK: split evenly by character
         var perChunk = Math.Max(1, (int)Math.Ceiling(text.Length / (double)chunkCount));
         for (var i = 0; i < text.Length; i += perChunk)
             results.Add(text.Substring(i, Math.Min(perChunk, text.Length - i)));
         return results;
     }
 
-    /// <summary>内部工作项：句子索引 + 目标文本 + 说话人/参考 + 目标时间窗。</summary>
+    /// <summary>Internal work item: sentence index + target text + speaker/reference + target time window.</summary>
     private sealed class WorkItem
     {
         public int SentenceIndex { get; init; }

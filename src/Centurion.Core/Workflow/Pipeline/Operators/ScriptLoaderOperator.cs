@@ -8,28 +8,28 @@ using Centurion.Abstractions.Utils;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 脚本加载算子：从配置的脚本文件逐行读取文本，每行作为一个 <see cref="Sentence"/>，
-/// 写入工作流状态，供"带脚本"工作流作为字幕分段的唯一依据。
+/// Script loading operator: reads text line by line from the configured script file, treats each line as one <see cref="Sentence"/>,
+/// and writes them to the workflow state, serving the scripted workflow as the sole basis for subtitle segmentation.
 /// </summary>
 public sealed class ScriptLoaderOperator : PipelineOperatorBase<ScriptLoaderOperator>
 {
     private readonly ILogger<ScriptLoaderOperator> _logger;
 
-    /// <summary>创建脚本加载算子实例。</summary>
-    /// <param name="logger">记录脚本加载日志的记录器。</param>
+    /// <summary>Creates a script loading operator instance.</summary>
+    /// <param name="logger">Logger that records script loading.</param>
     public ScriptLoaderOperator(ILogger<ScriptLoaderOperator> logger) : base(logger)
     {
         _logger = logger;
     }
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Script Loading";
 
     /// <summary>
-    /// 读取脚本文件并按非空行切分为句子，写入工作流状态。
+    /// Reads the script file and splits it into sentences by non-empty lines, writing to workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供脚本文件路径。</param>
-    /// <param name="cancellationToken">用于取消读取过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the script file path.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the reading process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var path = context.Config.ScriptFilePath;

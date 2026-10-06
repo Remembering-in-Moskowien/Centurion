@@ -1,19 +1,19 @@
 namespace Centurion.Models.Workflow;
 
 /// <summary>
-/// 一次拼写检查发现的疑点：可疑词、所在句子与候选建议。
+/// A suspect found by one spell check run: the suspicious word, the sentence containing it, and candidate suggestions.
 /// </summary>
 public sealed class SpellCheckIssue
 {
-    /// <summary>可疑词在句子中的序号（从 0 开始）。</summary>
+    /// <summary>Zero-based index of the suspicious word within its sentence.</summary>
     public int SentenceIndex { get; init; }
 
-    /// <summary>可疑词原文。</summary>
+    /// <summary>The suspicious word as it appears.</summary>
     public string Word { get; init; } = "";
 
-    /// <summary>可疑词所在句子文本。</summary>
+    /// <summary>Text of the sentence containing the suspicious word.</summary>
     public string Context { get; init; } = "";
 
-    /// <summary>Hunspell 给出的候选建议（最多 5 条）。</summary>
+    /// <summary>Candidate suggestions from Hunspell, at most 5.</summary>
     public List<string> Suggestions { get; init; } = [];
 }

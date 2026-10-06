@@ -24,14 +24,33 @@ internal static class ModelCatalog
         new("qwen3aligner", "qwen3aligner", registry.Qwen3ForcedAlignerModels),
         new("bert", "bert", registry.BertOnnxModels),
         new("qwen3tts", "qwen3tts", registry.Qwen3TtsModels),
-        new("indextts", "indextts", registry.IndexTtsModels)
+        new("indextts", "indextts", registry.IndexTtsModels),
+        new("opusmt", "opusmt", registry.OpusMtModels),
+        new("sat", "sat", registry.SatModels)
     ];
 
-    /// <summary>Matches a model name across all domains (case-insensitive); returns (domain, model name, metadata).</summary>
+    /// <summary>
+    /// Matches a model name across all domains. Supports both a bare name (e.g. "tiny", matched exactly across
+    /// all domains) and a domain-qualified name (e.g. "whispercpp/tiny", matched against that domain only).
+    /// </summary>
     internal static IReadOnlyList<(ModelDomain Domain, string ModelName, ModelMeta Meta)> Find(
         IReadOnlyList<ModelDomain> domains, string modelName)
     {
         var hits = new List<(ModelDomain, string, ModelMeta)>();
+        var slash = modelName.IndexOf('/');
+        if (slash >= 0)
+        {
+            var domainName = modelName[..slash].Trim();
+            var namePart = modelName[(slash + 1)..].Trim();
+            var domain = domains.FirstOrDefault(d => string.Equals(d.Name, domainName, StringComparison.OrdinalIgnoreCase));
+            if (domain is null)
+                return hits;
+            var key = domain.Models.Keys.FirstOrDefault(k => string.Equals(k, namePart, StringComparison.OrdinalIgnoreCase));
+            if (key is not null)
+                hits.Add((domain, key, domain.Models[key]));
+            return hits;
+        }
+
         foreach (var domain in domains)
         {
             var key = domain.Models.Keys.FirstOrDefault(k =>

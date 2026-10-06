@@ -8,23 +8,23 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 合并管道的句子合并算子：把 <see cref="CombineParseOperator"/> 解析出的全部来源
-/// 按时间轴交错合并为单一句子集合（稳定排序：同起始时间保持来源顺序），
-/// 每条句子标记 <see cref="Sentence.Source"/>，ASS 样式表按来源顺序合并（同名样式首个来源优先）。
-/// 结果写入 CurrentSentences（下游去重/质量报告消费），来源原始列表消费后从扩展槽移除。
+/// Sentence merging operator for the combine pipeline: interleaves all sources parsed by
+/// <see cref="CombineParseOperator"/> by timeline into a single sentence set (stable sort: equal start times keep source order),
+/// marks each sentence with <see cref="Sentence.Source"/>, and merges ASS style tables in source order (the first source wins for duplicate style names).
+/// The result is written to CurrentSentences (consumed by downstream dedupe / quality report); raw source lists are removed from extension slots after consumption.
 /// </summary>
 public sealed class CombineMergeOperator(ILogger<CombineMergeOperator> logger)
     : PipelineOperatorBase<CombineMergeOperator>(logger)
 {
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Combine Merge";
 
     /// <summary>
-    /// 合并全部来源句子并标记来源。
+    /// Merges all source sentences and marks their origin.
     /// </summary>
-    /// <param name="context">工作流上下文（Extensions 须含来源列表）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <exception cref="InvalidOperationException">扩展槽中没有可合并的来源。</exception>
+    /// <param name="context">Workflow context (Extensions must contain the source lists).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">No mergeable sources in the extension slots.</exception>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.Extensions.TryGetValue(CombineParseOperator.SourcesKey, out var raw)
@@ -47,12 +47,12 @@ public sealed class CombineMergeOperator(ILogger<CombineMergeOperator> logger)
     }
 
     /// <summary>
-    /// 纯合并算法（供算子与单元测试共用）：来源顺序稳定 → 按 Start 升序（次序保持）；
-    /// 每条句子打来源标记；来源样式表并入样式聚合表（同名首个优先）。
+    /// Pure merge algorithm (shared by the operator and unit tests): sources stay ordered, then sorted
+    /// by Start ascending (order preserved); each sentence gets its source tag; source style tables merge into the aggregated table (first source wins for duplicates).
     /// </summary>
-    /// <param name="sources">来源列表（按输入顺序）。</param>
-    /// <param name="styles">样式聚合表（就地追加；通常传 State.Styles）。</param>
-    /// <returns>合并后的句子列表。</returns>
+    /// <param name="sources">Source lists, in input order.</param>
+    /// <param name="styles">Aggregated style table (appended in place; usually State.Styles).</param>
+    /// <returns>The merged sentence list.</returns>
     public static List<Sentence> Merge(IReadOnlyList<SubtitleSourceItem> sources, List<AssStyle> styles)
     {
         var merged = new List<Sentence>();
@@ -60,7 +60,7 @@ public sealed class CombineMergeOperator(ILogger<CombineMergeOperator> logger)
 
         foreach (var source in sources)
         {
-            // ASS 样式表合并：同名样式保留首个来源的定义
+            // Merge ASS style tables: keep the first source's definition for duplicate style names
             foreach (var style in source.Styles)
                 if (styleNames.Add(style.Name))
                     styles.Add(style);
@@ -72,11 +72,11 @@ public sealed class CombineMergeOperator(ILogger<CombineMergeOperator> logger)
             }));
         }
 
-        // 稳定排序（.NET OrderBy 保证次序保持）：同起始时间保持来源顺序
+        // Stable sort (.NET OrderBy preserves order): equal start times keep source order
         return [.. merged.OrderBy(s => s.Start)];
     }
 
-    /// <summary>深拷贝句子（保留 Source 标记，基线副本与当前集合互不干扰）。</summary>
+    /// <summary>Deep-copies a sentence (keeping the Source tag, so the baseline copy and current set stay independent).</summary>
     private static Sentence CloneSentence(Sentence source) => new()
     {
         Text = source.Text,

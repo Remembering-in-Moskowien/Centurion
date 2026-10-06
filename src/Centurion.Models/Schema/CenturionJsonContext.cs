@@ -7,9 +7,9 @@ using Centurion.Models.Workflow;
 namespace Centurion.Models.Schema;
 
 /// <summary>
-/// IR（*.centurion.json）序列化的 System.Text.Json 源生成上下文：
-/// 显式登记全部参与 IR 读写/校验的类型，避免运行时反射，
-/// 并统一 camelCase 属性命名、缩进、忽略 null 与枚举字符串化。
+/// System.Text.Json source-generation context for IR (*.centurion.json) serialization:
+/// explicitly registers all types involved in IR read/write/validation to avoid runtime reflection,
+/// and unifies camelCase property naming, indentation, null ignoring, and string-enum conversion.
 /// </summary>
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

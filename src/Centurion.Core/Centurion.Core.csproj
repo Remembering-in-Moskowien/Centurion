@@ -25,7 +25,16 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
         <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.12" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" />
+        <!--
+          RapidOcrNet pulls Microsoft.ML.OnnxRuntime (CPU) 1.29.0 as a transitive dependency. Its native
+          onnxruntime.dll would overwrite the DirectML build's native library at the same NuGet output
+          path, silently disabling GPU execution. Excluding the CPU package's runtime assets keeps the
+          managed reference (1.29.0) while shipping only the DirectML native library.
+        -->
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" ExcludeAssets="runtime" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="SIL.Machine.Tokenization.SentencePiece" Version="3.9.4" />
         <PackageReference Include="OllamaSharp" Version="5.4.30" />
         <PackageReference Include="RapidOcrNet" Version="4.2.0" />
         <PackageReference Include="SharpCompress" Version="0.50.4" />

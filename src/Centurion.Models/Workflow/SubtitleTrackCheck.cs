@@ -1,55 +1,55 @@
 namespace Centurion.Models.Workflow;
 
 /// <summary>
-/// 媒体文件中的单条轨道信息（由 mkvmerge -i 解析得到）。
+/// Information about a single track in a media file, parsed from mkvmerge -i.
 /// </summary>
 public sealed class MkvTrackInfo
 {
-    /// <summary>轨道 ID（mkvmerge 输出中的 Track ID）。</summary>
+    /// <summary>Track ID as reported in the mkvmerge output.</summary>
     public int TrackId { get; init; }
 
-    /// <summary>轨道类型：video / audio / subtitles。</summary>
+    /// <summary>Track type: video / audio / subtitles.</summary>
     public string Type { get; init; } = "";
 
-    /// <summary>轨道编码（如 V_MPEG4/ISO/AVC、S_TEXT/UTF8）。</summary>
+    /// <summary>Track codec, such as V_MPEG4/ISO/AVC or S_TEXT/UTF8.</summary>
     public string Codec { get; init; } = "";
 
-    /// <summary>轨道语言（如 eng、und），无时为 null。</summary>
+    /// <summary>Track language, such as eng or und; null when absent.</summary>
     public string? Language { get; init; }
 
-    /// <summary>轨道名称（如 "English"），无时为 null。</summary>
+    /// <summary>Track name, such as "English"; null when absent.</summary>
     public string? Name { get; init; }
 
-    /// <summary>是否为字幕轨。</summary>
+    /// <summary>Whether this is a subtitle track.</summary>
 [System.Text.Json.Serialization.JsonIgnore]
     public bool IsSubtitle => Type.Equals("subtitles", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>简洁的可读描述（用于警告文案）。</summary>
+    /// <summary>A concise human-readable description, used in warning messages.</summary>
 [System.Text.Json.Serialization.JsonIgnore]
     public string Summary =>
         $"ID {TrackId} ({Codec})" + (Language is null ? "" : $", lang {Language}");
 }
 
 /// <summary>
-/// 字幕轨检查结果：mkvtoolnix（mkvmerge -i）对输入媒体的轨道探测结论。
+/// Subtitle track check result: the track probing conclusion that mkvtoolnix (mkvmerge -i) produced for the input media.
 /// </summary>
 public sealed class SubtitleTrackCheckResult
 {
-    /// <summary>被检查的媒体文件路径。</summary>
+    /// <summary>Path of the media file that was checked.</summary>
     public string SourceFile { get; init; } = "";
 
-    /// <summary>mkvmerge 是否成功运行并解析出轨道。</summary>
+    /// <summary>Whether mkvmerge ran successfully and parsed the tracks.</summary>
     public bool Checked { get; init; }
 
-    /// <summary>媒体中是否存在字幕轨。</summary>
+    /// <summary>Whether the media contains any subtitle tracks.</summary>
     public bool HasSubtitleTracks { get; init; }
 
-    /// <summary>媒体中的全部轨道。</summary>
+    /// <summary>All tracks in the media.</summary>
     public List<MkvTrackInfo> AllTracks { get; init; } = [];
 
-    /// <summary>媒体中的字幕轨子集。</summary>
+    /// <summary>The subset of subtitle tracks in the media.</summary>
     public List<MkvTrackInfo> SubtitleTracks { get; init; } = [];
 
-    /// <summary>检查被跳过或失败时的说明（如 mkvmerge 缺失、非容器文件）。</summary>
+    /// <summary>Explanation when the check was skipped or failed, such as mkvmerge being missing or a non-container file.</summary>
     public string? Message { get; init; }
 }

@@ -21,13 +21,13 @@ public static class WorkflowContextDumper
     };
 
     /// <summary>
-    /// 把工作流上下文连同运行元信息写入与 <paramref name="assOutputPath"/> 同名的 .context.json 文件。
+    /// Writes the workflow context together with runtime metadata into a .context.json file sharing the base name of <paramref name="assOutputPath"/>.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，包含配置与各阶段运行状态。</param>
-    /// <param name="commandName">触发本次运行的子命令名（如 "spawn"）。</param>
-    /// <param name="assOutputPath">本次生成的 ASS 字幕文件路径，决定 JSON 文件的输出位置与文件名。</param>
-    /// <param name="cancellationToken">用于取消写文件的取消令牌。</param>
-    /// <returns>写出的 JSON 文件完整路径。</returns>
+    /// <param name="context">Subtitle workflow context, including configuration and per-stage runtime state.</param>
+    /// <param name="commandName">Name of the subcommand that triggered this run, such as "spawn".</param>
+    /// <param name="assOutputPath">Path of the ASS subtitle file produced this run; determines where the JSON file is written and what it is named.</param>
+    /// <param name="cancellationToken">Token used to cancel writing the file.</param>
+    /// <returns>The full path of the written JSON file.</returns>
     public static async Task<string> WriteAsync(
         SubtitleWorkflowContext context,
         string commandName,
@@ -41,13 +41,13 @@ public static class WorkflowContextDumper
     }
 
     /// <summary>
-    /// 构造富上下文 JSON 字符串（internal，便于单元测试）。
-    /// 结构：meta（命令/时间/输入输出） + config（完整工作流配置） + state（各阶段句子、标志与诊断）。
+    /// Builds the rich-context JSON string (internal for unit testing).
+    /// Structure: meta (command/timing/input-output) + config (full workflow configuration) + state (per-stage sentences, flags and diagnostics).
     /// </summary>
-    /// <param name="context">字幕工作流上下文。</param>
-    /// <param name="commandName">触发本次运行的子命令名。</param>
-    /// <param name="assOutputPath">本次生成的 ASS 字幕文件路径。</param>
-    /// <returns>格式化后的 JSON 字符串。</returns>
+    /// <param name="context">Subtitle workflow context.</param>
+    /// <param name="commandName">Name of the subcommand that triggered this run.</param>
+    /// <param name="assOutputPath">Path of the ASS subtitle file produced this run.</param>
+    /// <returns>The formatted JSON string.</returns>
     internal static string BuildJson(SubtitleWorkflowContext context, string commandName, string assOutputPath)
     {
         var payload = new

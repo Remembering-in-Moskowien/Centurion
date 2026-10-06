@@ -5,24 +5,24 @@ using Centurion.Models.Text;
 namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 
 /// <summary>
-/// 积极规则分句策略（默认档）：标点与自适应停顿构成硬断点，段内超长再按长度切分。
-/// 硬断点保证短促密集对话（无说话人分割时）在真实停顿处断句，不再连成长行；
-/// 均匀连续语音（无显著停顿、无标点）保持整段一句，仅在超长时按长度切分。
-/// 适合短促对话、快节奏多人会话。
+/// Aggressive rule-based splitting strategy (default tier): punctuation and adaptive pauses form hard breaks,
+/// and over-long segments are further split by length. Hard breaks keep short, dense dialogue (without diarization)
+/// breaking at real pauses instead of long lines; uniform continuous speech (no pauses, no punctuation) stays as
+/// one segment, split by length only when over-long. Suited to short exchanges and fast-paced multi-party talk.
 /// </summary>
 public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
 {
     /// <summary>
-    /// 对一组词流完成分句：标点与自适应停顿构成硬断点，段内超长再按长度切分。
+    /// Splits a word stream into sentences: punctuation and adaptive pauses form hard breaks, over-long segments are then split by length.
     /// </summary>
-    /// <param name="wordList">按时间排序的同一说话人词流。</param>
-    /// <param name="options">分句长度与语言等配置选项。</param>
-    /// <returns>切分得到的句子列表。</returns>
+    /// <param name="wordList">The word stream of a single speaker, ordered by time.</param>
+    /// <param name="options">Configuration options such as split length and language.</param>
+    /// <returns>The list of sentences after splitting.</returns>
     protected override async Task<List<Sentence>> SplitGroupByPunctuation(List<Word> wordList, SplitOptions options)
     {
         var n = wordList.Count;
 
-        // 1. 标点候选断点（词末字符为句末/从句标点；最后词后不断）
+        // 1. Punctuation candidate breaks (word ends with sentence/clause punctuation; no break after the last word)
         var punctuationBreaks = new HashSet<int>();
         for (var i = 0; i < n; i++)
         {
@@ -32,11 +32,11 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
                 punctuationBreaks.Add(i);
         }
 
-        // 2. 停顿候选断点（自适应阈值）：短促密集对话转录常无标点，
-        //    依赖词间停顿识别句界；阈值 = max(基线, 中位间隙 × 系数)，随分句粒度调节
+        // 2. Pause candidate breaks (adaptive threshold): transcriptions of short, dense dialogue often lack punctuation,
+        //    so sentence boundaries rely on inter-word pauses; threshold = max(baseline, median gap x factor), tuned by granularity
         var pauseBreaks = ComputePauseBreaks(wordList, options);
 
-        // 3. 硬断点 = 标点 ∪ 停顿
+        // 3. Hard breaks = punctuation U pauses
         var hardBreaks = new HashSet<int>(punctuationBreaks);
         for (var i = 0; i < n; i++)
             if (pauseBreaks[i])
@@ -44,7 +44,7 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
 
         var maxLen = options.MaxLength;
 
-        // 4. 按硬断点分段；段内超长时再按长度切分
+        // 4. Segment by hard breaks; split over-long segments by length
         var sentences = new List<Sentence>();
         var segStart = 0;
         for (var i = 0; i < n; i++)
@@ -58,7 +58,7 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
                 }
                 else
                 {
-                    // 段内超长：无硬断点可用，按长度 DP 均匀切分
+                    // Over-long segment: no hard break available, split evenly by length DP
                     sentences.AddRange(SplitSegmentByLength(slice, options));
                 }
                 segStart = i + 1;
@@ -69,9 +69,9 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
     }
 
     /// <summary>
-    /// 计算相邻词之间的显著停顿断点：间隙超过自适应阈值即视为句界。
-    /// 阈值取"最大(350 − 粒度×200, 中位间隙 × (2.0 − 粒度))"毫秒——
-    /// 粒度越大切分越细（阈值越低）；均匀连续语音（中位间隙与整体接近）不会触发切分。
+    /// Computes significant pause breaks between adjacent words: a gap exceeding the adaptive threshold counts as a boundary.
+    /// The threshold is "max(350 − granularity×200, median gap × (2.0 − granularity))" ms —
+    /// the higher the granularity, the finer the split (lower threshold); uniform continuous speech triggers no split.
     /// </summary>
     private static bool[] ComputePauseBreaks(List<Word> wordList, SplitOptions options)
     {
@@ -91,16 +91,16 @@ public class AggressiveRuleSplitStrategy : RuleBasedSplitStrategyBase
 
         for (var i = 0; i < n - 1; i++)
         {
-            // 若停顿后的下一个词以标点结尾（句末/从句标点词），该停顿多为句内换气——
-            // 句界已在标点词之后，此处停顿断点会孤立句末词（导致零时长句被下游过滤丢词），故抑制
+            // If the word after a pause ends with punctuation (a sentence/clause-ending word), the pause is mostly in-sentence breathing —
+            // the boundary already lies after that punctuation word; a pause break here would isolate the ending word (zero-duration sentences dropped downstream), so suppress it
             pauses[i] = gaps[i] >= threshold && !EndsWithBreakPunctuation(wordList[i + 1].Text);
         }
         return pauses;
     }
 
     /// <summary>
-    /// 对无硬断点可用的超长词段按长度切分：DP 在非候选位置求最优断点，
-    /// 满足硬约束（每句 ≤ MaxLength）并尽量均匀接近目标长度，切分次数最少。
+    /// Splits an over-long word segment with no hard break by length: DP finds the optimal breaks at non-candidate
+    /// positions, satisfying the hard constraint (each sentence ≤ MaxLength) while staying even, near target length, with the fewest splits.
     /// </summary>
     private static List<Sentence> SplitSegmentByLength(List<Word> segment, SplitOptions options)
     {

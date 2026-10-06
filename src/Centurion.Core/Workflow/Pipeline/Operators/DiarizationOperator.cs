@@ -97,10 +97,10 @@ public sealed class DiarizationOperator(
     }
 
     /// <summary>
-    /// 按 Word 时间窗与说话人片段的重叠量归属说话人（internal，便于单元测试）。
-    /// 取与词时间窗交集最长的片段；词横跨说话人切换点时归给重叠更大的一侧，
-    /// 避免时间中点法在边界处整词错标。完全无重叠（词级时间戳病态）时回退到
-    /// 时间距离最近的片段；完全无片段时回退默认标签。
+    /// Assigns a speaker to a Word by the overlap between the word's time window and each speaker segment (internal, for unit testing).
+    /// Picks the segment with the longest intersection; when a word straddles a speaker switch it goes to the side with more overlap,
+    /// avoiding the whole-word mislabeling the time-midpoint rule causes at boundaries. With no overlap at all (degenerate word timestamps) it falls back to
+    /// the nearest segment by time; with no segments at all it falls back to the default label.
     /// </summary>
     internal static string ResolveSpeaker(Word word, IReadOnlyList<SpeakerSegment> turns)
     {
@@ -124,8 +124,8 @@ public sealed class DiarizationOperator(
         if (best is not null)
             return best.Speaker;
 
-        // 时间窗与所有片段均无重叠（词级时间戳病态或片段间隙）：
-        // 取时间距离最近的说话人片段，避免大量回退到占位标签造成说话人信息丢失
+        // The word window has no overlap with any segment (degenerate word timestamps or a gap
+        // between segments): take the nearest segment by time, avoiding mass fallback to the placeholder label that would lose speaker information.
         SpeakerSegment? nearest = null;
         var nearestDistance = double.MaxValue;
         foreach (var turn in turns)

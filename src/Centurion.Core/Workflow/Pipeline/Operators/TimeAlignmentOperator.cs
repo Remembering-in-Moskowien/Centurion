@@ -6,10 +6,10 @@ using Centurion.Core.Capabilities.Managers.Runtime;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 时间对齐算子（dub Phase 3）：用 ffprobe 探测每段合成时长，与字幕目标时长比较，
-/// 通过 FFmpeg atempo 把合成语音拉伸/压缩到目标时长（允许 0.5x~2.0x）。
-/// 超出可调范围时按配置处理：严格模式钳制到边界并记录 Warning，宽松模式保留原合成时长。
-/// 对齐完成后检测相邻字幕窗口重叠，为后段设置 MixOffsetMs（压叠）并告警。
+/// Time alignment operator (dub Phase 3): probes the synthesized duration of each segment with ffprobe, compares it to the subtitle's target duration,
+/// and stretches/compresses the synthesized speech to the target duration via FFmpeg atempo (0.5x~2.0x allowed).
+/// When the value is out of the adjustable range, the configured behavior applies: strict mode clamps to the boundary and logs a Warning; lenient mode keeps the original synthesized duration.
+/// After alignment, detects overlaps between adjacent subtitle windows and sets MixOffsetMs (overlap compression) for later segments, warning as needed.
 /// </summary>
 public sealed class TimeAlignmentOperator(
     IBinaryLocator binaryLocator,
@@ -20,14 +20,14 @@ public sealed class TimeAlignmentOperator(
     private const double MinAtempo = 0.5;
     private const double MaxAtempo = 2.0;
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Time Alignment";
 
     /// <summary>
-    /// 逐段探测合成时长并 atempo 对齐到目标时长。
+    /// Probes the synthesized duration of each segment and aligns it to the target duration via atempo.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.DubSegments.Count == 0)
@@ -52,7 +52,10 @@ public sealed class TimeAlignmentOperator(
             if (target <= 0 || actual <= 0)
                 continue;
 
-            var tempo = target / actual;
+            var tempo = actual / target;
+            // atempo ratio: <1 slows the clip down (stretches it to fill the target window),
+            // >1 speeds it up (compresses it). Synthesized speech shorter than the subtitle
+            // window therefore gets tempo < 1, longer speech gets tempo > 1.
             if (tempo is >= MinAtempo and <= MaxAtempo)
             {
                 await ApplyTempoAsync(ffmpeg, segment, tempo, ffprobe, cancellationToken);
@@ -61,7 +64,7 @@ public sealed class TimeAlignmentOperator(
             {
                 if (context.Config.DubStrictTiming)
                 {
-                    // 严格模式：钳制到边界，尽量贴合字幕节奏
+                    // Strict mode: clamp to the boundary to stay as close as possible to the subtitle rhythm
                     var clamped = Math.Clamp(tempo, MinAtempo, MaxAtempo);
                     await ApplyTempoAsync(ffmpeg, segment, clamped, ffprobe, cancellationToken);
                     segment.Note = $"Target {target:F2}s vs synthesized {actual:F2}s; tempo {tempo:F2} clamped to {clamped:F2}.";
@@ -80,7 +83,7 @@ public sealed class TimeAlignmentOperator(
         LogInfo("Time alignment completed.");
     }
 
-    /// <summary>应用 atempo 到目标 tempo，记录对齐后时长与最终 tempo。</summary>
+    /// <summary>Applies atempo to the target tempo, recording the aligned duration and the final tempo.</summary>
     private async Task ApplyTempoAsync(string ffmpeg, DubSegment segment, double tempo, string ffprobe, CancellationToken ct)
     {
         var alignedPath = segment.SynthesizedWavPath! + ".aligned.wav";
@@ -94,9 +97,9 @@ public sealed class TimeAlignmentOperator(
     }
 
     /// <summary>
-    /// 重叠检测与降级：按目标起始时间排序后，后段与前一已调整段的实际结束时间重叠时，
-    /// 把后段 MixOffsetMs 设为压叠量（保持时序、压缩重叠），并记录 Warning。
-    /// 该偏移在混音阶段由 AudioMixOperator 应用到 adelay。
+    /// Overlap detection and degradation: after sorting by target start time, when a later segment overlaps the actual end time of the previous adjusted segment,
+    /// sets the later segment's MixOffsetMs to the overlap amount (preserving order, compressing the overlap) and logs a Warning.
+    /// This offset is applied to adelay by AudioMixOperator during the mixing stage.
     /// </summary>
     internal static void DetectOverlaps(List<DubSegment> segments)
     {

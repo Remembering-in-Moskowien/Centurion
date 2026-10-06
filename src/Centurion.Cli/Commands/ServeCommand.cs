@@ -35,8 +35,10 @@ public sealed class ServeSettings : GlobalCommandSettings
 
 /// <summary>
 /// serve: exposes all packaged commands as an HTTP service
-/// (asr/from-script/correct/translate/dub/convert/build). Reuses the Cli command
-/// registry and Core DI; the request body is a CommandRequest JSON or a bare parameter object.
+/// (asr/ocr/from-script/correct/translate/dub/convert/combine/build, quality/validate/
+/// doctor/migrate/pipeline-graph, models-list|install|verify, providers-list|test).
+/// Reuses the Cli command registry and Core DI; the request body is a CommandRequest
+/// JSON or a bare parameter object.
 /// </summary>
 public sealed class ServeCommand(
     ILogger<ServeCommand> logger) : AsyncCommand<ServeSettings>

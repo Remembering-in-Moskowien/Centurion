@@ -40,18 +40,35 @@ public sealed class TranslateSettings : GlobalCommandSettings
     public string? SourceLanguage { get; init; }
 
     /// <summary>
-    /// Translation strategy, currently llm.
+    /// Translation strategy: llm (large language model, online) or opus (local OPUS-MT ONNX).
     /// </summary>
     [CommandOption("-s|--strategy <STRATEGY>")]
-    [Description("Translation strategy: llm")]
+    [Description("Translation strategy: llm, opus")]
     public string Strategy { get; init; } = "llm";
 
     /// <summary>
-    /// LLM model name; defaults to gpt-4o-mini (OpenAI) or llama3.2 (Ollama) when empty.
+    /// Model name: an LLM model for --strategy llm (defaults to gpt-4o-mini for OpenAI,
+    /// llama3.2 for Ollama); an OPUS-MT language pair for --strategy opus (e.g. zh-en, en-zh,
+    /// ja-en; append -fp32 for full precision). When omitted for opus, the pair is derived
+    /// from --source-language/--target-language.
     /// </summary>
     [CommandOption("--model <MODEL>")]
-    [Description("LLM model name (OpenAI default gpt-4o-mini, Ollama default llama3.2)")]
+    [Description("LLM model name; for --strategy opus: language pair (zh-en, en-zh, ja-en, ...)")]
     public string? Model { get; init; }
+
+    /// <summary>
+    /// Beam size for OPUS-MT decoding (1 = greedy). Larger beams improve quality at the cost of speed.
+    /// </summary>
+    [CommandOption("--beam <N>")]
+    [Description("OPUS-MT beam size, 1 = greedy (default 4)")]
+    public int Beam { get; init; } = 4;
+
+    /// <summary>
+    /// Maximum decoded token count per line for OPUS-MT.
+    /// </summary>
+    [CommandOption("--max-length <N>")]
+    [Description("OPUS-MT max decoded tokens per line (default 256)")]
+    public int MaxLength { get; init; } = 256;
 
     /// <summary>
     /// API key for the chosen LLM provider; falls back to local Ollama when omitted.

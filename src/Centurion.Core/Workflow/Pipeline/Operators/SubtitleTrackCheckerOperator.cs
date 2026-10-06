@@ -7,24 +7,24 @@ using Centurion.Models.Console;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 字幕轨检查算子：在生成/校准/打轴管道的最前端运行，
-/// 使用 mkvtoolnix（mkvmerge -i）探测输入媒体中是否已存在字幕轨，
-/// 有则警告用户，并将检查报告写入输出目录（{输出}.tracks.json）。
-/// 检查失败或工具缺失时不阻断管道，仅记录警告。
+/// Subtitle track check operator: runs at the very front of the generate/calibrate/time-align pipeline,
+/// uses mkvtoolnix (mkvmerge -i) to detect whether the input media already contains subtitle tracks,
+/// warns the user if so, and writes the check report to the output directory ({output}.tracks.json).
+/// A failed check or a missing tool does not block the pipeline; it only logs a warning.
 /// </summary>
 public sealed class SubtitleTrackCheckerOperator(
     MkvToolNixChecker checker,
     ILogger<SubtitleTrackCheckerOperator> logger)
     : PipelineOperatorBase<SubtitleTrackCheckerOperator>(logger)
 {
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Subtitle Track Check";
 
     /// <summary>
-    /// 执行检查：读取输入媒体 → mkvmerge 探测轨道 → 警告既有字幕 → 报告落盘。
+    /// Runs the check: read input media -> probe tracks with mkvmerge -> warn about existing subtitles -> write the report.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var input = context.Config.InputFilePath;
@@ -43,7 +43,7 @@ public sealed class SubtitleTrackCheckerOperator(
             return;
         }
 
-        // 已有字幕轨：向用户发出预警
+        // Existing subtitle track(s): warn the user up front
         if (result.HasSubtitleTracks)
         {
             var summary = string.Join("; ", result.SubtitleTracks.Select(t => t.Summary));
@@ -58,7 +58,7 @@ public sealed class SubtitleTrackCheckerOperator(
             LogInfo($"No subtitle tracks in '{result.SourceFile}'.");
         }
 
-        // 报告写入输出目录（与输出字幕同目录、同名 .tracks.json）
+        // Write the report to the output directory (same directory and base name as the output subtitle, as .tracks.json)
         var outputPath = context.Config.OutputFilePath;
         if (!string.IsNullOrWhiteSpace(outputPath))
         {

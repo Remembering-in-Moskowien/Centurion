@@ -2,64 +2,64 @@ using Newtonsoft.Json;
 
 namespace Centurion.Models.Transcript;
 
-// transcription 数组子项（支持词级时间戳和置信度）
-/// <summary>whisper.cpp 输出 JSON 中 transcription 数组的一个条目（一个音频段）。</summary>
+// transcription array child item (supports word-level timestamps and confidence)
+/// <summary>An entry in the whisper.cpp transcription array (one audio segment).</summary>
 public class TranscriptionItem
 {
-    /// <summary>该段的起止时间戳（字符串形式，如 "0.00"）。</summary>
+    /// <summary>Start/end timestamps of this segment (as strings, e.g. "0.00").</summary>
     [JsonProperty("timestamps")] public required TimeStampInfo Timestamps { get; set; }
 
-    /// <summary>该段的起止偏移（毫秒）。</summary>
+    /// <summary>Start/end offsets of this segment (milliseconds).</summary>
     [JsonProperty("offsets")] public required OffsetInfo Offsets { get; set; }
 
-    /// <summary>该段识别文本。</summary>
+    /// <summary>Recognized text of this segment.</summary>
     [JsonProperty("text")] public required string Text { get; set; }
 
-    /// <summary>词级 Token 明细，仅当使用 --output-json-full 时包含。</summary>
-    [JsonProperty("tokens")] public List<TokenInfo>? Tokens { get; set; } // 当使用 --output-json-full 时包含此项
+    /// <summary>Word-level token details; included only when --output-json-full is used.</summary>
+    [JsonProperty("tokens")] public List<TokenInfo>? Tokens { get; set; } // included only when --output-json-full is used
 }
 
-// 时间戳信息（用于段或词）
-/// <summary>字符串形式的时间戳区间。</summary>
+// Timestamp info (for segments or words)
+/// <summary>Timestamp range as strings.</summary>
 public class TimeStampInfo
 {
-    /// <summary>起始时间字符串。</summary>
+    /// <summary>Start time string.</summary>
     [JsonProperty("from")] public required string From { get; set; }
 
-    /// <summary>结束时间字符串。</summary>
+    /// <summary>End time string.</summary>
     [JsonProperty("to")] public required string To { get; set; }
 }
 
-// 偏移信息（毫秒，用于段或词）
-/// <summary>毫秒级整数偏移区间。</summary>
+// Offset info (milliseconds, for segments or words)
+/// <summary>Integer offset range in milliseconds.</summary>
 public class OffsetInfo
 {
-    /// <summary>起始偏移（毫秒）。</summary>
+    /// <summary>Start offset (milliseconds).</summary>
     [JsonProperty("from")] public int From { get; set; }
 
-    /// <summary>结束偏移（毫秒）。</summary>
+    /// <summary>End offset (milliseconds).</summary>
     [JsonProperty("to")] public int To { get; set; }
 }
 
-// 词级 Token 信息（包含置信度）
-/// <summary>词级 Token 的识别明细，含时间偏移、置信度等。</summary>
+// Word-level token info (including confidence)
+/// <summary>Recognition details for a word-level token, including time offsets and confidence.</summary>
 public class TokenInfo
 {
-    /// <summary>该 Token 对应的文本。</summary>
+    /// <summary>Text corresponding to this token.</summary>
     [JsonProperty("text")] public required string Text { get; set; }
 
-    /// <summary>该词的起止时间戳字符串。</summary>
+    /// <summary>Start/end timestamp string of this word.</summary>
     [JsonProperty("timestamps")] public required TimeStampInfo Timestamps { get; set; }
 
-    /// <summary>该词的起止偏移（毫秒）。</summary>
+    /// <summary>Start/end offset of this word (milliseconds).</summary>
     [JsonProperty("offsets")] public required OffsetInfo Offsets { get; set; }
 
-    /// <summary>词表中的 Token 编号。</summary>
+    /// <summary>Token ID in the vocabulary.</summary>
     [JsonProperty("id")] public int Id { get; set; }
 
-    /// <summary>识别置信度（概率）。</summary>
-    [JsonProperty("p")] public float P { get; set; } // 置信度（概率）
+    /// <summary>Recognition confidence (probability).</summary>
+    [JsonProperty("p")] public float P { get; set; } // confidence (probability)
 
-    /// <summary>DTW 强制对齐相关的时间偏移值。</summary>
+    /// <summary>Time offset related to DTW forced alignment.</summary>
     [JsonProperty("t_dtw")] public int Tdtw { get; set; }
 }

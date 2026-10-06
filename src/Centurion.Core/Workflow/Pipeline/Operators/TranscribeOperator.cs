@@ -8,10 +8,10 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 转录算子：沿已解析的 ASR fallback 链执行语音识别。
-/// 链由 <see cref="Providers.ProviderFactory"/> 在组装时解析（本地/云互备；
-/// 无 API 密钥或云端失败时自动回退本地）；用量（token/音频秒/估算成本）聚合进
-/// <see cref="WorkflowState.ProviderUsages"/>。
+/// Transcription operator: runs speech recognition along the resolved ASR fallback chain.
+/// The chain is resolved by <see cref="Providers.ProviderFactory"/> at assembly time (local/cloud mutual backup;
+/// automatically falls back to local when no API key is present or the cloud fails); usage (tokens/audio seconds/estimated cost) is aggregated into
+/// <see cref="WorkflowState.ProviderUsages"/>.
 /// </summary>
 public class TranscribeOperator(
     IReadOnlyList<IAsrProvider> chain,
@@ -26,11 +26,11 @@ public class TranscribeOperator(
     public override string Name => "Transcribe";
 
     /// <summary>
-    /// 转录：沿链执行，自动跳过不可用/失败的 Provider 并切换备用。
+    /// Transcription: runs along the chain, automatically skipping unavailable/failed providers and switching to backups.
     /// </summary>
-    /// <param name="context">字幕工作流上下文（输入音频、配置）。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <exception cref="NotSupportedException">转录引擎未被任何 Provider 支持（组装期已拦截）。</exception>
+    /// <param name="context">Subtitle workflow context (input audio, configuration).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="NotSupportedException">No provider supports the transcription engine (already intercepted at assembly time).</exception>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var config = context.Config;
@@ -67,13 +67,13 @@ public class TranscribeOperator(
     }
 
     /// <summary>
-    /// 去除词流中相邻完全重复的词（文本相同且起止时间戳完全一致）。
-    /// CrispASR 的 qwen3 后端在分段解码时会把句首 token 重复发射一次
-    /// （同文本同时间戳，实测几乎每句首词都重复，导致字幕每句前多出一个词）；
-    /// 真实语音中不存在两个时间戳完全一致的词，故此规则安全，不会误删叠词/叠句。
+    /// Removes adjacent, fully duplicated words from the word stream (identical text and identical start/end timestamps).
+    /// CrispASR's qwen3 backend emits the sentence-initial token twice when decoding segment-by-segment
+    /// (same text and same timestamp; observed that almost every sentence's first word is duplicated, leaving an extra word at the start of each subtitle line);
+    /// real speech never contains two words with identical timestamps, so this rule is safe and does not remove legitimate word/sentence repetition.
     /// </summary>
-    /// <param name="words">转录词流（provider 原始输出）。</param>
-    /// <returns>去重后的词流。</returns>
+    /// <param name="words">Transcribed word stream (raw provider output).</param>
+    /// <returns>The deduplicated word stream.</returns>
     internal static List<Word> DeduplicateWordRepeats(IReadOnlyList<Word> words)
     {
         var result = new List<Word>(words.Count);
@@ -93,7 +93,7 @@ public class TranscribeOperator(
         return result;
     }
 
-    /// <summary>把词级结果按句分组（按标点启发式切句；无标点时整段为一句），句级置信度为词级均值。</summary>
+    /// <summary>Groups word-level results into sentences (heuristic splitting by punctuation; the whole segment is one sentence when there is no punctuation); sentence-level confidence is the mean of word-level confidences.</summary>
     internal static List<Sentence> GroupIntoSentences(IReadOnlyList<Word> words)
     {
         var sentences = new List<Sentence>();
@@ -105,8 +105,8 @@ public class TranscribeOperator(
         {
             if (current is null)
             {
-                // 首词直接建立句子（Words 初始即含该词）；此前在 ??= 后又 Add 一次，
-                // 导致每句首词双加（字幕每句前多出一个词），已修复。
+                // The first word directly starts a sentence (Words already contains that word); previously it was Add'ed again after ??=,
+                // causing each sentence's first word to be added twice (an extra word at the start of each subtitle line); fixed.
                 current = new Sentence
                 {
                     Start = word.Start,
@@ -135,7 +135,7 @@ public class TranscribeOperator(
         return sentences;
     }
 
-    /// <summary>词级置信度聚合为句级（平均；全部为 null 时返回 null）。</summary>
+    /// <summary>Aggregates word-level confidence into sentence-level confidence (mean; returns null when all are null).</summary>
     internal static double? AggregateConfidence(IReadOnlyList<Word> words)
     {
         var values = words.Where(w => w.Confidence is not null).Select(w => w.Confidence!.Value).ToList();
@@ -150,7 +150,7 @@ public class TranscribeOperator(
             || trimmed.EndsWith('?'));
     }
 
-    /// <summary>探测音频时长（秒），失败返回 0（不影响转录结果）。</summary>
+    /// <summary>Probes the audio duration (seconds); returns 0 on failure (does not affect transcription results).</summary>
     private static async Task<double> ProbeAudioSecondsAsync(string path, CancellationToken cancellationToken)
     {
         try

@@ -1,34 +1,34 @@
 namespace Centurion.Models.Workflow;
 
-/// <summary>以字幕/脚本校正识别结果时采用的校正策略。</summary>
+/// <summary>The correction strategy used when correcting recognition results against subtitles/scripts.</summary>
 public enum CorrectionStrategy
 {
-    /// <summary>仅校正时间轴，不改写文本。</summary>
+    /// <summary>Correct only the timeline without rewriting the text.</summary>
     TimelineOnly,
-    /// <summary>仅校正文本，不调整时间轴。</summary>
+    /// <summary>Correct only the text without adjusting the timeline.</summary>
     TextOnly,
-    /// <summary>同时校正时间轴与文本。</summary>
+    /// <summary>Correct both the timeline and the text.</summary>
     Both
 }
 
-/// <summary>一次校正（对齐）操作的统计报告。</summary>
+/// <summary>Statistics report for a single correction (alignment) operation.</summary>
 public sealed class CorrectionReport
 {
-    /// <summary>参与校正的句子总数。</summary>
+    /// <summary>Total number of sentences participating in the correction.</summary>
     public int TotalSentences { get; set; }
-    /// <summary>被改写过文本的句子数。</summary>
+    /// <summary>Number of sentences whose text was rewritten.</summary>
     public int TextCorrected { get; set; }
-    /// <summary>时间轴被平移过的句子数。</summary>
+    /// <summary>Number of sentences whose timeline was shifted.</summary>
     public int TimelineShifted { get; set; }
-    /// <summary>未能与脚本对齐的句子数。</summary>
+    /// <summary>Number of sentences that could not be aligned with the script.</summary>
     public int Unmatched { get; set; }
-    /// <summary>对齐残差的平均漂移量（毫秒）。</summary>
+    /// <summary>Average alignment residual drift in milliseconds.</summary>
     public double AverageDriftMs { get; set; }
 
-    /// <summary>校准中出现的最大单句漂移（毫秒）。</summary>
+    /// <summary>Maximum single-sentence drift observed during calibration in milliseconds.</summary>
     public double MaxDriftMs { get; set; }
-    /// <summary>脚本文本被覆盖的比例（0-1）。</summary>
+    /// <summary>Fraction of the script text covered, from 0 to 1.</summary>
     public double TextCoverage { get; set; }
-    /// <summary>本次校正耗时。</summary>
+    /// <summary>Elapsed time of this correction run.</summary>
     public TimeSpan Elapsed { get; set; }
 }

@@ -6,44 +6,44 @@ using Centurion.Abstractions.Utils;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 脚本句 ↔ 转录时间轴对齐。
+/// Alignment between script sentences and the transcribed timeline.
 ///
-/// 分段策略（唯一准则）：
-///   • 输出分段严格采用脚本句（<c>CurrentSentences</c>）；一句脚本 → 一句输出；
-///   • 不做聚合（合并相邻脚本句），不做分句（拆分单个脚本句）；
-///   • 转录仅作为时间戳与纠错文本的来源，其断句不参与最终分段。
+/// Segmentation strategy (the only rule):
+///   • Output segmentation strictly follows script sentences (<c>CurrentSentences</c>); one script line → one output line;
+///   • No aggregation (merging adjacent script lines), no splitting (breaking a single script line);
+///   • Transcription is only a source of timestamps and correction text; its own line breaks do not affect final segmentation.
 ///
-/// 对齐流程（四级）：
-///   1. 词级 NW 全局对齐（精确匹配优先作为"锚点"）；
-///   2. 未命中的脚本句在相邻命中之间的空隙内均分转录词；
-///   3. 仍未被任何句覆盖的"边界残余词"按最近距离补回相邻句；
-///   4. 输出时间单调性二次校验。
+/// Alignment pipeline (four stages):
+///   1. Word-level NW global alignment (exact matches preferred as "anchors");
+///   2. Unmatched script lines share transcript words evenly within the gaps between neighboring matches;
+///   3. "Boundary leftover words" still uncovered by any line are assigned back to the nearest neighboring line;
+///   4. Second-pass check of output time monotonicity.
 ///
-/// 规模策略由基类 <see cref="TimelineAlignmentOperatorBase{TSelf}"/> 提供。
+/// Scaling strategy is provided by the base class <see cref="TimelineAlignmentOperatorBase{TSelf}"/>.
 /// </summary>
 public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase<ScriptTimelineMapperOperator>
 {
     private readonly ILogger<ScriptTimelineMapperOperator> _logger;
 
-    /// <summary>创建脚本时间轴映射算子实例。</summary>
-    /// <param name="logger">记录映射过程日志的记录器。</param>
+    /// <summary>Creates a script timeline mapping operator instance.</summary>
+    /// <param name="logger">Logger that records the mapping process.</param>
     public ScriptTimelineMapperOperator(ILogger<ScriptTimelineMapperOperator> logger) : base(logger)
     {
         _logger = logger;
     }
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Script Timeline Mapping";
 
     /// <summary>
-    /// 执行脚本句与转录词流的对齐：以脚本句为分段骨架，经词级全局对齐与空隙回填，
-    /// 为每句脚本注入带时间戳的词并写回工作流状态。
+    /// Aligns script sentences with the transcribed word stream: using script sentences as the
+    /// segmentation skeleton, runs word-level global alignment and gap filling, injects timestamped words into each script sentence, and writes the result back to workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供脚本句与转录词流。</param>
-    /// <param name="cancellationToken">用于取消映射过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing script sentences and the transcribed word stream.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the mapping process.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
-        // ====== 脚本句：输出的唯一分段依据 ======
+        // ====== Script sentences: the sole basis for output segmentation ======
         var scriptSentences = context.State.CurrentSentences;
         if (scriptSentences.Count == 0)
         {
@@ -53,7 +53,7 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
             throw new InvalidOperationException(message);
         }
 
-        // ====== 转录：把 Words 打平成词流 ======
+        // ====== Transcription: flatten Words into a word stream ======
         var transcriptWords = new List<Word>();
         foreach (var s in context.State.TranscribeSentences)
             if (s.Words is { Count: > 0 })
@@ -74,7 +74,7 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
             return Task.CompletedTask;
         }
 
-        // ==== 阶段 1：词级 NW 全局对齐 ====
+        // ==== Stage 1: word-level NW global alignment ====
         var alignment = AlignSentencesToTranscript(
             scriptSentences, transcriptWords, cancellationToken);
 
@@ -82,13 +82,13 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
         for (var i = 0; i < alignment.Length; i++)
             if (alignment[i].Start >= 0) trueMatchedCount++;
 
-        // ==== 阶段 2：未命中脚本句在邻居空隙内均分转录词 ====
+        // ==== Stage 2: unmatched script lines share transcript words within neighbor gaps ====
         FillUnmatchedFromGaps(alignment, transcriptWords.Count);
 
-        // ==== 阶段 3：把仍未被覆盖的转录词补回相邻已命中句 ====
+        // ==== Stage 3: assign still-uncovered transcript words back to matched neighbors ====
         FillRemainingGaps(alignment, transcriptWords.Count);
 
-        // ==== 阶段 4：以脚本句为骨架输出 ====
+        // ==== Stage 4: emit output built on the script-sentence skeleton ====
         for (var i = 0; i < scriptSentences.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -138,7 +138,7 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
                 sentence.SkipRender = true;
         }
 
-        // ==== 阶段 5：时间单调性二次校验 ====
+        // ==== Stage 5: second-pass time monotonicity check ====
         EnforceMonotonicTime(scriptSentences);
 
         for (var i = 0; i < scriptSentences.Count; i++)
@@ -170,7 +170,7 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
         return Task.CompletedTask;
     }
 
-    /// <summary>把句子集与转录词做词级 NW 对齐，返回句子级 (Start, End) 聚合。</summary>
+    /// <summary>Runs word-level NW alignment between a sentence set and transcript words, returning sentence-level (Start, End) aggregates.</summary>
     private (int Start, int End)[] AlignSentencesToTranscript(
         IList<Sentence> sentences,
         IList<Word> transcriptWords,
@@ -183,7 +183,7 @@ public sealed class ScriptTimelineMapperOperator : TimelineAlignmentOperatorBase
         for (var i = 0; i < m; i++) alignment[i] = (-1, -1);
         if (n == 0 || m == 0) return alignment;
 
-        // 展平脚本词流
+        // Flatten the script word stream
         var scriptWordNorm = new List<string>();
         var scriptWordOwner = new List<int>();
         for (var i = 0; i < m; i++)

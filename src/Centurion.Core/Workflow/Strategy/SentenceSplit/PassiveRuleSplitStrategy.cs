@@ -5,47 +5,47 @@ using Centurion.Models.Text;
 namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 
 /// <summary>
-/// 消极规则分句策略：只认标点，用全局动态规划在标点候选断点集上求解最优断句。
-/// 断点只允许出现在句末/从句标点之后（非候选位置断句有高额惩罚，仅当标点导致超长时才允许），
-/// 目标长度仅作软参考（允许大偏移）。适合独白、旁白、匀速朗读等均匀连续语音——
-/// 不会因词间换气停顿把句子切得过碎，标点之间的内容尽量保持为完整一句。
+/// Passive rule-based splitting strategy: only punctuation is honored, and global DP solves the optimal breaks over the punctuation-candidate set.
+/// Breaks are allowed only after sentence/clause punctuation (breaking at non-candidate positions carries a heavy penalty, allowed only when punctuation causes over-length);
+/// target length is a soft reference only (large deviation allowed). Suited to monologue, narration, and steady reading;
+/// it avoids over-fragmenting sentences on inter-word breathing pauses, keeping content between punctuation as one sentence.
 /// </summary>
 public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
 {
     /// <summary>
-    /// 对一组词流完成分句：纯标点候选 + 全局 DP 最优断点（恢复自早期版本的规则分句实现）。
+    /// Splits a word stream: pure punctuation candidates + global DP optimal breaks (restored from an earlier rule-splitting implementation).
     /// </summary>
-    /// <param name="wordList">按时间排序的同一说话人词流。</param>
-    /// <param name="options">分句长度与语言等配置选项。</param>
-    /// <returns>切分得到的句子列表。</returns>
+    /// <param name="wordList">The word stream of a single speaker, ordered by time.</param>
+    /// <param name="options">Configuration options such as split length and language.</param>
+    /// <returns>The list of sentences after splitting.</returns>
     protected override Task<List<Sentence>> SplitGroupByPunctuation(List<Word> wordList, SplitOptions options)
     {
         var n = wordList.Count;
         var texts = wordList.Select(w => w.Text).ToList();
         var lengths = texts.Select(t => t.Length).ToList();
 
-        // 1. 构建候选断点集合（索引表示在该单词之后断句）
+        // 1. Build the candidate break set (index means a break after that word)
         var candidateBreakIndices = new HashSet<int>();
         for (var i = 0; i < n; i++)
         {
-            if (i == n - 1) continue; // 最后单词后不断句
+            if (i == n - 1) continue; // no break after the last word
             var current = texts[i];
             if (!string.IsNullOrEmpty(current))
             {
                 var lastChar = current[^1];
                 if (BreakPunctuation.Contains(lastChar))
                 {
-                    // 简单过滤缩写（如 "Mr."），这里简化，全部视为断点
+                    // Simplified filtering of abbreviations (e.g. "Mr."); here all are treated as breaks
                     candidateBreakIndices.Add(i);
                 }
             }
         }
 
-        // 2. 动态规划（DP）求解最优断点集合
-        const double NonCandidatePenalty = 100.0;   // 非候选断点的高额惩罚
-        const double LengthDeviationWeight = 0.05;  // 长度偏差的权重（很低，允许大偏移）
+        // 2. Dynamic programming (DP) to solve the optimal break set
+        const double NonCandidatePenalty = 100.0;   // heavy penalty for a non-candidate break
+        const double LengthDeviationWeight = 0.05;  // weight for length deviation (very low, allows large offset)
 
-        // 混合感知长度：类 CJK 词直连，其余词间计空格（预计算前缀分隔，O(1) 增量）
+        // Mixed-aware length: CJK-like words join directly, others count a space between words (precomputed prefix separators, O(1) incremental)
         var sepBefore = ComputeSeparatorBefore(texts);
 
         var dp = new double[n + 1];
@@ -59,24 +59,24 @@ public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
         for (var i = 1; i <= n; i++)
         {
             dp[i] = INF;
-            // 尝试从 j 到 i-1 作为一句
+            // Try taking j through i-1 as one sentence
             for (var j = i - 1; j >= 0; j--)
             {
-                // 计算当前子句的字符数（混合感知：类 CJK 词直连，其余词间计一个空格）
+                // Compute the char count of the current clause (mixed-aware: CJK-like words join directly, others count one space)
                 var charSum = 0;
                 for (var k = j; k < i; k++)
                     charSum += lengths[k] + (k > j ? sepBefore[k] : 0);
 
-                // 硬约束：长度不得超过 MaxLength
+                // Hard constraint: length must not exceed MaxLength
                 if (charSum > maxLen)
                     continue;
 
-                // 判断断点位置是否在候选标点之后
-                // 断点位于 j-1 和 j 之间（j 是下一句起始索引），如果 j-1 是候选索引，则此断点为候选
-                // 首句（j == 0）之前没有断点，不应计非候选惩罚
+                // Check whether the break position is after a candidate punctuation
+                // The break lies between j-1 and j (j is the start index of the next sentence); if j-1 is a candidate index, this break is a candidate
+                // The first sentence (j == 0) has no preceding break, so no non-candidate penalty applies
                 var isCandidate = j == 0 || (j < n && candidateBreakIndices.Contains(j - 1));
 
-                // 成本计算：非候选断点高额惩罚 + 轻微长度偏差（允许大偏移）
+                // Cost: heavy penalty for non-candidate breaks plus a mild length deviation (large offset allowed)
                 var cost = isCandidate ? 0.0 : NonCandidatePenalty;
                 double deviation = Math.Abs(charSum - options.TargetLength);
                 cost += deviation * LengthDeviationWeight;
@@ -90,7 +90,7 @@ public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
             }
         }
 
-        // 3. 回溯得到断点位置
+        // 3. Backtrack to obtain the break positions
         var breakPoints = new List<int>();
         var cur = n;
         while (cur > 0)
@@ -101,7 +101,7 @@ public class PassiveRuleSplitStrategy : RuleBasedSplitStrategyBase
         }
         breakPoints.Reverse();
 
-        // 4. 构建句子
+        // 4. Build the sentences
         var sentences = new List<Sentence>();
         for (var b = 0; b < breakPoints.Count; b++)
         {

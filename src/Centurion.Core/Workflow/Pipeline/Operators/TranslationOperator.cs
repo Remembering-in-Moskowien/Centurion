@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 翻译算子：把当前工作集句子翻译到目标语言（策略内部按批并行调用 LLM），
-/// 译文写回各句 TranslatedText，时间轴与词级明细保持不变。
-/// 由 TranslateCommand 与 pipeline graph 命令共享装配。
+/// Translation operator: translates the current working set of sentences into the target language (the strategy internally calls the LLM in parallel batches),
+/// writes the translations back to each sentence's TranslatedText, and leaves the timeline and word-level details unchanged.
+/// Shared by TranslateCommand and the pipeline graph command for assembly.
 /// </summary>
 public sealed class TranslationOperator(
     ITranslationStrategy strategy,
@@ -19,10 +19,10 @@ public sealed class TranslationOperator(
     private readonly ITranslationStrategy _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
     private readonly TranslationOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Translation";
 
-    /// <summary>执行翻译并更新工作流状态（TranslatedSentences / CurrentSentences / IsTranslated）。</summary>
+    /// <summary>Runs translation and updates the workflow state (TranslatedSentences / CurrentSentences / IsTranslated).</summary>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var sentences = context.State.CurrentSentences;
@@ -46,7 +46,7 @@ public sealed class TranslationOperator(
         LogInfo($"Translation completed ({_options.TargetLanguage}).");
     }
 
-    /// <summary>计算翻译 QA：术语命中率 + 译文/原文长度偏差（纯文本统计，不额外调用 LLM）。</summary>
+    /// <summary>Computes translation QA: glossary term hit rate + translated/source length deviation (plain-text statistics, no extra LLM calls).</summary>
     internal static TranslationQa BuildTranslationQa(List<Sentence> sentences, TranslationOptions options)
     {
         var qa = new TranslationQa { TranslatedCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s.TranslatedText)) };

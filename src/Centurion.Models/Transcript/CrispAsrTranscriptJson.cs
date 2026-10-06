@@ -2,85 +2,85 @@ using Newtonsoft.Json;
 
 namespace Centurion.Models.Transcript;
 
-/// <summary>CrispASR -ojf 输出的完整转录 JSON 根对象，whisper / qwen3 等后端通用。</summary>
+/// <summary>Full transcript JSON root object output by CrispASR -ojf; shared by whisper / qwen3 and other backends.</summary>
 public class CrispAsrTranscriptJson
 {
-    /// <summary>CrispASR 头部元信息（后端、模型、语言）。</summary>
+    /// <summary>CrispASR header metadata (backend, model, language).</summary>
     [JsonProperty("crispasr")] public required CrispAsrHeader Header { get; set; }
 
-    /// <summary>逐段转写条目列表。</summary>
+    /// <summary>List of per-segment transcription entries.</summary>
     [JsonProperty("transcription")] public required List<CrispAsrTranscriptionItem> Transcription { get; set; }
 }
 
-/// <summary>CrispASR 输出根对象中的头部元信息。</summary>
+/// <summary>Header metadata in the CrispASR output root object.</summary>
 public class CrispAsrHeader
 {
-    /// <summary>转录后端名称（如 whisper、qwen3）。</summary>
+    /// <summary>Transcription backend name (e.g. whisper, qwen3).</summary>
     [JsonProperty("backend")] public required string Backend { get; set; }
 
-    /// <summary>所用模型的文件路径。</summary>
+    /// <summary>File path of the model used.</summary>
     [JsonProperty("model")] public required string Model { get; set; }
 
-    /// <summary>音频语言代码；"auto" 表示由模型自动检测。</summary>
+    /// <summary>Audio language code; "auto" means the model detects it automatically.</summary>
     [JsonProperty("language")] public required string Language { get; set; }
 }
 
-/// <summary>CrispASR 输出中 transcription 数组的一个条目（一个音频段）。</summary>
+/// <summary>An entry in the CrispASR transcription array (one audio segment).</summary>
 public class CrispAsrTranscriptionItem
 {
-    /// <summary>该段的起止时间戳（字符串形式，如 "00:00:01,260"）。</summary>
+    /// <summary>Start/end timestamps of this segment (as strings, e.g. "00:00:01,260").</summary>
     [JsonProperty("timestamps")] public required TimeStampInfo Timestamps { get; set; }
 
-    /// <summary>该段的起止偏移（毫秒）。</summary>
+    /// <summary>Start/end offsets of this segment (milliseconds).</summary>
     [JsonProperty("offsets")] public required OffsetInfo Offsets { get; set; }
 
-    /// <summary>该段识别文本。</summary>
+    /// <summary>Recognized text of this segment.</summary>
     [JsonProperty("text")] public required string Text { get; set; }
 
-    /// <summary>说话人标签（如 "(speaker 0) "）；仅 --diarize 输出包含，纯转录时为 null。</summary>
+    /// <summary>Speaker tag (e.g. "(speaker 0) "); present only in --diarize output, null for plain transcription.</summary>
     [JsonProperty("speaker")] public string? Speaker { get; set; }
 
-    /// <summary>音频块序号（长音频按块处理时的块编号）。</summary>
+    /// <summary>Audio chunk index (chunk number when long audio is processed in chunks).</summary>
     [JsonProperty("chunk_id")] public int ChunkId { get; set; }
 
-    /// <summary>词级时间戳明细；部分后端（如 qwen3）可能不输出该字段。</summary>
+    /// <summary>Word-level timestamp details; some backends (e.g. qwen3) may omit this field.</summary>
     [JsonProperty("words")] public List<CrispAsrWordInfo>? Words { get; set; }
 
-    /// <summary>词级 Token 明细（含置信度），部分后端可能不输出该字段。</summary>
+    /// <summary>Word-level token details (including confidence); some backends may omit this field.</summary>
     [JsonProperty("tokens")] public List<CrispAsrTokenInfo>? Tokens { get; set; }
 }
 
-/// <summary>CrispASR 词级时间戳信息；t0/t1 单位为厘秒（毫秒 / 10）。</summary>
+/// <summary>CrispASR word-level timestamp info; t0/t1 are in centiseconds (milliseconds / 10).</summary>
 public class CrispAsrWordInfo
 {
-    /// <summary>词文本（可能带前导空格）。</summary>
+    /// <summary>Word text (may include a leading space).</summary>
     [JsonProperty("text")] public required string Text { get; set; }
 
-    /// <summary>起始时间（厘秒）。</summary>
+    /// <summary>Start time (centiseconds).</summary>
     [JsonProperty("t0")] public int T0 { get; set; }
 
-    /// <summary>结束时间（厘秒）。</summary>
+    /// <summary>End time (centiseconds).</summary>
     [JsonProperty("t1")] public int T1 { get; set; }
 
-    /// <summary>毫秒级起止偏移。</summary>
+    /// <summary>Start/end offsets in milliseconds.</summary>
     [JsonProperty("offsets")] public required OffsetInfo Offsets { get; set; }
 }
 
-/// <summary>CrispASR 词级 Token 信息（含置信度）；无时间信息时 t0/t1 为 -1。</summary>
+/// <summary>CrispASR word-level token info (including confidence); t0/t1 are -1 when no timing info is available.</summary>
 public class CrispAsrTokenInfo
 {
-    /// <summary>Token 文本（可能带前导空格）。</summary>
+    /// <summary>Token text (may include a leading space).</summary>
     [JsonProperty("text")] public required string Text { get; set; }
 
-    /// <summary>识别置信度（概率，0~1）。</summary>
+    /// <summary>Recognition confidence (probability, 0 to 1).</summary>
     [JsonProperty("p")] public double P { get; set; }
 
-    /// <summary>起始时间（厘秒），无时间信息时为 -1。</summary>
+    /// <summary>Start time (centiseconds); -1 when no timing info is available.</summary>
     [JsonProperty("t0")] public int T0 { get; set; }
 
-    /// <summary>结束时间（厘秒），无时间信息时为 -1。</summary>
+    /// <summary>End time (centiseconds); -1 when no timing info is available.</summary>
     [JsonProperty("t1")] public int T1 { get; set; }
 
-    /// <summary>毫秒级起止偏移。</summary>
+    /// <summary>Start/end offsets in milliseconds.</summary>
     [JsonProperty("offsets")] public required OffsetInfo Offsets { get; set; }
 }

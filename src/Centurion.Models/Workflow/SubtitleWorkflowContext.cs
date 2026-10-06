@@ -1,14 +1,14 @@
 namespace Centurion.Models.Workflow;
 
 /// <summary>
-/// 字幕生成工作流的全量上下文（Pipeline 唯一传递对象）
-/// 设计为纯数据容器，可序列化以支持检查点/断点续传。
+/// The full context of the subtitle generation workflow, the only object passed through the Pipeline.
+/// Designed as a pure data container and serializable to support checkpoints and resume.
 /// </summary>
 public class SubtitleWorkflowContext(WorkflowConfig config)
 {
-    /// <summary>工作流配置（源自 CLI SubCommand；命令链中间可更新输出路径等字段）</summary>
+    /// <summary>Workflow configuration; originates from the CLI subcommand and may be updated mid-chain, such as the output path.</summary>
     public WorkflowConfig Config { get; set; } = config;
 
-    /// <summary>可变的工作流状态（由各 Operator 逐步填充）</summary>
+    /// <summary>Mutable workflow state, filled in step by step by each Operator.</summary>
     public WorkflowState State { get; set; } = new();
 }

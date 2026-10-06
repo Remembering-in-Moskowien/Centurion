@@ -197,7 +197,9 @@ public static class MetadataJsonLoader
             BuildModelDict(dtoModels, "diarization"),
             BuildModelDict(dtoModels, "bertOnnx"),
             BuildModelDict(dtoModels, "qwen3Tts"),
-            BuildModelDict(dtoModels, "indextts"));
+            BuildModelDict(dtoModels, "indextts"),
+            BuildModelDict(dtoModels, "opusMt"),
+            BuildModelDict(dtoModels, "sat"));
     }
 
     private static Dictionary<string, ModelMeta> BuildModelDict(
@@ -224,7 +226,8 @@ public static class MetadataJsonLoader
                 dto.Files ?? throw new InvalidOperationException($"Model '{key}' (directory) requires a non-empty 'files' list."),
                 dto.Subdirectory)
             {
-                FileHash = dto.FileHash
+                FileHash = dto.FileHash,
+                FileUrls = dto.FileUrls
             },
             ModelDownloadType.OnnxModelDirectory => new ModelMeta(
                 dto.DownloadUrl ?? throw new InvalidOperationException($"Model '{key}' is missing 'downloadUrl'."),
@@ -232,7 +235,8 @@ public static class MetadataJsonLoader
                 dto.OnnxModelType ?? throw new InvalidOperationException($"Model '{key}' (onnx-directory) requires 'onnxModelType'."),
                 dto.Subdirectory)
             {
-                FileHash = dto.FileHash
+                FileHash = dto.FileHash,
+                FileUrls = dto.FileUrls
             },
             _ => new ModelMeta(
                 dto.FileName ?? throw new InvalidOperationException($"Model '{key}' is missing 'fileName'."),
@@ -290,7 +294,9 @@ public static class MetadataJsonLoader
         var bert = MergeModelDict(local.BertOnnxModels, ModelRegistry.Default.BertOnnxModels, ref changed);
         var tts = MergeModelDict(local.Qwen3TtsModels, ModelRegistry.Default.Qwen3TtsModels, ref changed);
         var indextts = MergeModelDict(local.IndexTtsModels, ModelRegistry.Default.IndexTtsModels, ref changed);
-        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert, tts, indextts);
+        var opusmt = MergeModelDict(local.OpusMtModels, ModelRegistry.Default.OpusMtModels, ref changed);
+        var sat = MergeModelDict(local.SatModels, ModelRegistry.Default.SatModels, ref changed);
+        return new ModelRegistry(whisper, faster, qwen, aligner, diar, bert, tts, indextts, opusmt, sat);
     }
 
     private static Dictionary<string, ModelMeta> MergeModelDict(
@@ -331,7 +337,9 @@ public static class MetadataJsonLoader
                     ["diarization"] = ToDtoDict(catalog.Models.DiarizationModels),
                     ["bertOnnx"] = ToDtoDict(catalog.Models.BertOnnxModels),
                     ["qwen3Tts"] = ToDtoDict(catalog.Models.Qwen3TtsModels),
-                    ["indextts"] = ToDtoDict(catalog.Models.IndexTtsModels)
+                    ["indextts"] = ToDtoDict(catalog.Models.IndexTtsModels),
+                    ["opusMt"] = ToDtoDict(catalog.Models.OpusMtModels),
+                    ["sat"] = ToDtoDict(catalog.Models.SatModels)
                 }
             };
 
@@ -365,7 +373,11 @@ public static class MetadataJsonLoader
                     ["qwen3Asr"] = ToDtoDict(ModelRegistry.Default.Qwen3AsrModels),
                     ["qwen3ForcedAligner"] = ToDtoDict(ModelRegistry.Default.Qwen3ForcedAlignerModels),
                     ["diarization"] = ToDtoDict(ModelRegistry.Default.DiarizationModels),
-                    ["bertOnnx"] = ToDtoDict(ModelRegistry.Default.BertOnnxModels)
+                    ["bertOnnx"] = ToDtoDict(ModelRegistry.Default.BertOnnxModels),
+                    ["qwen3Tts"] = ToDtoDict(ModelRegistry.Default.Qwen3TtsModels),
+                    ["indextts"] = ToDtoDict(ModelRegistry.Default.IndexTtsModels),
+                    ["opusMt"] = ToDtoDict(ModelRegistry.Default.OpusMtModels),
+                    ["sat"] = ToDtoDict(ModelRegistry.Default.SatModels)
                 }
             };
 
@@ -417,7 +429,8 @@ public static class MetadataJsonLoader
         },
         Files = meta.Files,
         OnnxModelType = meta.OnnxModelType,
-        Subdirectory = meta.Subdirectory
+        Subdirectory = meta.Subdirectory,
+        FileUrls = meta.FileUrls?.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal)
     };
 
     // ---------- JSON structures ----------
@@ -484,5 +497,7 @@ public static class MetadataJsonLoader
         public string? OnnxModelType { get; set; }
         /// <summary>Optional subdirectory for the model within the download directory.</summary>
         public string? Subdirectory { get; set; }
+        /// <summary>Optional per-file absolute download URLs overriding the base URL prefix, keyed by file name.</summary>
+        public Dictionary<string, string>? FileUrls { get; set; }
     }
 }

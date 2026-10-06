@@ -9,28 +9,28 @@ using System.Text.RegularExpressions;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 合并管道的去重算子：不同字幕轨常含内容重复的行（SDH 字幕、双语拆轨、
-/// 同一台词的不同版本）。两条句子时间窗接近（相交或间隙 ≤ 容差）
-/// 且文本相似度达到阈值时视为重复，保留时间更早/来源更靠前的一条，其余标记跳过渲染。
-/// 默认启用；容差与阈值由命令参数配置。
+/// Deduplication operator for the combine pipeline: different subtitle tracks often carry repeated
+/// lines (SDH subtitles, split bilingual tracks, alternate versions of the same dialogue). Two sentences
+/// are duplicates when their time windows are close (overlapping or gap within tolerance) and text similarity reaches the threshold; the earlier / earlier-source one is kept, the rest are marked SkipRender.
+/// Enabled by default; tolerance and threshold are configured via command arguments.
 /// </summary>
 public sealed partial class CombineDedupeOperator(ILogger<CombineDedupeOperator> logger)
     : PipelineOperatorBase<CombineDedupeOperator>(logger)
 {
-    /// <summary>State.Extensions 中去重时间容差（毫秒）的键。</summary>
+    /// <summary>Key in State.Extensions for the dedupe time tolerance (ms).</summary>
     public const string ToleranceKey = "CombineDedupeToleranceMs";
 
-    /// <summary>State.Extensions 中相似度阈值的键。</summary>
+    /// <summary>Key in State.Extensions for the similarity threshold.</summary>
     public const string SimilarityKey = "CombineDedupeSimilarity";
 
-    /// <summary>算子名称。</summary>
+    /// <summary>Operator name.</summary>
     public override string Name => "Combine Dedupe";
 
     /// <summary>
-    /// 对当前句子集合执行贪心去重。
+    /// Runs greedy deduplication on the current sentence set.
     /// </summary>
-    /// <param name="context">工作流上下文。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
+    /// <param name="context">Workflow context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         var tolerance = GetExtensionValue(context, ToleranceKey, 500.0);
@@ -52,13 +52,13 @@ public sealed partial class CombineDedupeOperator(ILogger<CombineDedupeOperator>
     }
 
     /// <summary>
-    /// 纯去重算法（供算子与单元测试共用）：按输入顺序贪心扫描，
-    /// 与已保留句子时间接近且文本相似的句子置 <see cref="Sentence.SkipRender"/>。
+    /// Pure deduplication algorithm (shared by the operator and unit tests): scans greedily in input
+    /// order and marks with <see cref="Sentence.SkipRender"/> sentences close in time to a kept sentence and similar in text.
     /// </summary>
-    /// <param name="sentences">合并后的句子集合（就地标记）。</param>
-    /// <param name="toleranceMs">时间窗容差（毫秒）。</param>
-    /// <param name="similarityThreshold">文本相似度阈值（0-1）。</param>
-    /// <returns>被标记跳过的句子数。</returns>
+    /// <param name="sentences">Merged sentence set (marked in place).</param>
+    /// <param name="toleranceMs">Time-window tolerance (milliseconds).</param>
+    /// <param name="similarityThreshold">Text similarity threshold (0-1).</param>
+    /// <returns>The number of sentences marked to skip rendering.</returns>
     public static int Deduplicate(List<Sentence> sentences, double toleranceMs, double similarityThreshold)
     {
         var kept = new List<Sentence>(sentences.Count);
@@ -85,11 +85,11 @@ public sealed partial class CombineDedupeOperator(ILogger<CombineDedupeOperator>
         return removed;
     }
 
-    /// <summary>时间窗是否接近：区间相交，或间隙不超过容差。</summary>
+    /// <summary>Whether time windows are close: intervals overlap, or the gap is within tolerance.</summary>
     private static bool TimesClose(Sentence a, Sentence b, double toleranceMs) =>
         a.Start <= b.End + toleranceMs && b.Start <= a.End + toleranceMs;
 
-    /// <summary>归一化比较文本：剔除 ASS 覆盖标签、换行、空白并统一大小写。</summary>
+    /// <summary>Normalizes comparison text: strips ASS override tags, line breaks and whitespace, and lowercases.</summary>
     private static string Normalize(Sentence sentence)
     {
         var text = sentence.Text ?? string.Empty;

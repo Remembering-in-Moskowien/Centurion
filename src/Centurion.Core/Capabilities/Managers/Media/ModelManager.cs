@@ -32,10 +32,12 @@ public class ModelManager : IDisposable
     /// <param name="modelDict">Model metadata dictionary</param>
     /// <param name="serviceProvider">Service provider</param>
     /// <param name="categoryFolder">Category folder name for the model (e.g. whisper/diarization/vad)</param>
+    /// <param name="modelsRoot">Optional models root directory (defaults to AppContext.BaseDirectory); the model lands under modelsRoot/models/{categoryFolder}/{modelName}.</param>
     public ModelManager(string modelName,
         IReadOnlyDictionary<string, ModelMeta> modelDict,
         IServiceProvider serviceProvider,
-        string categoryFolder = "common")
+        string categoryFolder = "common",
+        string? modelsRoot = null)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _modelName = string.Empty;
@@ -58,17 +60,18 @@ public class ModelManager : IDisposable
 
         _targetMeta = tempMeta;
 
+        var root = Path.GetFullPath(modelsRoot ?? AppContext.BaseDirectory);
         // Determine the path based on the download type
         if (_targetMeta.DownloadType is ModelDownloadType.Directory or ModelDownloadType.OnnxModelDirectory)
         {
             // Directory model: subdirectory is models/categoryFolder/modelName/
-            ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder, _modelName);
+            ModelFolder = Path.Combine(root, "models", categoryFolder, _modelName);
             ModelFilePath = ModelFolder; // Set ModelFilePath to the directory path
         }
         else
         {
             // Single-file model: models/categoryFolder/fileName
-            ModelFolder = Path.Combine(AppContext.BaseDirectory, "models", categoryFolder);
+            ModelFolder = Path.Combine(root, "models", categoryFolder);
             ModelFilePath = Path.Combine(ModelFolder, _targetMeta.FileName!);
         }
     }
@@ -146,7 +149,9 @@ public class ModelManager : IDisposable
         // Download all files
         var tasks = _targetMeta.Files.Select(async fileName =>
         {
-            var fileUrl = _targetMeta.DownloadUrl!.TrimEnd('/') + "/" + fileName;
+            var fileUrl = _targetMeta.FileUrls != null && _targetMeta.FileUrls.TryGetValue(fileName, out var overrideUrl)
+                ? overrideUrl
+                : _targetMeta.DownloadUrl!.TrimEnd('/') + "/" + fileName;
             var savePath = Path.Combine(ModelFolder, fileName);
             var request = new OperatorsRequest<AriaDownloadRequest>
             {

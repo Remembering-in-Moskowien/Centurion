@@ -1,17 +1,17 @@
 namespace Centurion.Models.Text;
 
 /// <summary>
-/// 语言支持工具：为无空格分隔的语系（中日韩等）提供词拼接与标点集合，
-/// 并支持中英混合等代码混写（code-switching）文本的感知分词与拼接。
-/// 中文、日文不使用空格分隔词，其他语言按空格拼接。
+/// Language support utilities: provides word joining and punctuation sets for spaceless languages (CJK, etc.),
+/// and supports tokenization and joining aware of code-switching text such as mixed Chinese-English.
+/// Chinese and Japanese do not separate words with spaces; other languages are joined with spaces.
 /// </summary>
 public static class LanguageSupport
 {
     /// <summary>
-    /// 判断是否为不使用空格分隔词的语系（中日韩及常见变体写法）。
+    /// Whether the language is a spaceless one (CJK and common variant codes).
     /// </summary>
-    /// <param name="language">语言代码（如 "en"、"zh"、"zh-cn"、"ja"、"ko"）；null 或空白视为非 CJK。</param>
-    /// <returns>是 CJK 无空格语系时为 true。</returns>
+    /// <param name="language">Language code (e.g. "en", "zh", "zh-cn", "ja", "ko"); null or whitespace is treated as non-CJK.</param>
+    /// <returns>true when the language is a CJK spaceless language.</returns>
     public static bool IsSpaceless(string? language)
     {
         if (string.IsNullOrWhiteSpace(language))
@@ -19,20 +19,20 @@ public static class LanguageSupport
 
         return language.Trim().ToLowerInvariant() switch
         {
-            // 中文各变体与日语：连续书写，词间不使用空格
+            // Chinese variants and Japanese: written continuously without spaces between words
             "zh" or "zh-cn" or "zh-tw" or "zh-hk" or "zh-hans" or "zh-hant" or "chs" or "cht" or "cmn" or "yue" => true,
             "ja" or "ja-jp" or "jp" => true,
-            // 注意：韩语谚文用空格分隔词（如 "안녕하세요 세계"），不属于无空格语系
+            // Note: Korean Hangul separates words with spaces (e.g. "안녕하세요 세계") and is not a spaceless language
             _ => false
         };
     }
 
     /// <summary>
-    /// 按语言拼接词序列：CJK 语系直接连接（无空格），其他语系以空格连接。
+    /// Joins a word sequence by language: CJK languages are concatenated directly (no spaces); other languages are joined with spaces.
     /// </summary>
-    /// <param name="words">待拼接的词序列。</param>
-    /// <param name="language">语言代码，决定是否插入空格。</param>
-    /// <returns>拼接后的字符串。</returns>
+    /// <param name="words">The word sequence to join.</param>
+    /// <param name="language">Language code; determines whether spaces are inserted.</param>
+    /// <returns>The joined string.</returns>
     public static string JoinWords(IEnumerable<string> words, string? language)
     {
         ArgumentNullException.ThrowIfNull(words);
@@ -43,48 +43,48 @@ public static class LanguageSupport
     }
 
     /// <summary>
-    /// 常见的中日韩句末与从句标点，外加南亚（梵文句号 । ॥）与阿拉伯问号（؟）。
+    /// Common CJK sentence-final and clause punctuation, plus South Asian (Devanagari danda । ॥) and Arabic question mark (؟).
     /// </summary>
     public static readonly char[] CjkBreakPunctuation =
         ['。', '！', '？', '，', '；', '：', '、', '…', '।', '॥', '؟'];
 
     /// <summary>
-    /// 判断字符是否为中日韩表意文字/日文假名/注音符号（不含谚文——韩语按空格分词）。
+    /// Whether a character is a CJK ideograph / Japanese kana / Zhuyin symbol (excluding Hangul, since Korean is space-tokenized).
     /// </summary>
-    /// <param name="c">待判定字符。</param>
-    /// <returns>是 CJK 逐字书写字符时为 true。</returns>
+    /// <param name="c">The character to test.</param>
+    /// <returns>true when the character is a CJK per-character writing character.</returns>
     public static bool IsCjkIdeograph(char c)
     {
-        // 常用区段：扩展 A、统一表意文字、兼容表意、假名、注音
+        // Common ranges: Extension A, Unified Ideographs, Compatibility Ideographs, Kana, Zhuyin
         if (c is >= '\u3400' and <= '\u4DBF' or >= '\u4E00' and <= '\u9FFF'
             or >= '\uF900' and <= '\uFAFF' or >= '\u3040' and <= '\u30FF'
             or >= '\u3100' and <= '\u312F' or >= '\u31F0' and <= '\u31FF')
             return true;
 
-        // 扩展 B 及以后的字符以代理对形式出现（码点 ≥ U+20000）
+        // Characters from Extension B onward appear as surrogate pairs (code points >= U+20000)
         if (char.IsSurrogate(c) && c is >= '\uD840' and <= '\uD87F')
             return true;
 
         return false;
     }
 
-    /// <summary>常见的中日韩标点（句读、引号、括号等）。</summary>
+    /// <summary>Common CJK punctuation (punctuation marks, quotes, brackets, etc.).</summary>
     private static readonly HashSet<char> CjkPunctuationSet =
         [.. CjkBreakPunctuation, '「', '」', '『', '』', '《', '》', '（', '）', '【', '】', '〃', '々', 'ー'];
 
     /// <summary>
-    /// 判断字符是否为中日韩标点。
+    /// Whether a character is CJK punctuation.
     /// </summary>
-    /// <param name="c">待判定字符。</param>
-    /// <returns>是中日韩标点时为 true。</returns>
+    /// <param name="c">The character to test.</param>
+    /// <returns>true when the character is CJK punctuation.</returns>
     public static bool IsCjkPunctuation(char c) => CjkPunctuationSet.Contains(c);
 
     /// <summary>
-    /// 判断词 token 是否为"类 CJK 词"：全部由 CJK 表意/假名/标点及阿拉伯数字组成。
-    /// 拼接时相邻的两个类 CJK 词之间不加空格；含拉丁字母的 token 不视为类 CJK。
+    /// Whether a word token is a CJK-like word: composed entirely of CJK ideographs/kana/punctuation and Arabic digits.
+    /// When joining, no space is inserted between two adjacent CJK-like words; tokens containing Latin letters are not considered CJK-like.
     /// </summary>
-    /// <param name="token">词 token。</param>
-    /// <returns>类 CJK 词时为 true。</returns>
+    /// <param name="token">The word token.</param>
+    /// <returns>true when the token is a CJK-like word.</returns>
     public static bool IsCjkToken(string? token)
     {
         if (string.IsNullOrEmpty(token))
@@ -99,14 +99,14 @@ public static class LanguageSupport
     }
 
     /// <summary>
-    /// 混合感知分词：中英混合等代码混写文本按字符类别切分——
-    /// CJK 表意/假名逐字拆为单字符词；拉丁语词按空白切分为整词；
-    /// CJK 标点附着到紧邻的前一个 CJK 词（或拉丁词）末尾，避免被孤立；
-    /// 韩语谚文按空白分词（韩语空格书写）。
-    /// 例如 "hello 世界 world" → hello / 世 / 界 / world；"我们talk about" → 我 / 们 / talk / about。
+    /// Mixed-aware tokenization: splits code-switching text such as mixed Chinese-English by character category:
+    /// CJK ideographs/kana are split into single-character tokens; Latin words are split into whole words by whitespace;
+    /// CJK punctuation is attached to the end of the immediately preceding CJK word (or Latin word) to avoid being isolated;
+    /// Korean Hangul is tokenized by whitespace (Korean is written with spaces).
+    /// For example, interleaving CJK characters between Latin words yields one token per CJK character while Latin words stay whole.
     /// </summary>
-    /// <param name="text">混合文本。</param>
-    /// <returns>混合分词结果（保留原词序，不含空白）。</returns>
+    /// <param name="text">The mixed text.</param>
+    /// <returns>The mixed tokenization result (preserving original order, without whitespace).</returns>
     public static List<string> TokenizeMixed(string text)
     {
         var tokens = new List<string>();
@@ -129,7 +129,7 @@ public static class LanguageSupport
 
             if (IsCjkPunctuation(c))
             {
-                // 附着到紧邻的前一个 CJK 词；若当前有拉丁缓冲则并入词尾；否则独立成词
+                // Attach to the immediately preceding CJK word; if a Latin buffer is active, append to its tail; otherwise form its own token
                 if (tokens.Count > 0 && IsCjkToken(tokens[^1]))
                     tokens[^1] += c;
                 else
@@ -154,11 +154,11 @@ public static class LanguageSupport
     }
 
     /// <summary>
-    /// 混合感知拼接：相邻两个"类 CJK 词"直接相连（无空格），其余词间以空格连接。
-    /// 例如 [我, 们, talk] → "我们 talk"；[hello, 世, 界] → "hello 世界"。
+    /// Mixed-aware joining: two adjacent CJK-like words are concatenated directly (no space); other words are joined with spaces.
+    /// For example, adjacent CJK-like tokens are joined without a space, while a CJK-like token next to a Latin word gets a space.
     /// </summary>
-    /// <param name="tokens">词序列。</param>
-    /// <returns>拼接后的字符串。</returns>
+    /// <param name="tokens">The word sequence.</param>
+    /// <returns>The joined string.</returns>
     public static string JoinMixed(IEnumerable<string> tokens)
     {
         ArgumentNullException.ThrowIfNull(tokens);

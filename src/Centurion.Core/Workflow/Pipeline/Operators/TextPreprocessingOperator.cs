@@ -10,15 +10,15 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 文本清洗算子：按配置移除标点、展开数字与缩写、统一小写，
-/// 为每句生成用于对齐的 CleanedText。
+/// Text cleaning operator: removes punctuation, expands numbers and abbreviations, and lowercases text as configured,
+/// producing a CleanedText for each sentence that is used for alignment.
 /// </summary>
 public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingOperator>
 {
     private readonly ILogger<TextPreprocessingOperator> _logger;
 
-    /// <summary>创建文本清洗算子实例。</summary>
-    /// <param name="logger">记录清洗过程日志的记录器。</param>
+    /// <summary>Creates a text cleaning operator instance.</summary>
+    /// <param name="logger">Logger used to record the cleaning process.</param>
     public TextPreprocessingOperator(ILogger<TextPreprocessingOperator> logger) : base(logger)
     {
         _logger = logger;
@@ -40,14 +40,14 @@ public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingO
         ["St."] = "Street"
     };
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Text Cleaning for Alignment";
 
     /// <summary>
-    /// 执行文本清洗：对当前句子逐句生成 CleanedText，支持加载自定义缩写词典。
+    /// Runs text cleaning: generates CleanedText for each current sentence, and supports loading a custom abbreviation dictionary.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供句子与清洗配置。</param>
-    /// <param name="cancellationToken">用于取消清洗过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing sentences and cleaning configuration.</param>
+    /// <param name="cancellationToken">Token used to cancel the cleaning process.</param>
     public override Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -137,15 +137,15 @@ public class TextPreprocessingOperator : PipelineOperatorBase<TextPreprocessingO
 
         if (config.ExpandNumbers && !Centurion.Models.Text.LanguageSupport.IsSpaceless(config.Language))
         {
-            // 数字展开仅在拉丁语系下有意义（展开为英文单词）；
-            // 中文等无空格语系保留数字原文，避免引入无关英文文本干扰对齐。
-            // 匹配带千位分隔符的整数（如 500,000）或普通整数（如 123）
+            // Number expansion only makes sense for Latin-script languages (expands into English words);
+            // spaceless scripts such as Chinese keep the digits as-is to avoid introducing unrelated English text that would interfere with alignment.
+            // Matches integers with thousands separators (such as 500,000) or plain integers (such as 123)
             result = NumberPattern.Replace(result, match =>
             {
-                // 移除逗号，得到纯数字字符串
+                // Remove commas to obtain a pure digit string
                 var raw = match.Value.Replace(",", "");
                 if (!long.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-                    return match.Value; // 解析失败则保留原文
+                    return match.Value; // Keep the original text if parsing fails
 
                 return number.ToWords(CultureInfo.GetCultureInfo("en-US"));
             });

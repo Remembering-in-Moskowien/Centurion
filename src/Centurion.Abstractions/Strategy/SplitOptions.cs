@@ -64,4 +64,14 @@ public class SplitOptions
     /// Whether to enable a second segmentation pass.
     /// </summary>
     public bool EnableResegmentation { get; set; } = false;
+
+    /// <summary>
+    /// Model name for the SaT ("sat") split strategy, such as "sat-3l-sm"; null selects the default.
+    /// </summary>
+    public string? ModelName { get; set; }
+
+    /// <summary>
+    /// Boundary probability threshold for the SaT split strategy (0.0–1.0); the wtpsplit default is 0.5.
+    /// </summary>
+    public double Threshold { get; set; } = 0.5;
 }

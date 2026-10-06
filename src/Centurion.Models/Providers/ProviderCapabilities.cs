@@ -1,51 +1,51 @@
 namespace Centurion.Models.Providers;
 
-/// <summary>执行形态：本地推理或云端 API。</summary>
+/// <summary>Execution kind: local inference or cloud API.</summary>
 public enum ProviderKind
 {
-    /// <summary>本地推理（whisper.cpp / Ollama / llama.cpp / demucs-rs 等），免 API 密钥，无按量成本。</summary>
+    /// <summary>Local inference (whisper.cpp / Ollama / llama.cpp / demucs-rs, etc.); no API key required and no pay-per-use cost.</summary>
     Local,
 
-    /// <summary>云端 API（OpenAI / Groq / DashScope / Deepgram / 智谱 等），需 API 密钥，按量计费。</summary>
+    /// <summary>Cloud API (OpenAI / Groq / DashScope / Deepgram / Zhipu, etc.); requires an API key and is billed per use.</summary>
     Cloud
 }
 
-/// <summary>延迟档位（用于 profile 选型与成本估算）。</summary>
+/// <summary>Latency tier (used for profile selection and cost estimation).</summary>
 public enum ProviderLatency
 {
-    /// <summary>低延迟：本地小模型或高性能云端点。</summary>
+    /// <summary>Low latency: small local models or high-performance cloud endpoints.</summary>
     Low,
-    /// <summary>中等延迟：通用云 ASR/LLM。</summary>
+    /// <summary>Medium latency: general-purpose cloud ASR/LLM.</summary>
     Medium,
-    /// <summary>高延迟：大模型或排队型端点。</summary>
+    /// <summary>High latency: large models or queue-based endpoints.</summary>
     High
 }
 
-/// <summary>质量档位（用于 profile 选型）。</summary>
+/// <summary>Quality tier (used for profile selection).</summary>
 public enum ProviderQualityLevel
 {
-    /// <summary>草稿级：最快但质量一般（tiny/base、快速端点）。</summary>
+    /// <summary>Draft: fastest but average quality (tiny/base, fast endpoints).</summary>
     Draft,
-    /// <summary>常规级：默认平衡（small/medium、whisper-1）。</summary>
+    /// <summary>Normal: balanced default (small/medium, whisper-1).</summary>
     Normal,
-    /// <summary>高质量：大模型（large-v3、qwen3-asr-1.7b、glm-4v）。</summary>
+    /// <summary>High quality: large models (large-v3, qwen3-asr-1.7b, glm-4v).</summary>
     High,
-    /// <summary>极致质量：最大可用模型（成本最高）。</summary>
+    /// <summary>Ultra quality: the largest available models (highest cost).</summary>
     Ultra
 }
 
 /// <summary>
-/// Provider 能力声明：本地/云、语言、GPU、成本、延迟、质量档位。
-/// 供 Provider 工厂选型、profile 决策、命令展示与成本估算使用。
+/// Provider capability declaration: local/cloud, languages, GPU, cost, latency, quality tier.
+/// Used by the provider factory for selection, profile decisions, command display, and cost estimation.
 /// </summary>
-/// <param name="Kind">执行形态。</param>
-/// <param name="SupportedLanguages">支持的语言代码集合；空集合表示不限语言。</param>
-/// <param name="RequiresGpu">是否强制要求 GPU（本地大模型）。</param>
-/// <param name="CostPerAudioMinuteUsd">音频处理类（ASR/OCR/TTS）每分钟估算成本（美元）；本地为 0。</param>
-/// <param name="CostPer1MTokensUsd">LLM 类每百万 token 估算成本（美元）；本地为 0。</param>
-/// <param name="Latency">延迟档位。</param>
-/// <param name="Quality">质量档位。</param>
-/// <param name="Description">人类可读描述。</param>
+/// <param name="Kind">Execution kind.</param>
+/// <param name="SupportedLanguages">Supported language codes; an empty set means any language.</param>
+/// <param name="RequiresGpu">Whether a GPU is required (large local models).</param>
+/// <param name="CostPerAudioMinuteUsd">Estimated cost per audio minute in USD for audio processing (ASR/OCR/TTS); 0 for local.</param>
+/// <param name="CostPer1MTokensUsd">Estimated cost per million tokens in USD for LLM use; 0 for local.</param>
+/// <param name="Latency">Latency tier.</param>
+/// <param name="Quality">Quality tier.</param>
+/// <param name="Description">Human-readable description.</param>
 public sealed record ProviderCapabilities(
     ProviderKind Kind,
     IReadOnlySet<string> SupportedLanguages,
@@ -56,14 +56,14 @@ public sealed record ProviderCapabilities(
     ProviderQualityLevel Quality,
     string Description)
 {
-    /// <summary>构造本地 Provider 能力的快捷方式（成本恒为 0）。</summary>
+    /// <summary>Convenience factory for local provider capabilities (cost is always 0).</summary>
     public static ProviderCapabilities Local(
         bool requiresGpu, ProviderLatency latency, ProviderQualityLevel quality, string description,
         params string[] languages) =>
         new(ProviderKind.Local, new HashSet<string>(languages, StringComparer.OrdinalIgnoreCase),
             requiresGpu, 0, 0, latency, quality, description);
 
-    /// <summary>构造云端 Provider 能力的快捷方式。</summary>
+    /// <summary>Convenience factory for cloud provider capabilities.</summary>
     public static ProviderCapabilities Cloud(
         double costPerAudioMinuteUsd, double costPer1MTokensUsd,
         ProviderLatency latency, ProviderQualityLevel quality, string description,
@@ -71,7 +71,7 @@ public sealed record ProviderCapabilities(
         new(ProviderKind.Cloud, new HashSet<string>(languages, StringComparer.OrdinalIgnoreCase),
             false, costPerAudioMinuteUsd, costPer1MTokensUsd, latency, quality, description);
 
-    /// <summary>是否支持指定语言（空集合 = 不限）。</summary>
+    /// <summary>Whether the specified language is supported (empty set = any language).</summary>
     public bool Supports(string language) =>
         SupportedLanguages.Count == 0 || SupportedLanguages.Contains(language);
 }

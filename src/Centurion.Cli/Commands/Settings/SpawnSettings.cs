@@ -177,11 +177,25 @@ public sealed class SpawnSettings : GlobalCommandSettings
 
     // ----- Sentence splitter -----
     /// <summary>
-    /// Split strategy: rule/rule-aggressive (active rules, short dialogue; default), rule-passive (passive rules, steady speech), llm (LLM-based).
+    /// Split strategy: rule/rule-aggressive (active rules, short dialogue; default), rule-passive (passive rules, steady speech), llm (LLM-based), sat (local SaT model).
     /// </summary>
     [CommandOption("-s|--splitter <STRATEGY>")]
-    [Description("Split strategy: rule (default) / rule-passive / llm")]
+    [Description("Split strategy: rule (default) / rule-passive / llm / sat")]
     public string Splitter { get; init; } = "rule";
+
+    /// <summary>
+    /// Model for LLM-based splitting (e.g. gpt-4), or the local SaT model name for --splitter sat (default sat-3l-sm).
+    /// </summary>
+    [CommandOption("--splitter-model <MODEL>")]
+    [Description("Model for LLM-based splitting, or the SaT model name for --splitter sat (default sat-3l-sm)")]
+    public string? SplitterModel { get; init; }
+
+    /// <summary>
+    /// Boundary probability threshold (0.0-1.0) for the SaT model, default 0.5.
+    /// </summary>
+    [CommandOption("--splitter-threshold <VALUE>")]
+    [Description("SaT boundary probability threshold, default 0.5")]
+    public double SplitterThreshold { get; init; } = 0.5;
 
     /// <summary>
     /// NLP chunk granularity (0.0–1.0, higher splits finer), default 0.5.
@@ -210,13 +224,6 @@ public sealed class SpawnSettings : GlobalCommandSettings
     [CommandOption("--splitter-spread <RANGE>")]
     [Description("Spread range for line length distribution, default 10")]
     public int SpreadRange { get; init; } = 10;
-
-    /// <summary>
-    /// Model used for LLM-based splitting (e.g. gpt-4).
-    /// </summary>
-    [CommandOption("--splitter-model <MODEL>")]
-    [Description("Model for LLM-based splitting (e.g., gpt-4)")]
-    public string? SplitterModel { get; init; }
 
     /// <summary>
     /// API key for the LLM splitter model.

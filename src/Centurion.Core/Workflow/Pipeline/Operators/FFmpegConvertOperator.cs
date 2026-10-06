@@ -21,15 +21,15 @@ public class FFmpegConvertOperator(
     private const int TargetChannels = 1;
     private const string TargetCodec = "pcm_s16le";
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Audio Conversion (FFmpeg)";
 
     /// <summary>
-    /// 用 FFmpeg 将输入音频转换为 16kHz 单声道 WAV（PCM s16le），
-    /// 输出写入工作流状态中的 ConvertedAudioPath。
+    /// Converts the input audio to 16kHz mono WAV (PCM s16le) with FFmpeg, and writes the output
+    /// to ConvertedAudioPath in the workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供输入音频路径与临时目录。</param>
-    /// <param name="cancellationToken">用于取消音频转换过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing the input audio path and temp directory.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the audio conversion process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.IsAudioConverted)
@@ -42,7 +42,7 @@ public class FFmpegConvertOperator(
         if (!File.Exists(inputPath))
             throw new FileNotFoundException($"Input audio file not found: {inputPath}");
 
-        // 使用 Pipeline 共享的临时目录
+        // Use the pipeline-shared temporary directory
         var tempDir = context.State.PipelineTempDirectory;
         if (string.IsNullOrEmpty(tempDir))
             throw new InvalidOperationException("Pipeline temporary directory not set.");

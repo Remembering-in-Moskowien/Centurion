@@ -83,7 +83,12 @@ public sealed class AudioMixOperator(
     private async Task MixAsync(string ffmpeg, List<DubSegment> segments, int totalMs, string outputPath,
         double loudnessTarget, string? backgroundPath, bool ducking, CancellationToken ct)
     {
-        var inputs = new List<string> { "-y", "-f", "lavfi", "-i", $"anullsrc=r={SampleRate}:cl=stereo", "-t", (totalMs / 1000.0).ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) };
+        var inputs = new List<string>
+        {
+            "-y", "-f", "lavfi",
+            "-t", (totalMs / 1000.0).ToString("0.000", System.Globalization.CultureInfo.InvariantCulture),
+            "-i", $"anullsrc=r={SampleRate}:cl=stereo"
+        };
         foreach (var segment in segments)
         {
             inputs.Add("-i");
@@ -102,8 +107,10 @@ public sealed class AudioMixOperator(
             filters.Add($"[{i + 1}:a]aresample={SampleRate},adelay={delay}|{delay}[a{i}]");
         }
 
+        // amix duration=first uses the FIRST input's length; anullsrc (the full-length base track)
+        // must come first, otherwise the output is truncated to the first TTS segment.
         var vocalMixInputs = string.Join("", Enumerable.Range(0, segments.Count).Select(i => $"[a{i}]"));
-        filters.Add($"{vocalMixInputs}[0:a]amix=inputs={segments.Count + 1}:normalize=0:duration=first[vox]");
+        filters.Add($"[0:a]{vocalMixInputs}amix=inputs={segments.Count + 1}:normalize=0:duration=first[vox]");
 
         var loudnorm = $"loudnorm=I={loudnessTarget.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}:TP=-1.5:LRA=11";
         if (ducking && backgroundPath is not null)
@@ -116,14 +123,17 @@ public sealed class AudioMixOperator(
             filters.Add($"[{bgIndex}:a]aresample={SampleRate}[bg]");
             filters.Add($"[bg][v1]sidechaincompress=threshold=0.05:ratio=8:attack=50:release=400[duckbg]");
             filters.Add($"[duckbg][v2]amix=inputs=2:normalize=0:duration=first[mix]");
-            filters.Add($"[mix]{loudnorm}[out]");
+            filters.Add($"[mix]{loudnorm},aresample={SampleRate}[out]");
         }
         else
         {
-            filters.Add($"[vox]{loudnorm}[out]");
+            // TTS engines may synthesize at non-44.1k sample rates (e.g. QORA outputs 192 kHz);
+            // force the final output back to the project sample rate after loudness normalization.
+            filters.Add($"[vox]{loudnorm},aresample={SampleRate}[out]");
         }
 
-        var args = inputs.Concat(["-filter_complex", string.Join(";", filters), "-map", "[out]", "-c:a", "pcm_s16le", outputPath]).ToList();
+        var args = inputs.Concat(
+            ["-filter_complex", string.Join(";", filters), "-map", "[out]", "-t", (totalMs / 1000.0).ToString("0.000", System.Globalization.CultureInfo.InvariantCulture), "-c:a", "pcm_s16le", outputPath]).ToList();
         await processManager.ExecuteAsync(ffmpeg, args, ct);
     }
 

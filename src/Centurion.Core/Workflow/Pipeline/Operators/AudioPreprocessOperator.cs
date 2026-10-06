@@ -12,8 +12,8 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
-/// 音频预处理算子：估算信噪比、按需降噪与响度归一化，并重采样为下游处理所需格式，
-/// 结果写入 <see cref="SubtitleWorkflowContext"/> 状态中的 PreprocessedAudioPath。
+/// Audio preprocessing operator: estimates SNR, applies on-demand noise reduction and loudness
+/// normalization, resamples audio for downstream use, and writes the result to PreprocessedAudioPath in the <see cref="SubtitleWorkflowContext"/> state.
 /// </summary>
 public sealed class AudioPreprocessOperator(
     IBinaryLocator binaryLocator,
@@ -21,15 +21,15 @@ public sealed class AudioPreprocessOperator(
 {
     private readonly IBinaryLocator _binaryLocator = binaryLocator ?? throw new ArgumentNullException(nameof(binaryLocator));
 
-    /// <summary>算子在管道中的显示名称。</summary>
+    /// <summary>Display name of the operator in the pipeline.</summary>
     public override string Name => "Audio Preprocessing";
 
     /// <summary>
-    /// 执行音频预处理：探测音频信息、估算信噪比，按配置应用降噪与响度归一化，
-    /// 输出预处理后的音频文件并写回工作流状态。
+    /// Runs audio preprocessing: probes audio info, estimates SNR, applies noise reduction and
+    /// loudness normalization per config, writes the preprocessed file, and updates workflow state.
     /// </summary>
-    /// <param name="context">字幕工作流上下文，提供配置与输入音频路径。</param>
-    /// <param name="cancellationToken">用于取消预处理过程的取消标记。</param>
+    /// <param name="context">Subtitle workflow context, providing configuration and the input audio path.</param>
+    /// <param name="cancellationToken">Cancellation token used to cancel the preprocessing process.</param>
     public override async Task ExecuteAsync(SubtitleWorkflowContext context, CancellationToken cancellationToken)
     {
         if (context.State.PreprocessedAudioPath is { } existing && File.Exists(existing))
@@ -42,8 +42,8 @@ public sealed class AudioPreprocessOperator(
         var tempDir = context.State.PipelineTempDirectory;
         if (!File.Exists(inputPath))
         {
-            // 跨命令运行时，先前 transcribe 的临时音频可能已被清理；
-            // 回退到源媒体重新预处理，保证 align/correct 等命令可独立使用。
+            // On cross-command runs, the temp audio from a previous transcribe may be gone;
+            // fall back to re-preprocessing the source media so align/correct commands work standalone.
             LogWarning($"Converted/preprocessed audio not found ({inputPath}); falling back to source media.");
             inputPath = context.Config.InputFilePath;
         }

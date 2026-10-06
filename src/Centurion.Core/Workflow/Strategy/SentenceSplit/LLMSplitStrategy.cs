@@ -10,8 +10,8 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 
 /// <summary>
-/// 基于 LLM 的分句策略：输入先去除标点和大小写，让 LLM 恢复并断句。
-/// 带智能兜底：若 LLM 输出异常，使用模糊匹配将句子边界对齐到原始单词序列。
+/// LLM-based splitting strategy: the input is first stripped of punctuation and lowercased, then the LLM restores punctuation and splits.
+/// With smart fallback: if the LLM output is abnormal, fuzzy matching aligns sentence boundaries back to the original word sequence.
 /// </summary>
 public class LLMSplitStrategy : BaseSplitStrategy
 {
@@ -19,12 +19,12 @@ public class LLMSplitStrategy : BaseSplitStrategy
     private readonly ILogger<LLMSplitStrategy>? _logger;
     private const double MatchThreshold = 0.5;
 
-    // 用于提取 JSON 数组的正则表达式（支持纯数组或 Markdown 代码块）
+    // Regex to extract the JSON array (supports a bare array or a Markdown code block)
     private static readonly Regex JsonArrayRegex = new(@"\[\s*""(?:[^""\\]|\\.)*""\s*(?:,\s*""(?:[^""\\]|\\.)*""\s*)*\]", RegexOptions.Compiled);
 
-    /// <summary>创建基于 LLM 的分句策略实例。</summary>
-    /// <param name="chatClient">用于调用大语言模型的对话客户端。</param>
-    /// <param name="logger">可选的日志记录器，为 null 时不记录日志。</param>
+    /// <summary>Creates an LLM-based splitting strategy instance.</summary>
+    /// <param name="chatClient">The chat client used to call the large language model.</param>
+    /// <param name="logger">Optional logger; when null, nothing is logged.</param>
     public LLMSplitStrategy(IChatClient chatClient, ILogger<LLMSplitStrategy>? logger = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
@@ -32,18 +32,18 @@ public class LLMSplitStrategy : BaseSplitStrategy
     }
 
     /// <summary>
-    /// 调用 LLM 对去标点小写后的词流恢复标点并断句；
-    /// LLM 输出异常时依次尝试数量映射、模糊对齐，最终降级到规则分句。
+    /// Calls the LLM to restore punctuation and split the punctuation-stripped, lowercased word stream;
+    /// on abnormal LLM output, it tries count mapping, then fuzzy alignment, and finally falls back to rule splitting.
     /// </summary>
-    /// <param name="words">待切分的词流。</param>
-    /// <param name="options">分句长度与语言等配置选项。</param>
-    /// <returns>切分得到的句子列表。</returns>
+    /// <param name="words">The word stream to split.</param>
+    /// <param name="options">Configuration options such as split length and language.</param>
+    /// <returns>The list of sentences after splitting.</returns>
     public override async Task<List<Sentence>> Split(List<Word> words, SplitOptions options)
     {
         if (words.Count == 0)
             return [];
 
-        // ----- 预处理：去除标点和大小写 -----
+        // ----- Preprocessing: strip punctuation and casing -----
         var cleanWords = words.Select(w => new string(w.Text.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant())
                               .Where(w => !string.IsNullOrEmpty(w))
                               .ToList();
@@ -69,7 +69,7 @@ public class LLMSplitStrategy : BaseSplitStrategy
 
             _logger?.LogDebug("Raw LLM response: {Response}", messageText);
 
-            // 尝试解析 JSON（若包含多余文本则清理）
+            // Try to parse the JSON (strip extra surrounding text if present)
             var splitResult = ParseResponse(messageText);
             return BuildSentencesWithFallback(words, splitResult, options);
         }
@@ -80,12 +80,12 @@ public class LLMSplitStrategy : BaseSplitStrategy
         }
     }
 
-    // ---------- 强化提示词：强制要求纯 JSON 输出 ----------
+    // ---------- Prompt design: force pure JSON output ----------
     private string BuildSplitPrompt(string cleanText, SplitOptions options)
     {
         var lang = options.Language?.ToLowerInvariant() ?? "en";
 
-        // 中文与日文连续书写、句读相同；韩语使用英文标点（. , ? !），走英文提示词分支即可
+        // Chinese and Japanese are written continuously with shared punctuation; Korean uses English punctuation (. , ? !), so the English prompt branch suffices
         if (lang == "zh" || lang == "zh-cn" || lang == "zh-tw" || lang == "ja" || lang == "ja-jp")
         {
             return $@"
@@ -130,17 +130,17 @@ Output (JSON array only):
 ";
     }
 
-    // ---------- 解析响应：提取 JSON 数组（若有多余内容则清理） ----------
+    // ---------- Parse response: extract the JSON array (strip extra content if present) ----------
     private List<string> ParseResponse(string responseText)
     {
-        // 先尝试直接反序列化
+        // First try direct deserialization
         try
         {
                  return JsonParser.Deserialize<List<string>>(responseText);
         }
         catch (JsonException)
         {
-            // 如果直接反序列化失败，尝试提取 JSON 数组
+            // If direct deserialization fails, try extracting the JSON array
             var match = JsonArrayRegex.Match(responseText);
             if (match.Success)
             {
@@ -151,12 +151,12 @@ Output (JSON array only):
         }
     }
 
-    // ---------- 主构建方法（含兜底） ----------
+    // ---------- Main build method (with fallbacks) ----------
     private List<Sentence> BuildSentencesWithFallback(List<Word> words, List<string> sentenceTexts, SplitOptions options)
     {
         var wordList = words.OrderBy(w => w.Start).ToList();
 
-        // 策略1：直接按单词数量映射（如果总数一致）
+        // Strategy 1: direct mapping by word count (if the totals match)
         var totalLlmWords = sentenceTexts.Sum(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
         if (totalLlmWords == wordList.Count)
         {
@@ -167,7 +167,7 @@ Output (JSON array only):
         _logger?.LogWarning("LLM word count ({TotalLlmWords}) differs from original ({TotalOriginal}). Attempting fuzzy alignment.",
             totalLlmWords, wordList.Count);
 
-        // 策略2：模糊匹配对齐
+        // Strategy 2: fuzzy-match alignment
         var aligned = TryFuzzyAlignment(wordList, sentenceTexts, options);
         if (aligned != null)
         {
@@ -175,12 +175,12 @@ Output (JSON array only):
             return aligned;
         }
 
-        // 策略3：降级到规则分句
+        // Strategy 3: fall back to rule-based splitting
         _logger?.LogWarning("Fuzzy alignment failed. Falling back to rule-based splitting.");
         return FallbackSplit(words, options);
     }
 
-    // ---------- 直接按数量切分 ----------
+    // ---------- Direct split by count ----------
     private List<Sentence> BuildSentencesByCount(List<Word> wordList, List<string> sentenceTexts, SplitOptions options)
     {
         var result = new List<Sentence>();
@@ -205,14 +205,14 @@ Output (JSON array only):
 
             result.Add(new Sentence
             {
-                Text = sentenceText,  // 使用 LLM 生成的规范化文本
+                Text = sentenceText,  // use the LLM-generated normalized text
                 Start = sentenceWords.First().Start,
                 End = sentenceWords.Last().End,
                 Words = sentenceWords
             });
         }
 
-        // 剩余单词作为最后一句（使用原始拼接文本）
+        // Remaining words form the last sentence (using the original joined text)
         if (wordIndex < wordList.Count)
         {
             var remaining = wordList.Skip(wordIndex).ToList();
@@ -228,7 +228,7 @@ Output (JSON array only):
         return result;
     }
 
-    // ---------- 模糊匹配（滑动窗口） ----------
+    // ---------- Fuzzy matching (sliding window) ----------
     private List<Sentence>? TryFuzzyAlignment(List<Word> wordList, List<string> sentenceTexts, SplitOptions options)
     {
         var result = new List<Sentence>();
@@ -285,7 +285,7 @@ Output (JSON array only):
             }
 
             var takeCount = Math.Min(llmSeq.Count, wordList.Count - bestStart);
-            // 合并从 wordIndex 到 bestStart+takeCount 的所有单词，保证不丢词
+            // Merge all words from wordIndex to bestStart+takeCount so no words are lost
             var allWords = wordList.Skip(wordIndex).Take(bestStart + takeCount - wordIndex).ToList();
 
             var llmText = sentenceTexts[result.Count];
@@ -301,7 +301,7 @@ Output (JSON array only):
             wordIndex = bestStart + takeCount;
         }
 
-        // 剩余单词作为最后一句（使用原始拼接文本）
+        // Remaining words form the last sentence (using the original joined text)
         if (wordIndex < wordList.Count)
         {
             var remaining = wordList.Skip(wordIndex).ToList();
@@ -317,13 +317,13 @@ Output (JSON array only):
         return result;
     }
 
-    // ---------- 辅助方法 ----------
+    // ---------- Helpers ----------
     private static string NormalizeWord(string word)
     {
         return new string(word.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
     }
 
-    // ---------- 最终降级：基于长度的规则分句 ----------
+    // ---------- Final fallback: length-based rule splitting ----------
     private List<Sentence> FallbackSplit(List<Word> words, SplitOptions options)
     {
         var result = new List<Sentence>();
