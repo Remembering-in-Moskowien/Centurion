@@ -191,6 +191,20 @@ building the pipeline and prunes redundant stages:
   llama|indextts|qora`) and injected into the synthesis operator's constructor; the operator
   holds no runtime engine switch.
 
+**Time-stretch engine** (dub time alignment): synthesized speech is stretched/compressed to the
+subtitle window with **ffmpeg rubberband** by default (`--stretch-engine rubberband`) — high-quality
+time-stretching with pitch and formants preserved, 0.25x–4.0x range, which handles e.g. a 3 s
+synthesis into a 6 s window without the legacy atempo 0.5x boundary clamp. A one-pass duration
+correction (re-probe + tempo fix, max two passes) lands each segment within ~50 ms of its target
+window. Builds without librubberband fall back to `atempo` (`--stretch-engine atempo`, 0.5x–2.0x).
+
+**TTS voice matching**: the recommended engines for voice cloning are `qora` (self-contained,
+auto-downloads, voice cloning from a 3–10 s reference) and `llama` (Qwen3-TTS, when llama.cpp is
+registered). `indextts` (IndexTTS-Rust) is wired end-to-end but upstream is not production-ready:
+no prebuilt release (needs a local `cargo build`), the GPT inference path is a placeholder with a
+fallback vocoder, and the ONNX parts must be converted by hand — it currently cannot deliver real
+voice-cloned audio.
+
 ---
 
 ##  Notes & Limitations
