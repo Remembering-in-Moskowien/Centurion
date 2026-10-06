@@ -63,11 +63,11 @@ public sealed class DiarizationTests
             new(5.5, 10.0, "speaker 1")
         };
 
-        // 时间中点落在 A 区间（0–5000ms）→ speaker 0
+        // The word midpoint falls within interval A (0–5000ms) → speaker 0.
         var wordA = new Word { Text = "hi", Start = 1000, End = 2000, Speaker = "SPEAKER_00" };
         Assert.Equal("speaker 0", DiarizationOperator.ResolveSpeaker(wordA, turns));
 
-        // 时间中点落在 B 区间（5500–10000ms）→ speaker 1
+        // The word midpoint falls within interval B (5500–10000ms) → speaker 1.
         var wordB = new Word { Text = "yo", Start = 6000, End = 7000, Speaker = "SPEAKER_00" };
         Assert.Equal("speaker 1", DiarizationOperator.ResolveSpeaker(wordB, turns));
     }
@@ -77,11 +77,11 @@ public sealed class DiarizationTests
     {
         var turns = new List<SpeakerSegment> { new(0.0, 5.0, "speaker 0") };
 
-        // 落在区间外 → 回退到时间最近的说话人片段（避免说话人信息丢失）
+        // Falls outside all intervals → fall back to the nearest speaker segment in time (to avoid losing speaker information).
         var wordMiss = new Word { Text = "miss", Start = 8000, End = 9000, Speaker = "SPEAKER_00" };
         Assert.Equal("speaker 0", DiarizationOperator.ResolveSpeaker(wordMiss, turns));
 
-        // 空 turns → 默认标签
+        // Empty turns → default label.
         var wordEmpty = new Word { Text = "x", Start = 0, End = 100, Speaker = "SPEAKER_00" };
         Assert.Equal("SPEAKER_00", DiarizationOperator.ResolveSpeaker(wordEmpty, []));
     }
@@ -128,13 +128,13 @@ public sealed class DiarizationTests
         Assert.DoesNotContain("pyannote-seg-3.0", args);
     }
 
-    // ---------- ResolveSpeaker：时间窗重叠最大化 ----------
+    // ---------- ResolveSpeaker: maximizing overlap with the time window ----------
 
     [Fact]
     public void ResolveSpeaker_BoundaryWord_AssignsToLargerOverlap()
     {
-        // 词 (4500–6500ms) 横跨 A(0–5000ms) 与 B(5500–10000ms)：
-        // 与 A 重叠 500ms，与 B 重叠 1000ms → 归 B（重叠更大的一侧）
+        // The word (4500–6500ms) spans both A (0–5000ms) and B (5500–10000ms):
+        // it overlaps A by 500ms and B by 1000ms → assigned to B (the side with the larger overlap).
         var turns = new List<SpeakerSegment>
         {
             new(0.0, 5.0, "speaker 0"),
@@ -176,7 +176,7 @@ public sealed class DiarizationTests
     [Fact]
     public void Smooth_RemovesAlternatingBlip_BetweenSameSpeakers()
     {
-        // A(0–3) B(3–3.4) A(3.4–6)：B 为 0.4s 碎片且前后同为 A → 吞并为一个 A 段
+        // A(0–3) B(3–3.4) A(3.4–6): B is a 0.4s fragment flanked by A on both sides → absorbed into a single A segment.
         var turns = new List<SpeakerSegment>
         {
             new(0.0, 3.0, "speaker 0"),
@@ -193,7 +193,7 @@ public sealed class DiarizationTests
     [Fact]
     public void Smooth_ShortFragment_MergesIntoLongerNeighbor()
     {
-        // B(3–3.4) 短于阈值，前后为不同说话人 → 并入相邻较长的 A(0–3, 3s > C 2.6s)
+        // B(3–3.4) is shorter than the threshold, with different speakers on both sides → merged into the longer neighbor A (0–3, 3s > C 2.6s).
         var turns = new List<SpeakerSegment>
         {
             new(0.0, 3.0, "speaker 0"),
@@ -211,7 +211,7 @@ public sealed class DiarizationTests
     [Fact]
     public void Smooth_SortsAndRemovesOverlap()
     {
-        // 乱序 + 交叠输入：按开始时间排序并裁剪重叠
+        // Out-of-order and overlapping input: sort by start time and trim overlaps.
         var turns = new List<SpeakerSegment>
         {
             new(5.0, 8.0, "speaker 1"),

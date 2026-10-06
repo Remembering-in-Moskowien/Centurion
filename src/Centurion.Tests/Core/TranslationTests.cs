@@ -22,7 +22,7 @@ public sealed class TranslationTests
             })
             .ToList();
 
-    // ---------- 目标台本 1:1 对齐 ----------
+    // ---------- 1:1 alignment with the target script ----------
 
     [Fact]
     public void AlignToScript_MatchingLineCount_UsesScriptLinesDirectly()
@@ -49,7 +49,7 @@ public sealed class TranslationTests
         Assert.All(sentences, s => Assert.Null(s.TranslatedText));
     }
 
-    // ---------- LLM 响应解析 ----------
+    // ---------- LLM response parsing ----------
 
     [Fact]
     public void ParseResponse_ParsesJsonArray()
@@ -75,7 +75,7 @@ public sealed class TranslationTests
         Assert.Equal("你好。", items[0].Translation);
     }
 
-    // ---------- 提示词构建 ----------
+    // ---------- Prompt building ----------
 
     [Fact]
     public void BuildPrompt_IncludesGlossaryAndTargetScript()
@@ -96,7 +96,7 @@ public sealed class TranslationTests
         Assert.Contains("\"id\":0", prompt);
     }
 
-    // ---------- 术语表加载 ----------
+    // ---------- Glossary loading ----------
 
     [Fact]
     public void GlossaryLoader_LoadsDictForm()
@@ -135,7 +135,7 @@ public sealed class TranslationTests
         }
     }
 
-    // ---------- ASS 输出（单语 / 双语） ----------
+    // ---------- ASS output (monolingual / bilingual) ----------
 
     [Fact]
     public void AssSubBuilder_TranslatedOutput_UsesTranslationOnly()
@@ -189,7 +189,7 @@ public sealed class TranslationTests
         Assert.DoesNotContain("\\N", dialogues[0]);
     }
 
-    // ---------- 翻译词级时间戳（插值 + 长音节多分配） ----------
+    // ---------- Translation word-level timestamps (interpolation plus longer allocation for long syllables) ----------
 
     [Fact]
     public void KaraokeBuilder_Chinese_TokenizesPerCharWithLead()
@@ -197,14 +197,14 @@ public sealed class TranslationTests
         var result = TranslationKaraokeBuilder.Build("你好世界。", 1000, 6000, "zh");
 
         Assert.StartsWith("{\\K", result);
-        // 标点按参考字幕风格过滤（Theme.ass 的 \K 行不含句号）
+        // Punctuation is filtered per the reference subtitle style (the \K lines in Theme.ass contain no full stops).
         Assert.Matches(@"\{\\K\d+\}你\{\\K\d+\}好\{\\K\d+\}世\{\\K\d+\}界", result);
     }
 
     [Fact]
     public void KaraokeBuilder_English_LongWordsGetMoreTime()
     {
-        // "extraordinary"（多音节）应比 "a" 分配到更多 \K 时长
+        // "extraordinary" (multi-syllable) should be allocated more \K time than "a".
         var result = TranslationKaraokeBuilder.Build("a extraordinary", 0, 5000, "en");
 
         var aMatch = System.Text.RegularExpressions.Regex.Match(result, @"\{\\K(\d+)\}a");
@@ -220,7 +220,7 @@ public sealed class TranslationTests
 
         var sum = System.Text.RegularExpressions.Regex.Matches(result, @"\{\\K(\d+)\}")
             .Sum(m => int.Parse(m.Groups[1].Value));
-        Assert.InRange(sum, 490, 520);   // 5000ms = 500cs，容差 ±20cs
+        Assert.InRange(sum, 490, 520);   // 5000ms = 500cs, tolerance ±20cs
     }
 
     [Fact]

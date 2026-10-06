@@ -19,7 +19,7 @@ public sealed class VocalSeparationTests
         var root = Path.Combine(Path.GetTempPath(), $"vocalstest_{Guid.NewGuid():N}");
         try
         {
-            // 模拟 demucs 输出布局：out/htdemucs/input/vocals.wav + no_vocals.wav
+            // Simulate the demucs output layout: out/htdemucs/input/vocals.wav + no_vocals.wav
             var songDir = Path.Combine(root, "htdemucs", "song");
             Directory.CreateDirectory(songDir);
             File.WriteAllText(Path.Combine(songDir, "no_vocals.wav"), "x");

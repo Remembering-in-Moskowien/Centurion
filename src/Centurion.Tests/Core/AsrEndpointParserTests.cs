@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>云端 ASR 端点解析测试。</summary>
+/// <summary>Tests for cloud ASR endpoint resolution.</summary>
 public sealed class AsrEndpointParserTests
 {
     [Theory]

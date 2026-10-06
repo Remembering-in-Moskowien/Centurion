@@ -38,7 +38,7 @@ public sealed class OverlapResolverTests
     [Fact]
     public void Resolve_WordLevelNonOverlap_TrimsPreviousWindowToNextWordStart()
     {
-        // 前句窗口 0-8，但内容止于 5；后句内容始于 6 → 窗口重叠、内容不重叠
+        // The previous sentence's window is 0–8 but its content ends at 5; the next sentence's content starts at 6 → the windows overlap but the content does not.
         List<Sentence> sentences =
         [
             Make("hello world", 0, 8, ("hello", 0, 2), ("world", 2, 5)),
@@ -48,8 +48,8 @@ public sealed class OverlapResolverTests
         var changed = TimelineOverlapResolver.Resolve(sentences);
 
         Assert.True(changed > 0);
-        Assert.Equal(6, sentences[0].End);      // 收窄到后句首词开始
-        Assert.Equal(6, sentences[1].Start);    // 后句不动
+        Assert.Equal(6, sentences[0].End);      // narrowed to the next sentence's first word start
+        Assert.Equal(6, sentences[1].Start);    // the next sentence is untouched
     }
 
     [Fact]

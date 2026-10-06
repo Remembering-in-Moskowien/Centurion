@@ -29,7 +29,7 @@ public sealed class SpeakerAssTests
         Words = words.Select(w => new Word { Text = w.Word, Start = start, End = end, Speaker = w.Speaker }).ToList()
     };
 
-    // ---------- Sentence.Speaker 推导 ----------
+    // ---------- Sentence.Speaker inference ----------
 
     [Fact]
     public void SentenceSpeaker_MajorityVote_Wins()
@@ -46,7 +46,7 @@ public sealed class SpeakerAssTests
         Assert.Null(new Sentence { Text = "Hi", Start = 0, End = 1 }.Speaker);
     }
 
-    // ---------- ASS 输出 ----------
+    // ---------- ASS output ----------
 
     [Fact]
     public void AssOutput_NotDiarized_WritesNoSpeaker()
@@ -59,7 +59,7 @@ public sealed class SpeakerAssTests
         var ass = AssSubBuilder.FromWorkflow(context).Build().ToString();
         var dialogue = ass.Split('\n').First(line => line.StartsWith("Dialogue:"));
 
-        // 第 5 个字段（Name）为空，且文本无 [SPEAKER_00] 前缀
+        // The 5th field (Name) is empty, and the text has no [SPEAKER_00] prefix.
         Assert.Equal(string.Empty, dialogue.Split(',')[4].Trim());
         Assert.DoesNotContain("[SPEAKER_00]", dialogue);
         Assert.Contains("Hello world", dialogue);
@@ -76,7 +76,7 @@ public sealed class SpeakerAssTests
         var ass = AssSubBuilder.FromWorkflow(context).Build().ToString();
         var dialogue = ass.Split('\n').First(line => line.StartsWith("Dialogue:"));
 
-        // Name 字段 = SPEAKER_01；文本带 [SPEAKER_01] 前缀
+        // The Name field = SPEAKER_01; the text carries the [SPEAKER_01] prefix.
         Assert.Equal("SPEAKER_01", dialogue.Split(',')[4].Trim());
         Assert.Contains("[SPEAKER_01] Hello world", dialogue);
     }

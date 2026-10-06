@@ -7,9 +7,9 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// Centurion 中间文件（*.centurion.json）读写往返测试：
-/// 完整上下文（配置 + 各阶段句子/词级时间戳/说话人/翻译/译制分段 + 诊断）保存后必须无损恢复。
-/// 读写统一走 <see cref="ICenturionDocumentStore"/>（System.Text.Json 源生成器）。
+/// Round-trip tests for Centurion intermediate files (*.centurion.json):
+/// the full context (configuration plus per-stage sentences, word-level timestamps, speakers, translation, dub segments, and diagnostics) must be restored losslessly after saving.
+/// Reads and writes both go through <see cref="ICenturionDocumentStore"/> (System.Text.Json source generator).
 /// </summary>
 public sealed class CenturionFileIOTests
 {
@@ -64,7 +64,7 @@ public sealed class CenturionFileIOTests
             }
         ];
 
-        // 译制分段（正式字段）
+        // Dub segments (formal fields).
         context.State.DubSegments =
         [
             new DubSegment
@@ -96,27 +96,27 @@ public sealed class CenturionFileIOTests
 
             var loaded = await store.LoadAsync(path, CancellationToken.None);
 
-            // 契约字段
+            // Contract fields.
             Assert.Equal(CenturionSchema.CurrentVersion, loaded.SchemaVersion);
             Assert.Equal("centurion", loaded.Generator.Tool);
             Assert.Equal("spawn", loaded.Generator.Command);
             Assert.Equal("sample.mp4", loaded.Generator.InputFile);
             Assert.Equal(path, loaded.Generator.OutputFile);
 
-            // 配置
+            // Configuration.
             Assert.Equal("spawn", loaded.Config.CommandName);
             Assert.Equal("crispasr", loaded.Config.TranscriberEngine);
             Assert.Equal("qwen3-asr-1.7b", loaded.Config.TranscriberModel);
             Assert.True(loaded.Config.VocalSeparation);
             Assert.Equal("htdemucs", loaded.Config.VocalSeparationModel);
 
-            // 状态标志与诊断
+            // State flags and diagnostics.
             Assert.True(loaded.State.IsTranscribed);
             Assert.True(loaded.State.IsAligned);
             Assert.Single(loaded.State.Warnings);
             Assert.Equal("sample warning", loaded.State.Warnings[0]);
 
-            // 句子 + 词级时间戳 + 说话人 + 翻译
+            // Sentences plus word-level timestamps, speakers, and translation.
             Assert.Equal(2, loaded.State.CurrentSentences.Count);
             var first = loaded.State.CurrentSentences[0];
             Assert.Equal("Hello world.", first.Text);
@@ -128,7 +128,7 @@ public sealed class CenturionFileIOTests
             Assert.Equal(MappingStatus.Matched, first.Words[0].Status);
             Assert.Equal("再见。", loaded.State.CurrentSentences[1].TranslatedText);
 
-            // 译制分段
+            // Dub segments.
             Assert.Single(loaded.State.DubSegments);
             Assert.Equal("你好世界。", loaded.State.DubSegments[0].Text);
             Assert.Equal("speaker 0", loaded.State.DubSegments[0].SpeakerId);
@@ -163,7 +163,7 @@ public sealed class CenturionFileIOTests
             Assert.Contains("diarize", ops);
             Assert.Contains("align", ops);
             Assert.Contains("dub", ops);
-            // 参数哈希一致且非空（SHA-256 十六进制 = 64 字符）
+            // Parameter hashes are consistent and non-empty (SHA-256 hex = 64 characters).
             Assert.All(loaded.Provenance, p =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(p.ParametersHash));

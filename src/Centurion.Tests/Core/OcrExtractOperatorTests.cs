@@ -5,7 +5,7 @@ using Xunit;
 using Centurion.Core.Utils.Parsing;
 namespace Centurion.Tests.Core;
 
-/// <summary>OCR 提取与共享分词的纯逻辑测试（不依赖外部 API）。</summary>
+/// <summary>Pure-logic tests for OCR extraction and shared word splitting (no external API dependency).</summary>
 public sealed class OcrExtractOperatorTests
 {
     [Theory]
@@ -72,7 +72,7 @@ public sealed class OcrExtractOperatorTests
     [Fact]
     public void CreateVideoSubFinderFrames_SortsByNumericTime_NotLexicographic()
     {
-        // 10 小时的字符串序在 2 小时之前（"10_..." < "2_..."），必须按数值排序
+        // As strings, "10 hours" sorts before "2 hours" ("10_..." < "2_..."), so sorting must be by numeric time.
         var frames = OcrExtractOperator.CreateVideoSubFinderFrames(
             ["10_00_00_000__10_00_00_500_0070000000019200080001920.jpeg",
              "2_00_00_000__2_00_00_500_0070000000019200080001920.jpeg"],

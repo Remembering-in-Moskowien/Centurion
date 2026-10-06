@@ -29,6 +29,7 @@ Everything else (whisper.cpp, CrispASR, Demucs, models…) is **auto-downloaded 
 | Page | What's inside |
 |---|---|
 | [ Quick Start](quickstart.md) | Prerequisites, install, build & typical workflows |
+| [ Install](install.md) | Native installers (Windows/macOS/Linux), archives, Docker image & usage |
 | [ Commands](commands.md) | The full command family — `convert`, `asr`, `ocr`, `correct`, `from-script`, `build` with every option |
 | [ Translate](translate.md) | LLM translation, glossary, target-script alignment & karaoke timestamps |
 | [ Dub](dub.md) | Media dubbing with Qwen3-TTS — voice cloning, time alignment, ducking |

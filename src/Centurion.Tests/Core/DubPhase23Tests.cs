@@ -5,16 +5,16 @@ using Centurion.Core.Utils.Reporting;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// dub Phase 2/3 单元测试：SNR 选段评分、长句分块、重叠降级、质量报告 Dub 指标。
+/// Unit tests for dub Phase 2/3: SNR candidate scoring, long-sentence chunking, overlap degradation, and Dub metrics in the quality report.
 /// </summary>
 public class DubPhase23Tests
 {
-    // ── SpeakerProfilingOperator：SNR 评分与 RMS 解析 ──
+    // ── SpeakerProfilingOperator: SNR scoring and RMS parsing ──
 
     [Fact]
     public void ScoreCandidate_PrefersHighSnrAndTargetDuration()
     {
-        var candidate = new Sentence { Start = 1000, End = 5000 }; // 4s = 目标时长
+        var candidate = new Sentence { Start = 1000, End = 5000 }; // 4s = target duration
 
         var highSnr = SpeakerProfilingOperator.ScoreCandidate(candidate, -40, -10); // SNR 30dB
         var lowSnr = SpeakerProfilingOperator.ScoreCandidate(candidate, -40, -35);  // SNR 5dB
@@ -49,7 +49,7 @@ public class DubPhase23Tests
         Assert.Null(SpeakerProfilingOperator.ParseRmsDb("nothing useful here"));
     }
 
-    // ── TtsSynthesisOperator：长句分块 ──
+    // ── TtsSynthesisOperator: long-sentence chunking ──
 
     [Fact]
     public void SplitLongSentence_NoChunk_WhenWithinThreshold()
@@ -62,8 +62,8 @@ public class DubPhase23Tests
     [Fact]
     public void SplitLongSentence_ChunksWhenExceedingThreshold()
     {
-        var longText = string.Join(' ', Enumerable.Repeat("word", 80)); // 80 词长句
-        var parts = TtsSynthesisOperator.SplitLongSentence(longText, 40000, 15); // 40s 目标
+        var longText = string.Join(' ', Enumerable.Repeat("word", 80)); // long sentence of 80 words
+        var parts = TtsSynthesisOperator.SplitLongSentence(longText, 40000, 15); // 40s target
 
         Assert.True(parts.Count >= 2, $"expected >=2 chunks, got {parts.Count}");
         Assert.True(parts.Count <= 8);
@@ -81,7 +81,7 @@ public class DubPhase23Tests
             string.Concat(parts));
     }
 
-    // ── TimeAlignmentOperator：重叠降级 ──
+    // ── TimeAlignmentOperator: overlap degradation ──
 
     [Fact]
     public void DetectOverlaps_SetsMixOffset_AndNotes()
@@ -89,7 +89,7 @@ public class DubPhase23Tests
         var segments = new List<DubSegment>
         {
             new() { Text = "A", TargetStartMs = 0, TargetEndMs = 3000 },
-            new() { Text = "B", TargetStartMs = 2500, TargetEndMs = 5000 } // 与 A 重叠 500ms
+            new() { Text = "B", TargetStartMs = 2500, TargetEndMs = 5000 } // overlaps A by 500ms
         };
 
         TimeAlignmentOperator.DetectOverlaps(segments);
@@ -112,7 +112,7 @@ public class DubPhase23Tests
         Assert.Equal(0, segments[1].MixOffsetMs);
     }
 
-    // ── QualityReportBuilder：Dub 指标 ──
+    // ── QualityReportBuilder: Dub metrics ──
 
     [Fact]
     public void BuildDub_ComputesCoverageAndTempos()
@@ -122,7 +122,7 @@ public class DubPhase23Tests
         var sentences = new List<Sentence>
         {
             new() { Text = "Hello.", TranslatedText = "你好。", Start = 0, End = 1000 },
-            new() { Text = "World.", Start = 1000, End = 2000 } // 无译文
+            new() { Text = "World.", Start = 1000, End = 2000 } // no translation
         };
         state.CurrentSentences.AddRange(sentences);
         state.DubSegments = new List<DubSegment>
@@ -138,7 +138,7 @@ public class DubPhase23Tests
         Assert.NotNull(report.Dub);
         Assert.Equal(2, report.Dub!.SegmentsTotal);
         Assert.Equal(0, report.Dub.SegmentsSkipped);
-        Assert.Equal(1.0, report.Dub.TranslationCoverage); // 两句均有配音文本（译文或原文）
+        Assert.Equal(1.0, report.Dub.TranslationCoverage); // both sentences have dubbing text (translation or source)
         Assert.Equal(0.9, report.Dub.TempoMin);
         Assert.Equal(1.1, report.Dub.TempoMax);
     }

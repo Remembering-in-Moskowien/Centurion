@@ -5,7 +5,7 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// LLM 端点解析测试：提供商名/URL 推断、默认端点与默认模型补全、Auto 回退规则。
+/// Tests for LLM endpoint resolution: provider name/URL inference, default endpoint and model completion, and Auto fallback rules.
 /// </summary>
 public sealed class LlmEndpointParserTests
 {
@@ -131,7 +131,7 @@ public sealed class LlmEndpointParserTests
     [Fact]
     public void Resolve_ProviderNameWinsOverUrlInference()
     {
-        // 显式 ProviderName 优先于 URL 推断：URL 指向 OpenAI，但 ProviderName 指定 DeepSeek
+        // An explicit ProviderName takes precedence over URL inference: the URL points to OpenAI, but ProviderName specifies DeepSeek.
         var (provider, baseUrl, _) = LlmEndpointParser.Resolve(
             new LlmOptions { ProviderName = "deepseek", BaseUrl = "https://api.openai.com/v1", ApiKey = "key" }, Logger);
 

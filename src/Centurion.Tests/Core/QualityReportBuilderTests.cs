@@ -5,7 +5,7 @@ using Centurion.Core.Utils.Reporting;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// 质量报告构建器测试：验证从工作流上下文提取的指标正确性（单位、说话人、覆盖标志）。
+/// Tests for the quality report builder: verifies the correctness of metrics extracted from the workflow context (units, speakers, coverage flags).
 /// </summary>
 public class QualityReportBuilderTests
 {

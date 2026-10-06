@@ -4,7 +4,7 @@ using Centurion.Core.Utils.Media;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// mkvmerge -i 输出解析（字幕轨检查）单元测试。
+/// Unit tests for parsing mkvmerge -i output (subtitle track checking).
 /// </summary>
 public class MkvTrackCheckTests
 {

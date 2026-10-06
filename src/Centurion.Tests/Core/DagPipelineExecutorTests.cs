@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>DAG 执行器：拓扑调度、并行、条件、重试、超时、降级与 IR 一致性测试。</summary>
+/// <summary>Tests for the DAG executor: topological scheduling, parallelism, conditions, retries, timeouts, degradation, and IR consistency.</summary>
 public sealed class DagPipelineExecutorTests
 {
     private static SubtitleWorkflowContext CreateContext(WorkflowConfig? config = null)
@@ -15,7 +15,7 @@ public sealed class DagPipelineExecutorTests
 
     private static PipelineExecutor CreateExecutor() => new(NullLogger<PipelineExecutor>.Instance);
 
-    /// <summary>可编程 stub 算子：延迟、可选失败、可选写状态字段。</summary>
+    /// <summary>Programmable stub operator: delay, optional failure, optional state field write.</summary>
     private sealed class StubOperator(string name, TimeSpan? delay = null, int failTimes = 0, string? stateField = null, string? stateValue = null)
         : IPipelineOperator
     {
@@ -36,7 +36,7 @@ public sealed class DagPipelineExecutorTests
         }
     }
 
-    // ---------- 拓扑与依赖 ----------
+    // ---------- Topology and dependencies ----------
 
     [Fact]
     public async Task Execute_LinearDag_ExecutesInDependencyOrder()
@@ -61,18 +61,20 @@ public sealed class DagPipelineExecutorTests
     public async Task Execute_IndependentNodes_ParallelReducesWallTime()
     {
         var dag = PipelineDag.CreateBuilder()
-            .Add("Slow1", new StubOperator("Slow1", TimeSpan.FromMilliseconds(500)))
-            .Add("Slow2", new StubOperator("Slow2", TimeSpan.FromMilliseconds(500)))
-            .Add("Slow3", new StubOperator("Slow3", TimeSpan.FromMilliseconds(500)))
+            .Add("Slow1", new StubOperator("Slow1", TimeSpan.FromMilliseconds(800)))
+            .Add("Slow2", new StubOperator("Slow2", TimeSpan.FromMilliseconds(800)))
+            .Add("Slow3", new StubOperator("Slow3", TimeSpan.FromMilliseconds(800)))
             .Build();
 
         var stopwatch = Stopwatch.StartNew();
         var results = await CreateExecutor().ExecuteAsync(dag, CreateContext(), CancellationToken.None);
         stopwatch.Stop();
 
-        // 三个 500ms 无依赖节点并行：总耗时应显著小于串行 1500ms
-        Assert.True(stopwatch.ElapsedMilliseconds < 1200,
-            $"Parallel DAG took {stopwatch.ElapsedMilliseconds}ms; expected < 1200ms for 3x500ms independent nodes.");
+        // Three independent 800ms nodes run in parallel: total time should be well below the serial
+        // 2400ms and comfortably under 1.5x the single-node cost (leaves headroom for thread-pool
+        // scheduling jitter while the full xUnit suite runs other tests in parallel).
+        Assert.True(stopwatch.ElapsedMilliseconds < 1500,
+            $"Parallel DAG took {stopwatch.ElapsedMilliseconds}ms; expected < 1500ms for 3x800ms independent nodes.");
         Assert.Equal(3, results.Count);
     }
 
@@ -95,7 +97,7 @@ public sealed class DagPipelineExecutorTests
         Assert.True(order.IndexOf("Join") > order.IndexOf("Right"));
     }
 
-    // ---------- 条件节点 ----------
+    // ---------- Conditional nodes ----------
 
     [Fact]
     public async Task Execute_ConditionFalse_SkipsNodeAndContinues()
@@ -114,7 +116,7 @@ public sealed class DagPipelineExecutorTests
         Assert.Equal("ran", context.State.Extensions["Next:s"]);
     }
 
-    // ---------- 重试 / 降级 ----------
+    // ---------- Retries and degradation ----------
 
     [Fact]
     public async Task Execute_RetrySucceeds_ReportsRetried()
@@ -159,7 +161,7 @@ public sealed class DagPipelineExecutorTests
         Assert.Equal("Failing", ex.NodeName);
     }
 
-    // ---------- 超时 ----------
+    // ---------- Timeouts ----------
 
     [Fact]
     public async Task Execute_NodeTimeout_TriggersRetry()
@@ -175,7 +177,7 @@ public sealed class DagPipelineExecutorTests
         Assert.Equal(2, result.Attempts);
     }
 
-    // ---------- 环检测 ----------
+    // ---------- Cycle detection ----------
 
     [Fact]
     public async Task Execute_CyclicDag_ThrowsInvalidOperation()
@@ -189,7 +191,7 @@ public sealed class DagPipelineExecutorTests
             () => CreateExecutor().ExecuteAsync(dag, CreateContext(), CancellationToken.None));
     }
 
-    // ---------- IR/状态一致性：线性 DAG vs 并行 DAG ----------
+    // ---------- IR/state consistency: linear DAG vs parallel DAG ----------
 
     [Fact]
     public async Task Execute_ParallelTopology_ProducesSameStateAsSequential()
@@ -212,7 +214,7 @@ public sealed class DagPipelineExecutorTests
         Assert.All(seqContext.State.StepTimings.Keys, name => Assert.Contains(name, parContext.State.StepTimings));
     }
 
-    /// <summary>记录执行顺序的算子。</summary>
+    /// <summary>Operator that records execution order.</summary>
     private sealed class OrderOperator(string name, List<string> order) : IPipelineOperator
     {
         public string Name { get; } = name;

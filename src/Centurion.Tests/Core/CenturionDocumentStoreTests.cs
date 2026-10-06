@@ -7,8 +7,8 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// <see cref="CenturionDocumentStore"/> 专项测试：旧版 meta/config/state 格式兼容与迁移、
-/// validate 校验、schemaVersion 严格性。
+/// Focused tests for <see cref="CenturionDocumentStore"/>: legacy meta/config/state format compatibility and migration,
+/// validate checks, and schemaVersion strictness.
 /// </summary>
 public sealed class CenturionDocumentStoreTests
 {
@@ -74,7 +74,7 @@ public sealed class CenturionDocumentStoreTests
             Assert.Single(doc.State.CurrentSentences);
             Assert.Equal("Hello.", doc.State.CurrentSentences[0].Text);
             Assert.Equal("spk", doc.State.CurrentSentences[0].Words[0].Speaker);
-            // Extensions 不持久化：旧文件的 extensions 被丢弃
+            // Extensions are not persisted: the extensions of legacy files are dropped.
             Assert.Empty(doc.State.Extensions);
         }
         finally
@@ -224,10 +224,10 @@ public sealed class CenturionDocumentStoreTests
                     DubOutputWavPath = "out.dub.wav",
                     DubSpeakerReferences = new Dictionary<string, string> { ["SPEAKER_00"] = "ref0.wav" },
                     DubSegments = [new DubSegment { Text = "Hello." }],
-                    // 运行时字段：不写入 IR
+                    // Runtime fields: not written to the IR.
                     StepTimings = new Dictionary<string, TimeSpan> { ["TTS"] = TimeSpan.FromSeconds(2) },
                     CorrectionMetadata = new Dictionary<Sentence, Dictionary<string, object>>(),
-                    // 临时扩展槽：不写入 IR
+                    // Temporary extension slots: not written to the IR.
                     Extensions = new Dictionary<string, object> { ["SourceAudioInfo"] = "probe", ["EstimatedSnrDb"] = 40.0 }
                 }
             };

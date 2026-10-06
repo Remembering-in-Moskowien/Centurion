@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>Provider fallback 链与策略的专项测试（第⑨阶段验收）。</summary>
+/// <summary>Focused tests for the Provider fallback chain and strategy (stage ⑨ acceptance).</summary>
 public sealed class ProviderChainTests
 {
     private sealed class FakeProvider(
@@ -95,7 +95,7 @@ public sealed class ProviderChainTests
         };
         var invoked = new List<string>();
 
-        // 第一次链：主云成功，花费 2.0（预算 1.0 → 超限但成功结果仍返回）。
+        // First chain: the primary cloud provider succeeds, costing 2.0 (budget 1.0 → over the limit, but the successful result is still returned).
         await ProviderChain.ExecuteAsync(
             expensive,
             (p, ct) =>
@@ -108,7 +108,7 @@ public sealed class ProviderChainTests
             NullLogger.Instance,
             CancellationToken.None);
 
-        // 第二次链（同一 policies 实例共享预算）：预算已用尽 → 跳过后续云端，本地兜底。
+        // Second chain (the same policies instance shares the budget): the budget is exhausted → skip subsequent cloud providers and fall back to local.
         var result = await ProviderChain.ExecuteAsync(
             later,
             (p, ct) =>
@@ -122,7 +122,7 @@ public sealed class ProviderChainTests
             CancellationToken.None);
 
         Assert.Contains("cloud-expensive", invoked);
-        Assert.DoesNotContain("cloud-cheap", invoked); // 预算用尽后跳过后续云端
+        Assert.DoesNotContain("cloud-cheap", invoked); // subsequent cloud providers are skipped after the budget is exhausted
         Assert.Contains("local", invoked);
         Assert.Equal("local", result.Usage.ProviderName);
         Assert.True(policies.BudgetSpentUsd >= 2.0, "累计花费应 >= 2.0");

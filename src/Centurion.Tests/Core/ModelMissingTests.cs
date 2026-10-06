@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>模型缺失报错：CheckHealthAsync 缺失即抛 ModelMissingException（附 install 提示），不再自动下载。</summary>
+/// <summary>Model-missing errors: CheckHealthAsync throws ModelMissingException (with an install hint) when a model is missing, and no longer auto-downloads.</summary>
 public sealed class ModelMissingTests
 {
     private static readonly IServiceProvider EmptyServices =
@@ -61,6 +61,6 @@ public sealed class ModelMissingTests
             EmptyServices,
             "whispercpp");
         Assert.False(manager.ManagementEnabled);
-        await manager.CheckHealthAsync(default); // 不应抛
+        await manager.CheckHealthAsync(default); // should not throw
     }
 }

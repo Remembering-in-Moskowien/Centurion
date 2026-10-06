@@ -6,12 +6,12 @@ using Centurion.Core.Utils.Reporting;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// 第 5 步质量闭环：Builder 指标接线（Timing/Issues/Confidence/Translation/Tts）、
-/// 自动修复引擎、CI 阈值评估与 HTML 报告。
+/// Step 5 quality loop: Builder metric wiring (Timing/Issues/Confidence/Translation/Tts),
+/// the automatic fix engine, CI threshold evaluation, and the HTML report.
 /// </summary>
 public sealed class QualityLoopTests
 {
-    // ---------- Builder 接线 ----------
+    // ---------- Builder wiring ----------
 
     private static SubtitleWorkflowContext MakeContext()
     {
@@ -39,7 +39,7 @@ public sealed class QualityLoopTests
         var report = QualityReportBuilder.Build(MakeContext(), @"C:\out\out.ass", 0);
 
         Assert.NotNull(report.Timing);
-        // "Hello world." = 10 字符 / 1s = 10 CPS > 5 阈值
+        // "Hello world." = 10 chars / 1s = 10 CPS > the 5 threshold
         Assert.True(report.Timing.MaxCps >= 10);
         Assert.Contains(report.Issues, i => i.Type == nameof(QualityIssueType.CpsTooHigh));
         Assert.All(report.Issues, i => Assert.True(i.SentenceIndex >= 0));
@@ -112,11 +112,11 @@ public sealed class QualityLoopTests
         Assert.NotNull(report.Dub);
     }
 
-    // ---------- 自动修复引擎 ----------
+    // ---------- Automatic fix engine ----------
 
     private static List<Sentence> MakeSentences()
     {
-        // 句1 CPS 超标（20 字符 / 1s）；句2 太短（100ms）；句3 与句4 重叠
+        // Sentence 1 exceeds the CPS limit (20 chars / 1s); sentence 2 is too short (100ms); sentence 3 overlaps sentence 4.
         return
         [
             new Sentence { Text = "This is a very very long line that exceeds limits.", Start = 0, End = 1000 },
@@ -134,17 +134,17 @@ public sealed class QualityLoopTests
 
         Assert.NotEmpty(result.Applied);
 
-        // 1) 重叠修复：句4 Start 应 ≥ 句3 End（无重叠）
+        // 1) Overlap fix: sentence 4's Start should be ≥ sentence 3's End (no overlap).
         Assert.True(result.Sentences.Count >= 4);
         var idx3 = result.Sentences.FindIndex(s => s.Text.Contains("Next line"));
         var idx4 = result.Sentences.FindIndex(s => s.Text.Contains("Overlapping line"));
         if (idx4 > idx3)
             Assert.True(result.Sentences[idx4].Start >= result.Sentences[idx3].End);
 
-        // 2) 过短合并：不再存在 100ms 的 "Hi."
+        // 2) Short-line merging: the 100ms "Hi." no longer exists.
         Assert.DoesNotContain(result.Sentences, s => s.Text.Trim() == "Hi.");
 
-        // 3) 修复后重新评估：超行宽 / 重叠应消除（CPS 随等比拆分不收敛，不作计数断言）
+        // 3) Reassess after fixing: over-width lines and overlaps should be gone (CPS does not converge under proportional splitting, so no count assertion is made).
         var reassessed = QualityAssessor.Assess(result.Sentences, options);
         Assert.Equal(0, reassessed.Timing.LineTooLongCount);
         Assert.Equal(0, reassessed.Timing.OverlapCount);
@@ -157,7 +157,7 @@ public sealed class QualityLoopTests
         var first = QualityFixer.Fix(MakeSentences(), options);
         var second = QualityFixer.Fix(first.Sentences, options);
 
-        // 第二次不应再产生修复（重叠/短句/行宽已达标）
+        // The second run should produce no further fixes (overlap / short lines / line width already meet the limits).
         Assert.Empty(second.Applied);
     }
 
@@ -170,18 +170,18 @@ public sealed class QualityLoopTests
         };
         var result = QualityFixer.Fix(sentences, new QualityAssessmentOptions { MaxCharsPerLine = 18 });
 
-        // 拆成多段：时间轴连续、合计时长不变、每段行宽达标
+        // Split into multiple segments: continuous timeline, unchanged total duration, and each segment within the line-width limit.
         Assert.True(result.Sentences.Count >= 2);
         Assert.Equal(3000.0, result.Sentences.Sum(s => s.End - s.Start), 1);
         Assert.All(result.Sentences, s => Assert.True(
             s.Text.Count(ch => !char.IsWhiteSpace(ch)) <= 18,
             $"segment '{s.Text}' exceeds 18 chars"));
-        // 相邻段时间连续（后段 Start == 前段 End）
+        // Adjacent segments are continuous in time (the next segment's Start == the previous segment's End).
         for (var i = 0; i + 1 < result.Sentences.Count; i++)
             Assert.Equal(result.Sentences[i].End, result.Sentences[i + 1].Start);
     }
 
-    // ---------- CI 阈值 ----------
+    // ---------- CI thresholds ----------
 
     [Fact]
     public void ThresholdRule_ParsesAndEvaluates()
@@ -205,10 +205,10 @@ public sealed class QualityLoopTests
         Assert.NotNull(rule);
 
         var low = new QualityReport { Alignment = new QualityAlignment { MapperCoverage = 0.90 } };
-        Assert.True(rule.Evaluate(low));          // 90 < 95 → 不满足 → 应失败
+        Assert.True(rule.Evaluate(low));          // 90 < 95 → not satisfied → should fail
 
         var high = new QualityReport { Alignment = new QualityAlignment { MapperCoverage = 0.97 } };
-        Assert.False(rule.Evaluate(high));        // 97 ≥ 95 → 满足
+        Assert.False(rule.Evaluate(high));        // 97 ≥ 95 → satisfied
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public sealed class QualityLoopTests
         Assert.Null(QualityThresholdRule.TryParse("cps>abc"));
     }
 
-    // ---------- HTML 报告 ----------
+    // ---------- HTML report ----------
 
     [Fact]
     public void HtmlReport_ContainsLineAnchorsAndThresholds()
@@ -250,11 +250,11 @@ public sealed class QualityLoopTests
 
         var html = QualityHtmlReport.Render(report);
 
-        Assert.Contains("id=\"line-2\"", html);      // 问题定位到字幕行
-        Assert.Contains("Centurion 质量报告", html);
-        Assert.Contains("cps&gt;20", html);          // 阈值展示
+        Assert.Contains("id=\"line-2\"", html);      // the issue is located to a subtitle line
+        Assert.Contains("Centurion Quality Report", html);
+        Assert.Contains("cps&gt;20", html);          // threshold display
         Assert.Contains("Split the sentence.", html);
         Assert.Contains("<!DOCTYPE html>", html);
-        Assert.DoesNotContain("<script", html);      // 纯静态自包含
+        Assert.DoesNotContain("<script", html);      // purely static and self-contained
     }
 }

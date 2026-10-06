@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Centurion.Tests.Cli;
 
-/// <summary>第 6 步 CLI 体验：配置文件加载/环境变量覆盖、退出码、init 配方。</summary>
+/// <summary>Step 6 CLI experience: configuration file loading and environment variable overrides, exit codes, and the init recipe.</summary>
 public sealed class CenturionConfigTests
 {
     [Fact]
@@ -23,7 +23,7 @@ public sealed class CenturionConfigTests
         {
             var path = Path.Combine(dir, "centurion.config.json");
             File.WriteAllText(path, "{ not valid json !!");
-            // 显式路径加载：非法 JSON 静默回退默认
+            // Loading from an explicit path: invalid JSON silently falls back to defaults.
             var config = CenturionConfig.Load(path);
             Assert.Null(config.Profile);
         }
@@ -53,7 +53,7 @@ public sealed class CenturionConfigTests
     }
 }
 
-/// <summary>标准化退出码契约。</summary>
+/// <summary>Standardized exit code contract.</summary>
 public sealed class ExitCodesTests
 {
     [Fact]

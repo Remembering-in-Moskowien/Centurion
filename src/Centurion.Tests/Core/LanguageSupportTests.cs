@@ -13,7 +13,7 @@ public sealed class LanguageSupportTests
     [InlineData("zh-TW", true)]
     [InlineData("ja", true)]
     [InlineData("ja-jp", true)]
-    [InlineData("ko", false)]      // 韩语谚文用空格分隔词
+    [InlineData("ko", false)]      // Korean Hangul uses spaces between words
     [InlineData("ko-kr", false)]
     [InlineData("en", false)]
     [InlineData("fr", false)]
@@ -55,7 +55,7 @@ public sealed class ChineseSplitTests
     [Fact]
     public async Task RuleBasedSplit_ChinesePunctuation_BreaksAtFullStop()
     {
-        // 总字符数超出 MaxLength 硬约束，必须断句；断点应优先落在中文句号后
+        // The total character count exceeds the MaxLength hard limit, so a split is required; the break should preferentially fall after a Chinese full stop.
         var words = new List<Word>
         {
             new() { Text = "你好", Start = 0, End = 500, Speaker = string.Empty },
@@ -69,7 +69,7 @@ public sealed class ChineseSplitTests
         var sentences = await strategy.Split(words, Options(maxLength: 8));
 
         Assert.Equal(2, sentences.Count);
-        Assert.Equal("你好世界。", sentences[0].Text);      // 断在中文句号后，且无空格拼接
+        Assert.Equal("你好世界。", sentences[0].Text);      // broken after the Chinese full stop, joined without spaces
         Assert.Equal("今天天气真好！", sentences[1].Text);
         Assert.DoesNotContain(" ", sentences[0].Text);
         Assert.DoesNotContain(" ", sentences[1].Text);
@@ -78,7 +78,7 @@ public sealed class ChineseSplitTests
     [Fact]
     public async Task RuleBasedSplit_Japanese_NoSpacesAndBreaksAtJapanesePunctuation()
     {
-        // 日语连续书写无空格；句号（。）触发分句
+        // Japanese is written continuously without spaces; the full stop (。) triggers a sentence break.
         var words = new List<Word>
         {
             new() { Text = "こんにちは", Start = 0, End = 500, Speaker = string.Empty },
@@ -100,7 +100,7 @@ public sealed class ChineseSplitTests
     [Fact]
     public async Task RuleBasedSplit_ChineseNoPunctuation_SplitsByLengthWithoutSpaces()
     {
-        // 无标点长文本：MaxLength 硬约束强制按长度断开，输出仍无空格且不超长
+        // Long text without punctuation: the MaxLength hard limit forces a length-based break, and the output stays space-free and within the limit.
         var words = Enumerable.Range(0, 20)
             .Select(i => new Word
             {

@@ -99,12 +99,12 @@ Centurion update --apply
 
 ```bash
 # run in Chinese
-Centurion.Cli.exe --lang zh-CN asr video.mp4
+Centurion --lang zh-CN asr video.mp4
 # omit --lang  English (default)
 
 # GitHub downloads (update / dictionaries / tools) auto-try 520 mirrors then direct
-Centurion.Cli.exe --github-proxy https://my-mirror.example/ update      # use a custom mirror
-Centurion.Cli.exe --no-github-proxy update                              # disable mirrors entirely
+Centurion --github-proxy https://my-mirror.example/ update      # use a custom mirror
+Centurion --no-github-proxy update                              # disable mirrors entirely
 ```
 
 - Missing key / missing language file  falls back to English gracefully

@@ -5,7 +5,7 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// 转录词流后处理测试：句首重复词去重（qwen3 分段解码段边界重复发射句首 token）。
+/// Tests for transcription word-stream post-processing: deduplicating leading word repeats (qwen3's segmented decoding re-emits leading tokens at segment boundaries).
 /// </summary>
 public class TranscribeOperatorTests
 {
@@ -15,7 +15,7 @@ public class TranscribeOperatorTests
         var words = new List<Word>
         {
             new() { Text = "Jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"},
-            new() { Text = "Jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"},  // 句首重复（同文本同时间戳）
+            new() { Text = "Jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"},  // repeated leading word (same text and timestamps)
             new() { Text = "sind", Start = 62120, End = 62120, Speaker = "SPEAKER_00"},
             new() { Text = "sie", Start = 62120, End = 62360, Speaker = "SPEAKER_00"}
         };
@@ -32,7 +32,7 @@ public class TranscribeOperatorTests
         var words = new List<Word>
         {
             new() { Text = "Ganze", Start = 138000, End = 139530, Speaker = "SPEAKER_00"},
-            new() { Text = "Ganze", Start = 139530, End = 141000, Speaker = "SPEAKER_00"}  // 真实叠词（时间不同）→ 保留
+            new() { Text = "Ganze", Start = 139530, End = 141000, Speaker = "SPEAKER_00"}  // a genuine word repeat (different timestamps) → kept
         };
 
         var result = TranscribeOperator.DeduplicateWordRepeats(words);
@@ -46,7 +46,7 @@ public class TranscribeOperatorTests
         var words = new List<Word>
         {
             new() { Text = "Jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"},
-            new() { Text = "jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"}  // 大小写不同 → 不视为重复
+            new() { Text = "jetzt", Start = 57000, End = 57240, Speaker = "SPEAKER_00"}  // different casing → not treated as a repeat
         };
 
         var result = TranscribeOperator.DeduplicateWordRepeats(words);

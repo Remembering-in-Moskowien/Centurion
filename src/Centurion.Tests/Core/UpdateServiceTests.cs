@@ -110,7 +110,7 @@ public sealed class UpdateServiceTests
             new("other-win-x64.zip", "https://example.com/b.zip", 999),
         };
 
-        // 精确名不存在时，取包含 rid 的最大 zip
+        // When the exact name does not exist, pick the largest zip that contains the rid.
         var name = GitHubUpdateService.MatchAsset(assets, "osx-arm64", preferredName: null);
         Assert.Null(name);
 
@@ -127,7 +127,7 @@ public sealed class UpdateServiceTests
     [Fact]
     public void MatchAsset_MatchesCompactRidVariant()
     {
-        // 发布资产常见命名 centurion-win64.zip，而 rid 为 win-x64：应通过紧凑变体命中
+        // Release assets are commonly named centurion-win64.zip while the rid is win-x64: it should match via the compact variant.
         var assets = new List<ReleaseAssetInfo>
         {
             new("centurion-win64.zip", "https://example.com/c.zip", 47_000_000),

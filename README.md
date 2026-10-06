@@ -30,6 +30,26 @@ etc.) are downloaded automatically on first use.
 
 ---
 
+## Install (prebuilt binaries)
+
+Prefer an installer instead of building from source? Every commit publishes a
+pre-release `build-N` with native installers and archives for **Windows x64**,
+**Linux x64** and **macOS** (Apple Silicon + Intel), plus a multi-arch **Docker
+image**:
+
+- Windows: `centurion-setup-win-x64.exe` (wizard, PATH, uninstaller)
+- Linux: `.deb` / `.rpm` / `tar.gz`
+- macOS: `.pkg` (Apple Silicon) / `zip` (Intel)
+- Docker: `ghcr.io/<owner>/centurion:latest`
+
+```bash
+centurion update        # installed releases self-update
+```
+
+Full instructions and checksums: [Install](https://remembering-in-moskowien.github.io/Centurion/install).
+
+---
+
 ## Highlights
 
 | Capability | Description |
@@ -74,6 +94,7 @@ log suitable for issue reports.
 ## Documentation
 
 - [Quick Start](https://remembering-in-moskowien.github.io/Centurion/quickstart)
+- [Install](https://remembering-in-moskowien.github.io/Centurion/install)
 - [Commands](https://remembering-in-moskowien.github.io/Centurion/commands)
 - [Translate](https://remembering-in-moskowien.github.io/Centurion/translate)
 - [Dub](https://remembering-in-moskowien.github.io/Centurion/dub)
@@ -109,6 +130,28 @@ registry.
 | `src/Centurion.Core` | Engine: DAG executor, operators, strategies, providers, DI |
 | `src/Centurion.Cli` | Spectre.Console CLI front-end (incl. `serve` HTTP mode) |
 | `src/Centurion.Tests` | xUnit test suite |
+
+---
+
+## First-run downloads & network
+
+Models and third-party tools are downloaded on first use, so no extra setup
+is required after install:
+
+- **Models** (`models install`): `Centurion models install <model>` matches a
+  model name exactly across all domains; use the qualified form
+  `Centurion models install <domain>/<model>` (e.g. `whispercpp/tiny`,
+  `opusmt/zh-en`) when a bare name is ambiguous. Model files are served from
+  hf-mirror.com, which is reachable from CN networks.
+- **Tools** (whisper.cpp, CrispASR, demucs-rs, QORA-TTS, …): GitHub release
+  archives are downloaded on first use. Because github.com is often reset from
+  CN networks, GitHub URLs are routed through a mirror proxy automatically
+  (default `https://gh-proxy.com/`). Override with the `CENTURION_DOWNLOAD_PROXY`
+  environment variable — set it to a mirror like `https://ghfast.top/`, or to an
+  empty value to disable proxying.
+- **Speaker diarization**: the foxnose method needs the WeSpeaker embedder;
+  Centurion pre-seeds CrispASR's cache from hf-mirror automatically when it is
+  missing, so the first diarization run works without manual downloads.
 
 ---
 

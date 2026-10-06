@@ -5,8 +5,8 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// 消极规则分句策略测试（独白等匀速连续语音）：只认标点断句，
-/// 不因词间换气停顿切句；超长无标点段由全局 DP 均匀切分。
+/// Tests for the passive rule-based sentence-splitting strategy (monologue-like, evenly paced continuous speech): it only breaks at punctuation,
+/// never splits on inter-word breath pauses; oversized punctuation-free segments are split uniformly by a global DP.
 /// </summary>
 public sealed class PassiveRuleSplitStrategyTests
 {
@@ -19,8 +19,8 @@ public sealed class PassiveRuleSplitStrategyTests
     [Fact]
     public async Task PassiveSplit_BreaksAtPunctuation_WhenOversized()
     {
-        // 独白：三个句号 + 一个逗号，词间间隙均匀（100ms）；总长超 MaxLength（80），
-        // 全局 DP 只能在标点处断开以满足长度约束——标点是唯一断点候选
+        // Monologue: three full stops plus one comma, with even inter-word gaps (100ms); the total exceeds MaxLength (80),
+        // so the global DP can only break at punctuation to satisfy the length limit — punctuation is the only break candidate.
         var words = new List<Word>
         {
             new() { Text = "This", Start = 0, End = 200, Speaker = "SPEAKER_00" },
@@ -49,28 +49,28 @@ public sealed class PassiveRuleSplitStrategyTests
         var sentences = await strategy.Split(words, Options);
 
         Assert.True(sentences.Count >= 2, $"expected >=2 sentences, got {sentences.Count}");
-        // 每句不超 MaxLength
+        // No sentence exceeds MaxLength.
         foreach (var s in sentences)
             Assert.True(s.Text.Length <= Options.MaxLength, $"sentence too long: {s.Text}");
-        // 全部在标点后断开（句末词以标点结尾或为最后一句）
+        // All breaks fall after punctuation (the last word ends with punctuation, or it is the final sentence).
         foreach (var s in sentences)
             Assert.True(
                 s.Text.EndsWith('.') || s.Text.EndsWith(',') || ReferenceEquals(s, sentences[^1]),
                 $"break not at punctuation: {s.Text}");
-        // 词完整性
+        // Word integrity.
         Assert.Equal(words.Count, sentences.SelectMany(s => s.Words).Count());
     }
 
     [Fact]
     public async Task PassiveSplit_KeepsNaturalPausesTogether_UnlikeAggressive()
     {
-        // 独白换气停顿（500ms）但无标点：消极档不因停顿断句，整段保持一句（积极档会在此断开）
+        // A monologue breath pause (500ms) with no punctuation: the passive profile does not break on the pause, keeping the whole segment as one sentence (the aggressive profile would break here).
         var words = new List<Word>
         {
             new() { Text = "In", Start = 0, End = 200, Speaker = "SPEAKER_00" },
             new() { Text = "the", Start = 200, End = 400, Speaker = "SPEAKER_00" },
             new() { Text = "beginning", Start = 400, End = 600, Speaker = "SPEAKER_00" },
-            new() { Text = "there", Start = 1100, End = 1300, Speaker = "SPEAKER_00" }, // 500ms 换气
+            new() { Text = "there", Start = 1100, End = 1300, Speaker = "SPEAKER_00" }, // 500ms breath pause
             new() { Text = "was", Start = 1300, End = 1500, Speaker = "SPEAKER_00" },
             new() { Text = "only", Start = 1500, End = 1700, Speaker = "SPEAKER_00" },
             new() { Text = "silence", Start = 1700, End = 1900, Speaker = "SPEAKER_00" }
@@ -79,11 +79,11 @@ public sealed class PassiveRuleSplitStrategyTests
         var passive = new PassiveRuleSplitStrategy();
         var passiveSentences = await passive.Split(words, Options);
 
-        // 无标点 → 整段一句（自然停顿不触发切分）
+        // No punctuation → the whole segment is one sentence (natural pauses do not trigger splitting).
         Assert.Single(passiveSentences);
         Assert.Equal("In the beginning there was only silence", passiveSentences[0].Text);
 
-        // 对照组：积极档会在 500ms 停顿处断开
+        // Control group: the aggressive profile breaks at the 500ms pause.
         var aggressive = new AggressiveRuleSplitStrategy();
         var aggressiveSentences = await aggressive.Split(words, Options);
         Assert.True(aggressiveSentences.Count >= 2, "aggressive should split on the pause");
@@ -92,7 +92,7 @@ public sealed class PassiveRuleSplitStrategyTests
     [Fact]
     public async Task PassiveSplit_OversizedNoPunctuation_SplitsByLengthUniformly()
     {
-        // 独白超长无标点段（超 MaxLength）：全局 DP 切分，每句不超限
+        // An oversized punctuation-free monologue segment (exceeds MaxLength): split by the global DP, with no sentence over the limit.
         var words = new List<Word>();
         var t = 0;
         for (var i = 0; i < 30; i++)
@@ -108,7 +108,7 @@ public sealed class PassiveRuleSplitStrategyTests
         foreach (var s in sentences)
             Assert.True(s.Text.Length <= Options.MaxLength, $"sentence too long: {s.Text}");
 
-        // 词完整性：全部词保序出现
+        // Word integrity: all words appear in order.
         var outputWords = sentences.SelectMany(s => s.Words).ToList();
         Assert.Equal(words.Count, outputWords.Count);
     }
@@ -116,7 +116,7 @@ public sealed class PassiveRuleSplitStrategyTests
     [Fact]
     public async Task PassiveSplit_ForcesBreakOnSpeakerChange()
     {
-        // 说话人切换仍是强制断点（两档通用行为）
+        // A speaker change remains a forced break point (behavior shared by both profiles).
         var words = new List<Word>
         {
             new() { Text = "Narrator", Start = 0, End = 500, Speaker = "speaker 0" },
@@ -136,7 +136,7 @@ public sealed class PassiveRuleSplitStrategyTests
     [Fact]
     public async Task PassiveSplit_IgnoresDefaultSpeakerLabels()
     {
-        // 全部回退标签 → 无标点 → 整段一句（不触发说话人断句）
+        // All fallback labels → no punctuation → the whole segment is one sentence (no speaker-based split is triggered).
         var words = new List<Word>
         {
             new() { Text = "Hello", Start = 0, End = 500, Speaker = "SPEAKER_00" },

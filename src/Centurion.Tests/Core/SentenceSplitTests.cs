@@ -47,7 +47,7 @@ public sealed class SentenceSplitTests
         var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options);
 
-        // 全部为回退标签 → 不触发说话人断句（无标点 → 整段一句）
+        // All fallback labels → no speaker-based split is triggered (no punctuation → the whole segment is one sentence).
         Assert.Single(sentences);
         Assert.Equal("Hello world again", sentences[0].Text);
     }
@@ -65,7 +65,7 @@ public sealed class SentenceSplitTests
         var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options);
 
-        // SPEAKER_00 是未命中回退标签，与其相邻的有效标签不触发说话人强制断句
+        // SPEAKER_00 is an unmatched fallback label, so it does not trigger a forced speaker break with the valid labels around it.
         Assert.Single(sentences);
         Assert.Equal("Hello there friend", sentences[0].Text);
     }
@@ -73,7 +73,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_SplitsDenseDialogueOnPausesWithoutPunctuation()
     {
-        // 短促密集对话：无标点转录，句间有明显停顿（500ms），词内间隙极小
+        // Short, dense dialogue: punctuation-free transcription with noticeable pauses between turns (500ms) and minimal within-word gaps.
         var words = new List<Word>
         {
             new() { Text = "Hi", Start = 0, End = 300, Speaker = "SPEAKER_00" },
@@ -86,7 +86,7 @@ public sealed class SentenceSplitTests
         var strategy = new AggressiveRuleSplitStrategy();
         var sentences = await strategy.Split(words, Options);
 
-        // 停顿处（Hi 后）强制断句，其余连续词保持成句
+        // A forced break occurs at the pause (after Hi), while the remaining continuous words stay in one sentence.
         Assert.Equal(2, sentences.Count);
         Assert.Equal("Hi", sentences[0].Text);
         Assert.Equal("there How are you", sentences[1].Text);
@@ -95,7 +95,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_SplitsOnPausesBetweenShortTurns()
     {
-        // 两短轮次："Hello world" / "Good morning"，中间停顿 600ms，无标点
+        // Two short turns: "Hello world" / "Good morning", with a 600ms pause between them and no punctuation.
         var words = new List<Word>
         {
             new() { Text = "Hello", Start = 0, End = 300, Speaker = "SPEAKER_00" },
@@ -117,7 +117,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_KeepsUniformFastSpeechTogether()
     {
-        // 均匀连续语音：词间间隙一致（100ms），无标点无显著停顿 → 保持整段一句
+        // Uniform continuous speech: even inter-word gaps (100ms), no punctuation and no noticeable pauses → the whole segment stays one sentence.
         var words = new List<Word>
         {
             new() { Text = "This", Start = 0, End = 200, Speaker = "SPEAKER_00" },
@@ -136,7 +136,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_PunctuationBreaksRemainMandatory()
     {
-        // 标点仍是最高优先级硬断点：句号后强制断句
+        // Punctuation remains the highest-priority hard break: a forced break after a full stop.
         var words = new List<Word>
         {
             new() { Text = "Hello", Start = 0, End = 300, Speaker = "SPEAKER_00" },
@@ -156,7 +156,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_OversizedSegmentSplitsByLength()
     {
-        // 无标点、无停顿的长段（超 MaxLength）：按长度 DP 切分且每句不超限
+        // A long segment with no punctuation or pauses (exceeds MaxLength): split by length DP, with no sentence over the limit.
         var words = new List<Word>();
         var t = 0;
         for (var i = 0; i < 30; i++)
@@ -176,8 +176,8 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_DoesNotIsolatePunctuationWordAfterPause()
     {
-        // 句内换气停顿（320ms）后接句末标点词（"waiting."）：
-        // 停顿断点应被抑制（真正的句界在标点词之后），避免孤立句末词造成零时长句丢词
+        // An in-sentence breath pause (320ms) followed by a final punctuation word ("waiting."):
+        // the pause break should be suppressed (the real sentence boundary is after the punctuation word), to avoid isolated final words causing zero-duration sentences and lost words.
         var words = new List<Word>
         {
             new() { Text = "after", Start = 0, End = 300, Speaker = "SPEAKER_00" },
@@ -185,8 +185,8 @@ public sealed class SentenceSplitTests
             new() { Text = "three", Start = 600, End = 900, Speaker = "SPEAKER_00" },
             new() { Text = "weeks", Start = 900, End = 1200, Speaker = "SPEAKER_00" },
             new() { Text = "of", Start = 1200, End = 1500, Speaker = "SPEAKER_00" },
-            new() { Text = "waiting.", Start = 1820, End = 2120, Speaker = "SPEAKER_00" },  // 句内 320ms 换气
-            new() { Text = "So", Start = 2440, End = 2740, Speaker = "SPEAKER_00" },        // 句间 320ms 停顿
+            new() { Text = "waiting.", Start = 1820, End = 2120, Speaker = "SPEAKER_00" },  // in-sentence 320ms breath pause
+            new() { Text = "So", Start = 2440, End = 2740, Speaker = "SPEAKER_00" },        // inter-sentence 320ms pause
             new() { Text = "we're", Start = 2740, End = 3040, Speaker = "SPEAKER_00" }
         };
 
@@ -201,7 +201,7 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_DoesNotIsolateCommaWordAfterPause()
     {
-        // 逗号词（"hundred,"）前有 320ms 停顿：不孤立——"is over a hundred," 保持一句
+        // A 320ms pause precedes the comma word ("hundred,"): it is not isolated — "is over a hundred," stays one sentence.
         var words = new List<Word>
         {
             new() { Text = "my", Start = 0, End = 200, Speaker = "SPEAKER_00" },
@@ -224,17 +224,17 @@ public sealed class SentenceSplitTests
     [Fact]
     public async Task RuleBasedSplit_PreservesAllWordsAcrossBreaks()
     {
-        // 词完整性：混合标点/停顿/超长段的输入，分句后所有词必须出现在输出句子中，
-        // 且顺序、引用、文本一致（不丢词、不丢顺序）
+        // Word integrity: for input mixing punctuation / pauses / oversized segments, after splitting every word must appear in the output sentences,
+        // with identical order, reference identity, and text (no lost words, no lost order).
         var words = new List<Word>();
         var t = 0;
         foreach (var (text, gapBeforeMs) in new (string, int)[]
         {
-            ("Hello", 0), ("world", 0), (".", 0),              // 标点断点
-            ("This", 700), ("is", 0), ("a", 0),                // 停顿断点
+            ("Hello", 0), ("world", 0), (".", 0),              // punctuation break
+            ("This", 700), ("is", 0), ("a", 0),                // pause break
             ("test", 0), ("with", 0), ("many", 0), ("words", 0),
             ("inside", 0), ("one", 0), ("long", 0), ("sentence", 0),
-            ("okay", 900)                                       // 末词前停顿
+            ("okay", 900)                                       // pause before the last word
         })
         {
             t += gapBeforeMs;
@@ -253,7 +253,7 @@ public sealed class SentenceSplitTests
             Assert.Equal(words[i].Text, outputWords[i].Text);
         }
 
-        // 每句文本非空且包含其全部词（标点词由 JoinWords 智能粘连，空格差异不计）
+        // Each sentence's text is non-empty and contains all of its words (punctuation words are intelligently joined by JoinWords; space differences are ignored).
         foreach (var s in sentences)
         {
             Assert.False(string.IsNullOrWhiteSpace(s.Text));

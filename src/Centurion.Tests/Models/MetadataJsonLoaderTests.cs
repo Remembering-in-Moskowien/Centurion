@@ -19,9 +19,9 @@ public sealed class MetadataJsonLoaderTests : IDisposable
 
         var catalog = MetadataJsonLoader.LoadOrDefault(path);
 
-        // 缺失时应当生成种子文件
+        // A seed file should be generated when missing.
         Assert.True(File.Exists(path), "Seed file should be written when missing.");
-        // 并回退到内置默认注册表
+        // and fall back to the built-in default registry.
         Assert.True(catalog.Tools.Tools.ContainsKey("whispercpp"));
         Assert.True(catalog.Tools.Tools.ContainsKey("crispasr"));
         Assert.True(catalog.Models.Qwen3AsrModels.ContainsKey("qwen3-asr-1.7b"));
@@ -75,25 +75,25 @@ public sealed class MetadataJsonLoaderTests : IDisposable
 
         var catalog = MetadataJsonLoader.LoadOrDefault(path);
 
-        // 工具条目：ToolName 缺省时回退为字典键
+        // Tool entries: when ToolName is omitted, it falls back to the dictionary key.
         var tool = catalog.Tools.Tools["mytool"];
         Assert.Equal("mytool", tool.ToolName);
         Assert.Equal("https://example.com/tool.zip", tool.DownloadUrl);
         Assert.Equal("tool.exe", tool.ExecutableRelativePath);
         Assert.Equal("v1.0", tool.Version);
 
-        // 单文件模型
+        // Single-file model.
         var single = catalog.Models.Qwen3AsrModels["my-model"];
         Assert.Equal(ModelDownloadType.SingleFile, single.DownloadType);
         Assert.Equal("my-model.gguf", single.FileName);
         Assert.Equal("https://example.com/my-model.gguf", single.DownloadUrl);
 
-        // 目录模型
+        // Directory model.
         var dir = catalog.Models.WhisperModels["dir-model"];
         Assert.Equal(ModelDownloadType.Directory, dir.DownloadType);
         Assert.Equal(["config.json", "model.bin"], dir.Files);
 
-        // ONNX 目录模型
+        // ONNX directory model.
         var onnx = catalog.Models.BertOnnxModels["onnx-model"];
         Assert.Equal(ModelDownloadType.OnnxModelDirectory, onnx.DownloadType);
         Assert.Equal("token_classification", onnx.OnnxModelType);
@@ -117,6 +117,6 @@ public sealed class MetadataJsonLoaderTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_tempDir, true); }
-        catch { /* 忽略清理失败 */ }
+        catch { /* ignore cleanup failures */ }
     }
 }

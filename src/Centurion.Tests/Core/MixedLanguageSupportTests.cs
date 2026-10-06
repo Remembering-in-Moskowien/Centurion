@@ -7,8 +7,8 @@ using Centurion.Core.Utils.Parsing;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// 多语言混合文本（code-switching）测试：英语听力材料中夹带中/日文时的
-/// 混合感知分词、拼接、分句与卡拉OK时间戳构建。
+/// Tests for mixed-language text (code-switching): when English listening material contains Chinese or Japanese,
+/// covering mix-aware tokenization, joining, sentence splitting, and karaoke timestamp building.
 /// </summary>
 public sealed class MixedLanguageSupportTests
 {
@@ -87,7 +87,7 @@ public sealed class MixedLanguageSupportTests
     public void TranslationKaraoke_MixedText_KeepsTokenCount()
     {
         var result = TranslationKaraokeBuilder.Build("hello 世界 world", 0, 3000, "zh");
-        // 4 tokens → 4 个 \K 标签（含行首 lead）+ 无多余空格错乱
+        // 4 tokens → 4 \K tags (including the leading lead), with no stray-space corruption.
         Assert.Equal(5, result.Split("{\\K", StringSplitOptions.None).Length - 1);
         Assert.Contains("hello", result);
         Assert.Contains("世", result);
@@ -108,7 +108,7 @@ public sealed class MixedLanguageSupportTests
     [Fact]
     public async Task RuleBasedSplit_MixedEnglishChinese_PreservesTightness()
     {
-        // 中英混写：中文段直连，中文↔英文之间保留原文空格；长度约束按显示长度
+        // Mixed Chinese-English writing: CJK runs join directly, original spaces are kept between Chinese and English; length limits use display length.
         var words = new List<Word>
         {
             new() { Text = "hello", Start = 0, End = 500, Speaker = string.Empty },
@@ -123,14 +123,14 @@ public sealed class MixedLanguageSupportTests
         var sentences = await strategy.Split(words, new SplitOptions { MaxLength = 20, TargetLength = 15, Language = "en" });
 
         Assert.Equal(2, sentences.Count);
-        Assert.Equal("hello 世界 world。", sentences[0].Text);   // 中英混合：中文段直连、词间单空格
-        Assert.Equal("今天天气真好！", sentences[1].Text);       // 纯中文：无空格
+        Assert.Equal("hello 世界 world。", sentences[0].Text);   // mixed Chinese-English: CJK runs joined directly, single space between words
+        Assert.Equal("今天天气真好！", sentences[1].Text);       // pure Chinese: no spaces
     }
 
     [Fact]
     public async Task RuleBasedSplit_Passive_MixedText_RespectsMaxLength()
     {
-        // 消极档同样遵守混合长度约束：类 CJK 词直连不超长
+        // The passive profile also honors mixed-length limits: CJK-like words join directly without exceeding the limit.
         var words = new List<Word>();
         for (var i = 0; i < 8; i++)
         {

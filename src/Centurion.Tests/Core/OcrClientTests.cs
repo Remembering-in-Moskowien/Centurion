@@ -2,7 +2,7 @@ using Centurion.Core.Capabilities.Infrastructure.Ocr;using Centurion.Core.Workf
 
 namespace Centurion.Tests.Core;
 
-/// <summary>OCR 多后端解析与端点/模型默认值测试。</summary>
+/// <summary>Tests for OCR multi-backend resolution and endpoint/model defaults.</summary>
 public sealed class OcrClientTests
 {
     [Theory]

@@ -3,7 +3,7 @@ using Centurion.Core.Utils.Infrastructure;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// GitHub 下载加速代理（镜像候选链）单元测试。
+/// Unit tests for the GitHub download acceleration proxy (mirror candidate chain).
 /// </summary>
 public class GitHubDownloadProxyTests
 {

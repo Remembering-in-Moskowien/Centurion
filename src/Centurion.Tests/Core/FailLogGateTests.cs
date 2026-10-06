@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>FailLogGate 使用进程级静态状态，测试须串行执行以避免相互竞争。</summary>
+/// <summary>FailLogGate uses process-level static state; tests must run serially to avoid racing each other.</summary>
 [CollectionDefinition("FailLogGate", DisableParallelization = true)]
 public sealed class FailLogGateCollection;
 

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>LLM 翻译批并行：并发确实发生、结果与串行一致。</summary>
+/// <summary>Parallel LLM translation batches: concurrency actually occurs, and results match the sequential run.</summary>
 public sealed class TranslationParallelTests
 {
     private sealed class FakeChatClient(
@@ -32,7 +32,7 @@ public sealed class TranslationParallelTests
             .Select(i => new Sentence { Text = $"Line {i}.", Start = i * 1000, End = (i + 1) * 1000 })
             .ToList();
 
-    /// <summary>记录并发峰值；每批按批内索引返回译文（与批大小解耦）。</summary>
+    /// <summary>Records the concurrency peak; each batch returns translations by in-batch index (decoupled from batch size).</summary>
     private static (FakeChatClient Client, ConcurrentDictionary<int, int> BatchIds, PeakGauge Gauge) BuildBatchClient()
     {
         var gauge = new PeakGauge();
@@ -43,12 +43,12 @@ public sealed class TranslationParallelTests
             gauge.Enter();
             try
             {
-                // 异步让出，使并发批次在时间上真实重叠
+                // Yield asynchronously so concurrent batches truly overlap in time.
                 await Task.Delay(15, ct);
                 var current = Interlocked.Increment(ref id) - 1;
                 batchIds[current] = 1;
                 var prompt = messages.LastOrDefault()?.Text ?? string.Empty;
-                // 译文按句子内容生成（与调用顺序无关），保证并行/串行结果可比
+                // Translations are generated from sentence content (independent of call order), so parallel and sequential results are comparable.
                 var texts = ExtractSentenceTexts(prompt);
                 var items = texts
                     .Select((text, i) => new LLMTranslationStrategy.TranslationItem { Id = i, Translation = $"T:{text}" })
@@ -65,7 +65,7 @@ public sealed class TranslationParallelTests
 
     private static List<string> ExtractSentenceTexts(string prompt)
     {
-        // prompt 尾部是 JSON payload：[{"id":0,"text":"..."},...]
+        // The tail of the prompt is the JSON payload: [{"id":0,"text":"..."},...]
         var matches = Regex.Matches(prompt, "\"text\":\"((?:[^\"\\\\]|\\\\.)*)\"");
         return matches.Select(m => m.Groups[1].Value).ToList();
     }
@@ -103,7 +103,7 @@ public sealed class TranslationParallelTests
             MaxConcurrency = 3
         });
 
-        // 5 个批全部发起；并发峰值 >1 证明并行实际发生
+        // All 5 batches are issued; a concurrency peak >1 proves that parallelism actually occurred.
         Assert.Equal(5, batchIds.Count);
         Assert.True(gauge.Peak > 1, $"Expected parallel batches, peak concurrency was {gauge.Peak}.");
     }

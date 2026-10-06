@@ -132,7 +132,7 @@ public sealed class AlignmentChunkingTests
 
         CrispAsrAlignmentStrategy.SplitTimingsAcrossSentences([sentence1], timings, offsetMilliseconds: 0);
 
-        // 仅第一个时间被消费（词数=1），其余截断
+        // Only the first timing is consumed (word count = 1); the rest are truncated.
         Assert.Equal(100, sentence1.Words[0].Start);
         Assert.Equal(500, sentence1.Words[0].End);
     }
@@ -145,7 +145,7 @@ public sealed class AlignmentChunkingTests
 
         CrispAsrAlignmentStrategy.SplitTimingsAcrossSentences([sentence], timings, offsetMilliseconds: 0);
 
-        // 第一个词被细化，其余词保留粗时间（0→4000）
+        // The first word is refined; the rest keep the coarse timing (0 to 4000).
         Assert.Equal(100, sentence.Words[0].Start);
         Assert.Equal(500, sentence.Words[0].End);
         Assert.Equal(0, sentence.Words[1].Start);

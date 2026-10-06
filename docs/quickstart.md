@@ -25,7 +25,7 @@ dotnet build -c Release
 Output lands in `src/Centurion.Cli/bin/Release/net10.0/` — run it directly:
 
 ```bash
-./src/Centurion.Cli/bin/Release/net10.0/Centurion.Cli
+./src/Centurion.Cli/bin/Release/net10.0/Centurion
 ```
 
 ##  Your First Subtitles

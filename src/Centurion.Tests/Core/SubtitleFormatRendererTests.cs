@@ -5,7 +5,7 @@ using Centurion.Core.Utils.Reporting;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// build 命令的 SRT / TXT 渲染测试：时间轴格式、双语拼接、说话人前缀、跳过规则与标签清理。
+/// Tests for the SRT / TXT rendering of the build command: timeline format, bilingual joining, speaker prefixes, skip rules, and tag stripping.
 /// </summary>
 public sealed class SubtitleFormatRendererTests
 {
@@ -57,7 +57,7 @@ public sealed class SubtitleFormatRendererTests
         Assert.Contains("00:01:33,650 --> 00:01:39,220\n", srt);
         Assert.Contains("2\n", srt);
         Assert.Contains("00:01:41,540 --> 00:01:43,520\n", srt);
-        // 被跳过的句子不渲染
+        // Skipped sentences are not rendered.
         Assert.DoesNotContain("Skipped line.", srt);
     }
 

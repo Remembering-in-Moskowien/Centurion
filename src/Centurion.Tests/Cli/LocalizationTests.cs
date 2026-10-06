@@ -3,13 +3,13 @@ using Xunit;
 
 namespace Centurion.Tests.Cli;
 
-/// <summary>本地化契约：key 即英文默认，未配置本地化器时英文兜底（英文优先）。</summary>
+/// <summary>Localization contract: keys are the English defaults, and English is the fallback when no localizer is configured (English first).</summary>
 public sealed class LocalizationTests
 {
     [Fact]
     public void T_NoLocalizer_ReturnsEnglishKey()
     {
-        // 未注入 Localizer 时：消息按英文原文输出
+        // When no localizer is injected: messages are output as the original English text.
         ConsoleServices.Localizer = null;
         Assert.Equal("Model Registry", ConsoleServices.T("Model Registry"));
         Assert.Equal("ready", ConsoleServices.T("ready"));
@@ -26,7 +26,7 @@ public sealed class LocalizationTests
     [Fact]
     public void T_UnknownKey_FallsBackToEnglish()
     {
-        // 本地化器命中但 key 缺失 → ResourceNotFound → 英文兜底
+        // When the localizer is hit but the key is missing, ResourceNotFound falls back to English.
         ConsoleServices.Localizer = null;
         var s = ConsoleServices.T("no-such-key-anywhere");
         Assert.Equal("no-such-key-anywhere", s);

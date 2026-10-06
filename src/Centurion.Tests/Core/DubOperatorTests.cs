@@ -4,7 +4,7 @@ using Xunit;
 namespace Centurion.Tests.Core;
 
 /// <summary>
-/// dub（媒体译制）相关单元测试：双语字幕解析、译文时间窗匹配。
+/// Unit tests for dub (media dubbing): bilingual subtitle parsing and translation time-window matching.
 /// </summary>
 public class DubOperatorTests
 {

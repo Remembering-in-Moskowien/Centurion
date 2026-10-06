@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Centurion.Tests.Core;
 
-/// <summary>Provider 工厂解析与 profile 的专项测试（第⑨阶段验收）。</summary>
+/// <summary>Focused tests for Provider factory resolution and profiles (stage ⑨ acceptance).</summary>
 public sealed class ProviderFactoryTests
 {
     private static ProviderFactory CreateFactory()
@@ -17,7 +17,7 @@ public sealed class ProviderFactoryTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddCenturionCore();
-        // 注意：ProviderRegistry 懒构建且持有 IServiceProvider，测试期间不得释放容器。
+        // Note: ProviderRegistry is lazily built and holds the IServiceProvider; the container must not be disposed during tests.
         return (ProviderFactory)services.BuildServiceProvider().GetRequiredService<IProviderFactory>();
     }
 
@@ -48,13 +48,13 @@ public sealed class ProviderFactoryTests
         Assert.Equal(2, chain.Count);
         Assert.Equal("openai", chain[0].Name);
         Assert.Equal(ProviderKind.Cloud, chain[0].Capabilities.Kind);
-        Assert.Equal(ProviderKind.Local, chain[1].Capabilities.Kind); // 本地兜底
+        Assert.Equal(ProviderKind.Local, chain[1].Capabilities.Kind); // local fallback
     }
 
     [Fact]
     public void CreateAsrChain_CloudWithoutKey_StillResolvesLocalBackup()
     {
-        // 无密钥：主云 provider IsAvailable=false，链执行时自动回退本地（不崩溃）。
+        // No API key: the primary cloud provider has IsAvailable=false, so chain execution automatically falls back to local (without crashing).
         var factory = CreateFactory();
         var chain = factory.CreateAsrChain("openai", null, NoKey(), ProviderProfile.Fast);
 
