@@ -178,6 +178,19 @@ Centurion asr anime.mkv -l ja
 - Pipelines are **assembled dynamically per command** and executed by `PipelineExecutor`
 - Fully async & cancellation-aware; **non-fatal errors just log a warning and keep going** — no half-baked bailouts
 
+**Strategy/operator fusion & assembly-time personalization**: every strategy
+(`ITranscriptionStrategy` / `IAlignmentStrategy` / `IDiarizationStrategy` / `ISentenceSplitStrategy` /
+`ITranslationStrategy`) inherits `IPipelineStrategy` and declares `StrategyCapabilities`
+(`None` / `AlignedTimestamps` / `SpeakerLabels`). The DAG assembler reads those capabilities when
+building the pipeline and prunes redundant stages:
+
+- **CrispASR-Qwen3** declares `AlignedTimestamps` (the Qwen3 forced aligner runs during
+  transcription), so the standalone **Force Alignment** node is removed at assembly time — even
+  with `--align`. Whisper.cpp / cloud ASR (no such capability) keep the node.
+- The **TTS engine** for `dub` is resolved once at assembly time (`--tts-engine
+  llama|indextts|qora`) and injected into the synthesis operator's constructor; the operator
+  holds no runtime engine switch.
+
 ---
 
 ##  Notes & Limitations
