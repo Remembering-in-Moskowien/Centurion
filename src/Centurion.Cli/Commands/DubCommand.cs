@@ -72,6 +72,7 @@ public sealed class DubCommand(
                 TtsLanguage = settings.TargetLanguage,
                 SpeakerReferenceDir = settings.SpeakerReference?.FullName,
                 DubStrictTiming = settings.StrictTiming,
+                DubStretchEngine = settings.StretchEngine,
                 DubBackgroundPath = settings.BackgroundFile?.FullName,
                 DubLoudnessTarget = settings.LoudnessTarget,
                 TtsParallelism = Math.Max(1, settings.TtsParallelism),

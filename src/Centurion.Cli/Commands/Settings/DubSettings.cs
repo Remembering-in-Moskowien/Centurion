@@ -51,6 +51,11 @@ public sealed class DubSettings : GlobalCommandSettings
     [Description("Strict time alignment: clamp outside the 0.5x-2.0x range (default on)")]
     public bool StrictTiming { get; set; } = true;
 
+    /// <summary>Time-stretch engine for aligning synthesized speech: "rubberband" (default, high quality, 0.25x-4.0x) | "atempo" (legacy, 0.5x-2.0x).</summary>
+    [CommandOption("--stretch-engine <ENGINE>")]
+    [Description("Time-stretch engine (rubberband default / atempo); rubberband falls back to atempo when the ffmpeg build lacks it")]
+    public string StretchEngine { get; set; } = "rubberband";
+
     /// <summary>Optional: background audio (soundtrack or score); enables sidechain ducking mixing when provided.</summary>
     [CommandOption("--background <FILE>")]
     [Description("Background audio (soundtrack/score); enables sidechain ducking")]

@@ -112,6 +112,29 @@ public class DubPhase23Tests
         Assert.Equal(0, segments[1].MixOffsetMs);
     }
 
+    // ── TimeAlignmentOperator: stretch engine (rubberband / atempo) ──
+
+    [Fact]
+    public void BuildStretchFilter_Atempo_ReturnsAtempoFilter()
+    {
+        Assert.Equal("atempo=0.5", TimeAlignmentOperator.BuildStretchFilter(0.5, useRubberband: false));
+    }
+
+    [Fact]
+    public void BuildStretchFilter_Rubberband_ReturnsFormantPreservingFilter()
+    {
+        Assert.Equal(
+            "rubberband=tempo=0.5:formant=preserved",
+            TimeAlignmentOperator.BuildStretchFilter(0.5, useRubberband: true));
+    }
+
+    [Fact]
+    public void BuildStretchFilter_TempoUsesInvariantCulture()
+    {
+        // 3 s synthesized speech into a 6 s target = tempo 0.5; must never render as "0,5" on a comma-locale.
+        Assert.Equal("atempo=0.5", TimeAlignmentOperator.BuildStretchFilter(3.0 / 6.0, useRubberband: false));
+    }
+
     // ── QualityReportBuilder: Dub metrics ──
 
     [Fact]

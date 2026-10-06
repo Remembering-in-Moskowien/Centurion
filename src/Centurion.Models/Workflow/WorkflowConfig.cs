@@ -219,8 +219,13 @@ public class WorkflowConfig
     /// <summary>Optional: path of the translation subtitle track file in bilingual mode, matched to the main subtitle by time window.</summary>
     public string? TranslationSubtitlePath { get; init; }
 
-    /// <summary>Strategy when TTS speech rate falls outside the allowed range: true clamps to the 0.5x~2.0x boundaries, false keeps the original synthesis duration.</summary>
+    /// <summary>Strategy when TTS speech rate falls outside the allowed range: true clamps to the engine boundaries, false keeps the original synthesis duration.</summary>
     public bool DubStrictTiming { get; init; } = true;
+
+    /// <summary>Time-stretch engine for aligning synthesized speech to the subtitle timeline:
+    /// "rubberband" (default; ffmpeg librubberband filter, high quality, 0.25x~4.0x) | "atempo"
+    /// (legacy ffmpeg atempo, 0.5x~2.0x). Falls back to atempo when the ffmpeg build lacks rubberband.</summary>
+    public string DubStretchEngine { get; init; } = "rubberband";
 
     /// <summary>Optional: path of accompaniment/background audio; providing it enables ducking mixing.</summary>
     public string? DubBackgroundPath { get; init; }
