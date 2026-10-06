@@ -101,6 +101,41 @@ Tools & models live in an **external JSON registry**, loaded at startup — edit
 
 ---
 
+##  Content-Addressed Model Storage
+
+Downloaded models are stored by their **content SHA-256**, so identical files are deduplicated
+and every cached model is self-verifying (`models/<category>/<sha256>.<ext>`).
+
+- **Single-file models** (whisper.cpp gguf/bin, Qwen3-ASR/Aligner, htdemucs ONNX, sherpa embedders,
+  OCR v5/v6): the file is downloaded to a temp path, hashed locally, then stored as
+  `models/<category>/<sha256>.<ext>`.
+- **Directory models** (OPUS-MT, SaT, Qwen3-TTS, IndexTTS, PolyVoice, sherpa-diarization packages):
+  members keep their original file names inside a directory named after the **aggregate hash**
+  (each member's SHA-256 + relative path, sorted, hashed again) — `models/<category>/<aggregate>/`.
+- **Manifest**: every category has `.manifest.json` mapping the logical model name to the hash
+  (`{Kind: file|dir, Hash, Ext, FileName/Files}`). `models list` reads these manifests to report
+  readiness; a missing entry shows the install hint instead of a guessed path.
+- **Verification on download**: when the registry declares a published SHA-256, the download is
+  verified against it **before** the content hash is computed; mismatches are deleted and re-fetched.
+- **Migration**: existing models were renamed in place by `scripts/migrate-models-content-hash.ps1`
+  (idempotent; PowerShell 5.1 compatible). Run it again after adding models by hand to re-hash them.
+
+```text
+models/
+├── whispercpp/.manifest.json
+├── whispercpp/be07e048…e1b21.bin          # ggml-tiny.bin (content hash)
+├── qwen3asr/.manifest.json
+├── qwen3asr/ec197cef…dad8d4.gguf          # qwen3-asr-1.7b-q4_k
+├── opusmt/.manifest.json
+├── opusmt/137a8972…7d043/                 # zh-en package (aggregate hash dir)
+│   ├── config.json
+│   └── onnx/encoder_model.onnx
+├── sat/09ca073b…f4d7f6/                   # sat-3l-sm
+└── htdemucs/d05c269d…db70a.onnx
+```
+
+---
+
 ##  Non-Latin Language Support
 
 Centurion no longer assumes your audio speaks English with spaces.
