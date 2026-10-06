@@ -44,8 +44,9 @@ NumSpeakers        = 0,             // 0 = auto (wespeaker honors --clustering.n
 
 Background music drowning out the speech? Separate the vocals first, then transcribe — clean input, better subtitles.
 
-- Powered by **demucs-rs** (native Rust, no Python); models auto-downloaded on first run
--  **Mirror-safe model downloads**: Demucs-rs itself only knows HuggingFace, so Centurion pre-downloads the model into its cache — and if the official source times out (we feel you, China networks ), it automatically falls back to the **hf-mirror.com** mirror. Zero manual steps, one working vocal track.
+- Powered by **htdemucs via ONNX Runtime** (native .NET inference, no Python, no external CLI); the MIT-licensed StemSplitio ONNX model auto-downloads on first run (models/htdemucs)
+- **GPU accelerated when available**: DirectML execution provider is tried first and falls back to CPU automatically (DirectML out-of-memory on low-memory machines is remembered per process)
+- **Mirror-safe model downloads**: models are fetched through Centurion's downloader, which automatically falls back to the **hf-mirror.com** mirror when the official source times out. Zero manual steps, one working vocal track.
 - **Off by default** — it's slow (deep learning is patient work) and pointless for clean speech
 - Turn it on only for music / MV / BGM-heavy media:
 
