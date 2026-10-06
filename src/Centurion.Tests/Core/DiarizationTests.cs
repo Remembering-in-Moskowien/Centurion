@@ -1,55 +1,116 @@
 using Centurion.Abstractions.Strategy;
 using Centurion.Models;
-using Centurion.Core.Workflow.Pipeline.Operators;using Centurion.Core.Workflow.Strategy.Diarization;using Xunit;
+using Centurion.Core.Workflow.Pipeline.Operators;
+using Centurion.Core.Workflow.Strategy.Diarization;
 using Centurion.Core.Utils.Parsing;
+using Xunit;
 namespace Centurion.Tests.Core;
 
 public sealed class DiarizationTests
 {
-    // ---------- DiarizationJsonParser ----------
+    // ---------- PolyVoiceDiarizationStrategy.BuildArguments ----------
 
     [Fact]
-    public void DiarizationJsonParser_ParsesSpeakersFromTranscription()
+    public void PolyVoice_BuildArguments_IncludesClustererFormatOutputAndModelsCache()
     {
-        const string json = """
-        {
-          "crispasr": { "backend": "whisper", "model": "ggml-tiny.bin", "language": "en" },
-          "transcription": [
-            {
-              "timestamps": { "from": "00:00:00,000", "to": "00:00:05,000" },
-              "offsets":    { "from": 0, "to": 5000 },
-              "speaker":    "(speaker 0) ",
-              "text":       "Hello there",
-              "chunk_id":   0
-            },
-            {
-              "timestamps": { "from": "00:00:05,500", "to": "00:00:10,200" },
-              "offsets":    { "from": 5500, "to": 10200 },
-              "speaker":    "(speaker 1) ",
-              "text":       "Hi!",
-              "chunk_id":   0
-            },
-            {
-              "timestamps": { "from": "00:00:12,000", "to": "00:00:15,000" },
-              "offsets":    { "from": 12000, "to": 15000 },
-              "text":       "No speaker label",
-              "chunk_id":   1
-            }
-          ]
-        }
-        """;
+        var args = PolyVoiceDiarizationStrategy.BuildArguments(
+            "audio.wav", "C:\\models\\polyvoice", "out.json", numSpeakers: 0);
 
-        var turns = DiarizationJsonParser.Parse(json);
-
-        Assert.Equal(2, turns.Count);
-        Assert.Equal(new SpeakerSegment(0.0, 5.0, "speaker 0"), turns[0]);
-        Assert.Equal(new SpeakerSegment(5.5, 10.2, "speaker 1"), turns[1]);
+        Assert.Contains("diarize", args);
+        Assert.Contains("audio.wav", args);
+        Assert.Contains("--clusterer", args);
+        Assert.Contains("ahc", args);
+        Assert.Contains("--format", args);
+        Assert.Contains("json", args);
+        Assert.Contains("--output", args);
+        Assert.Contains("out.json", args);
+        Assert.Contains("--models-cache", args);
+        Assert.Contains("C:\\models\\polyvoice", args);
+        Assert.DoesNotContain("--speakers", args);
     }
 
     [Fact]
-    public void DiarizationJsonParser_MissingTranscription_Throws()
+    public void PolyVoice_BuildArguments_NumSpeakersCapsClustering()
     {
-        Assert.Throws<InvalidOperationException>(() => DiarizationJsonParser.Parse("{\"text\":\"no transcription\"}"));
+        var args = PolyVoiceDiarizationStrategy.BuildArguments(
+            "audio.wav", "models", "out.json", numSpeakers: 3);
+
+        Assert.Contains("--speakers", args);
+        Assert.Contains("3", args);
+    }
+
+    [Fact]
+    public void PolyVoice_ParseJson_MapsSegmentsToSpeakerSegments()
+    {
+        const string json = """
+        {
+          "segments": [
+            { "time": { "start": 0.0, "end": 2.48 }, "speaker": 0, "confidence": 0.98 },
+            { "time": { "start": 3.23, "end": 5.45 }, "speaker": 1, "confidence": 0.97 }
+          ],
+          "turns": []
+        }
+        """;
+
+        var turns = PolyVoiceDiarizationStrategy.ParseJson(json);
+
+        Assert.Equal(2, turns.Count);
+        Assert.Equal(new SpeakerSegment(0.0, 2.48, "SPEAKER_00"), turns[0]);
+        Assert.Equal(new SpeakerSegment(3.23, 5.45, "SPEAKER_01"), turns[1]);
+    }
+
+    [Fact]
+    public void PolyVoice_ParseJson_EmptySegments_ReturnsEmpty()
+    {
+        Assert.Empty(PolyVoiceDiarizationStrategy.ParseJson("{\"segments\":[]}"));
+    }
+
+    // ---------- WeSpeakerDiarizationStrategy.BuildArguments ----------
+
+    [Fact]
+    public void WeSpeaker_BuildArguments_IncludesSegmentationEmbeddingAndClusters()
+    {
+        var args = WeSpeakerDiarizationStrategy.BuildArguments(
+            "audio.wav", "seg\\model.onnx", "emb.onnx", numSpeakers: 4);
+
+        Assert.Contains(args, a => a.StartsWith("--segmentation.pyannote-model=", StringComparison.Ordinal));
+        Assert.Contains(args, a => a.Contains("seg\\model.onnx", StringComparison.Ordinal));
+        Assert.Contains(args, a => a.StartsWith("--embedding.model=", StringComparison.Ordinal));
+        Assert.Contains(args, a => a.Contains("emb.onnx", StringComparison.Ordinal));
+        Assert.Contains(args, a => a.StartsWith("--clustering.num-clusters=4", StringComparison.Ordinal));
+        Assert.Equal("audio.wav", args[^1]);
+    }
+
+    [Fact]
+    public void WeSpeaker_BuildArguments_NoClusterLimitWhenUnknown()
+    {
+        var args = WeSpeakerDiarizationStrategy.BuildArguments("a.wav", "seg.onnx", "emb.onnx", 0);
+
+        Assert.DoesNotContain(args, a => a.StartsWith("--clustering.num-clusters", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WeSpeaker_ParseStdout_MapsTurnLines()
+    {
+        const string stdout = """
+        Started 0.031 -- 6.798 speaker_01
+        7.017 -- 13.649 speaker_00
+        13.801 -- 16.957 speaker_02
+        Duration : 56.861 s
+        """;
+
+        var turns = WeSpeakerDiarizationStrategy.ParseStdout(stdout);
+
+        Assert.Equal(3, turns.Count);
+        Assert.Equal(new SpeakerSegment(0.031, 6.798, "SPEAKER_01"), turns[0]);
+        Assert.Equal(new SpeakerSegment(7.017, 13.649, "SPEAKER_00"), turns[1]);
+        Assert.Equal(new SpeakerSegment(13.801, 16.957, "SPEAKER_02"), turns[2]);
+    }
+
+    [Fact]
+    public void WeSpeaker_ParseStdout_NoTurnLines_ReturnsEmpty()
+    {
+        Assert.Empty(WeSpeakerDiarizationStrategy.ParseStdout("no turns here\n"));
     }
 
     // ---------- DiarizationOperator.ResolveSpeaker ----------
@@ -84,48 +145,6 @@ public sealed class DiarizationTests
         // Empty turns → default label.
         var wordEmpty = new Word { Text = "x", Start = 0, End = 100, Speaker = "SPEAKER_00" };
         Assert.Equal("SPEAKER_00", DiarizationOperator.ResolveSpeaker(wordEmpty, []));
-    }
-
-    // ---------- CrispAsrDiarizationBase.BuildArguments ----------
-
-    [Fact]
-    public void BuildArguments_CrispAsrMethod_EnablesSpeakersNoEmbedderOrMaxSpeakers()
-    {
-        var args = CrispAsrDiarizationBase.BuildArguments(
-            "audio.wav", "C:\\models\\ggml-tiny.bin", "audio_diar",
-            numSpeakers: 0, segmentModel: null, method: "foxnose", embedder: null, defaultSegmentModel: null);
-
-        Assert.Contains("--diarize-speakers --diarize-method foxnose", args);
-        Assert.DoesNotContain("--diarize-embedder", args);
-        Assert.DoesNotContain("--sherpa-segment-model", args);
-        Assert.DoesNotContain("--diarize-max-speakers", args);
-        Assert.Contains("-ojf -of \"audio_diar\"", args);
-    }
-
-    [Fact]
-    public void BuildArguments_PyannoteTitaNet_IncludesEmbedderAndMaxSpeakers()
-    {
-        var args = CrispAsrDiarizationBase.BuildArguments(
-            "audio.wav", "C:\\models\\ggml-tiny.bin", "audio_diar",
-            numSpeakers: 3, segmentModel: "pyannote-seg-3.0",
-            method: "pyannote", embedder: "auto", defaultSegmentModel: null);
-
-        Assert.Contains("--diarize-speakers --diarize-method pyannote", args);
-        Assert.Contains("--diarize-embedder auto", args);
-        Assert.Contains("--diarize-max-speakers 3", args);
-        Assert.DoesNotContain("--sherpa-segment-model", args);
-    }
-
-    [Fact]
-    public void BuildArguments_SegmentModelIsManagedByCli_NotPassed()
-    {
-        var args = CrispAsrDiarizationBase.BuildArguments(
-            "audio.wav", "C:\\models\\ggml-tiny.bin", "audio_diar",
-            numSpeakers: 0, segmentModel: "pyannote-seg-3.0",
-            method: "pyannote", embedder: "auto", defaultSegmentModel: "pyannote-seg-3.0");
-
-        Assert.DoesNotContain("--sherpa-segment-model", args);
-        Assert.DoesNotContain("pyannote-seg-3.0", args);
     }
 
     // ---------- ResolveSpeaker: maximizing overlap with the time window ----------

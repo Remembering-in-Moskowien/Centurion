@@ -166,25 +166,43 @@ public class ToolManager : IDisposable
             else if (_toolMeta.ArchiveType.Equals("tar.gz", StringComparison.OrdinalIgnoreCase) ||
                      _toolMeta.ArchiveType.Equals("tgz", StringComparison.OrdinalIgnoreCase))
             {
-                using var stream = File.OpenRead(tempFile);
-                using var reader = ArchiveFactory.OpenArchive(stream);
-                var root = Path.GetFullPath(ToolDirectory);
-                foreach (var entry in reader.Entries)
+                using (var stream = File.OpenRead(tempFile))
+                using (var reader = ArchiveFactory.OpenArchive(stream))
                 {
-                    if (entry.IsDirectory)
-                        continue;
-                    if (entry.Key == null) continue;
-
-                    // Guard against zip-slip: reject any entry path that escapes the tool directory.
-                    var fullPath = Path.GetFullPath(Path.Combine(root, entry.Key));
-                    if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                        throw new InvalidDataException($"Unsafe archive entry path rejected: {entry.Key}");
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
-                    using var entryStream = entry.OpenEntryStream();
-                    using var fileStream = File.Create(fullPath);
-                    await entryStream.CopyToAsync(fileStream, cancellationToken);
+                    await ExtractEntriesAsync(reader.Entries, ToolDirectory, cancellationToken);
                 }
+            }
+            else if (_toolMeta.ArchiveType.Equals("tar.bz2", StringComparison.OrdinalIgnoreCase) ||
+                     _toolMeta.ArchiveType.Equals("tbz2", StringComparison.OrdinalIgnoreCase))
+            {
+                // tar.bz2: ArchiveFactory has no bzip2 factory, so decompress then read the inner tar.
+                // Explicit scope: all streams must be disposed before the caller deletes tempFile.
+                using (var fileStream = File.OpenRead(tempFile))
+                using (var bz2 = SharpCompress.Compressors.BZip2.BZip2Stream.Create(
+                    fileStream, SharpCompress.Compressors.CompressionMode.Decompress, false))
+                using (var reader = SharpCompress.Readers.ReaderFactory.OpenReader(bz2))
+                {
+                    while (reader.MoveToNextEntry())
+                    {
+                        if (reader.Entry.IsDirectory || reader.Entry.Key == null)
+                            continue;
+                        var fullPath = Path.GetFullPath(Path.Combine(ToolDirectory, reader.Entry.Key));
+                        if (!fullPath.StartsWith(Path.GetFullPath(ToolDirectory) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                            throw new InvalidDataException($"Unsafe archive entry path rejected: {reader.Entry.Key}");
+                        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
+                        using var entryStream = reader.OpenEntryStream();
+                        using var fileStream2 = File.Create(fullPath);
+                        await entryStream.CopyToAsync(fileStream2, cancellationToken);
+                    }
+                }
+            }
+            else if (_toolMeta.ArchiveType.Equals("direct", StringComparison.OrdinalIgnoreCase) ||
+                     _toolMeta.ArchiveType.Equals("exe", StringComparison.OrdinalIgnoreCase))
+            {
+                // Single-file tool: the download is the executable itself (e.g. a prebuilt .exe).
+                Directory.CreateDirectory(Path.GetDirectoryName(ExecutablePath) ?? ToolDirectory);
+                File.Move(tempFile, ExecutablePath, overwrite: true);
+                _logger.LogInformation("Tool '{ToolName}' installed as a single executable at {ExecutablePath}", _toolMeta.ToolName, ExecutablePath);
             }
             else
             {
@@ -197,6 +215,30 @@ public class ToolManager : IDisposable
         {
             if (File.Exists(tempFile))
                 File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>Extracts archive entries into the tool directory with zip-slip protection.</summary>
+    private static async Task ExtractEntriesAsync(
+        IEnumerable<SharpCompress.Archives.IArchiveEntry> entries,
+        string toolDirectory,
+        CancellationToken cancellationToken)
+    {
+        var root = Path.GetFullPath(toolDirectory);
+        foreach (var entry in entries)
+        {
+            if (entry.IsDirectory || entry.Key == null)
+                continue;
+
+            // Guard against zip-slip: reject any entry path that escapes the tool directory.
+            var fullPath = Path.GetFullPath(Path.Combine(root, entry.Key));
+            if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidDataException($"Unsafe archive entry path rejected: {entry.Key}");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
+            using var entryStream = entry.OpenEntryStream();
+            using var fileStream = File.Create(fullPath);
+            await entryStream.CopyToAsync(fileStream, cancellationToken);
         }
     }
 

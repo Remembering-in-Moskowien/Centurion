@@ -10,7 +10,7 @@ public interface IDiarizationStrategyFactory
     /// <summary>
     /// Creates a diarization strategy for the specified backend.
     /// </summary>
-    /// <param name="backend">"crispasr" or "pyannote".</param>
+    /// <param name="backend">"polyvoice" or "wespeaker".</param>
     /// <returns>The diarization strategy instance.</returns>
     IDiarizationStrategy Create(string backend);
 }

@@ -66,7 +66,7 @@ public sealed class SpawnCommand(
                 NumSpeakers = settings.NumSpeakers,
                 DiarizationBackend = settings.DiarizationBackend is not null
                     ? settings.DiarizationBackend
-                    : settings.Diarize ? "crispasr" : "none",
+                    : settings.Diarize ? "polyvoice" : "none",
                 KaraokeMode = settings.Karaoke,
                 ShowSpeakerLabels = settings.ShowSpeakerLabels,
                 CacheDirectory = "./cache",

@@ -65,19 +65,6 @@ public class ModelPathResolver(IServiceProvider serviceProvider, ModelRegistry m
     }
 
     /// <summary>
-    /// Ensures the given speaker diarization model is ready and returns its local file path.
-    /// </summary>
-    /// <param name="modelName">Model name.</param>
-    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
-    /// <returns>The local path of the model file.</returns>
-    public async Task<string> GetDiarizationModelPathAsync(string modelName, CancellationToken cancellationToken = default)
-    {
-        var manager = CreateManager(modelName, _modelRegistry.DiarizationModels, "diarization");
-        await manager.CheckHealthAsync();
-        return manager.ModelFilePath;
-    }
-
-    /// <summary>
     /// Ensures the given Qwen3 forced-alignment model is ready and returns its local file path.
     /// </summary>
     /// <param name="modelName">Model name.</param>

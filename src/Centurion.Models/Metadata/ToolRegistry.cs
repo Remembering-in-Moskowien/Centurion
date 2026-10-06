@@ -31,6 +31,8 @@ public class ToolMeta
     public required string ExecutableRelativePath { get; set; }
     /// <summary>Optional tool version.</summary>
     public string? Version { get; set; }
+    /// <summary>Optional user-facing tool description (shown in provider listings).</summary>
+    public string? Description { get; set; }
     /// <summary>
     /// Base download URL for models or weights required at runtime, such as a demucs-rs safetensors repository.
     /// Optional; null uses the tool's built-in default URL.
@@ -106,6 +108,24 @@ public sealed class ToolRegistry
                 ExecutableRelativePath = "demucs.exe", // "demucs" on Linux/macOS.
                 Version = "v0.3.4",
                 ModelBaseUrl = "https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/"
+            },
+            ["polyvoice"] = new()
+            {
+                ToolName = "polyvoice",
+                DownloadUrl = "https://github.com/ekhodzitsky/polyvoice/releases/download/v1.0.0/polyvoice-windows-x86_64.exe",
+                ArchiveType = "direct", // single prebuilt .exe; no archive to extract
+                ExecutableRelativePath = "polyvoice.exe",
+                Version = "v1.0.0",
+                Description = "Rust CPU speaker diarization (powerset segmentation + WeSpeaker ResNet34 + VBx/AHC)"
+            },
+            ["sherpa-onnx"] = new()
+            {
+                ToolName = "sherpa-onnx",
+                DownloadUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-win-x64-shared-MD-Release-no-tts.tar.bz2",
+                ArchiveType = "tar.bz2",
+                ExecutableRelativePath = "sherpa-onnx-offline-speaker-diarization.exe",
+                Version = "v1.13.8",
+                Description = "sherpa-onnx offline speaker diarization (pyannote segmentation + WeSpeaker embeddings)"
             }
         };
 }

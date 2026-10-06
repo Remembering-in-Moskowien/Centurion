@@ -45,23 +45,23 @@ public sealed class DiarizationStrategyProvider(
 /// <summary>Registration factory for speaker-segmentation providers (fixed names/capabilities).</summary>
 public static class DiarizationProviders
 {
-    /// <summary>Registration name for the built-in CrispASR backend.</summary>
-    public const string CrispAsrName = "crispasr";
+    /// <summary>Registration name for the polyvoice (Rust CPU) backend.</summary>
+    public const string PolyVoiceName = "polyvoice";
 
-    /// <summary>Registration name for the Pyannote+TitaNet backend.</summary>
-    public const string PyannoteName = "pyannote";
+    /// <summary>Registration name for the sherpa-onnx WeSpeaker backend.</summary>
+    public const string WeSpeakerName = "wespeaker";
 
-    /// <summary>CrispASR capability declaration: local, energy/xcorr/vad-turns/foxnose methods.</summary>
-    public static ProviderCapabilities CrispAsrCapabilities => ProviderCapabilities.Local(
+    /// <summary>PolyVoice capability declaration: local CPU diarization (powerset + WeSpeaker ResNet34 + AHC).</summary>
+    public static ProviderCapabilities PolyVoiceCapabilities => ProviderCapabilities.Local(
         requiresGpu: false,
         latency: ProviderLatency.Low,
-        quality: ProviderQualityLevel.Normal,
-        description: "CrispASR built-in speaker segmentation (energy/xcorr/vad-turns/foxnose)");
-
-    /// <summary>Pyannote capability declaration: local, high accuracy.</summary>
-    public static ProviderCapabilities PyannoteCapabilities => ProviderCapabilities.Local(
-        requiresGpu: true,
-        latency: ProviderLatency.High,
         quality: ProviderQualityLevel.High,
-        description: "Pyannote segmentation + TitaNet embedding (high accuracy, GPU recommended)");
+        description: "polyvoice (Rust CPU): powerset segmentation + WeSpeaker ResNet34 embeddings + AHC clustering");
+
+    /// <summary>WeSpeaker capability declaration: local, high accuracy (pyannote segmentation + WeSpeaker embeddings).</summary>
+    public static ProviderCapabilities WeSpeakerCapabilities => ProviderCapabilities.Local(
+        requiresGpu: false,
+        latency: ProviderLatency.Medium,
+        quality: ProviderQualityLevel.High,
+        description: "sherpa-onnx offline diarization (pyannote segmentation + WeSpeaker ResNet34 embeddings)");
 }

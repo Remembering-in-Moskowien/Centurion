@@ -106,13 +106,13 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
             QoraTtsProviders.Name, "QORA-TTS (Qwen3-TTS Rust)",
             sp.GetRequiredService<QoraTtsEngine>(), QoraTtsProviders.Capabilities));
 
-        // ---- Speaker segmentation: CrispASR / Pyannote (local) ----
+        // ---- Speaker segmentation: polyvoice / WeSpeaker (sherpa-onnx), local ----
         providers.Add(new DiarizationStrategyProvider(
-            DiarizationProviders.CrispAsrName, "CrispASR Diarization",
-            sp.GetRequiredService<CrispAsrDiarizationStrategy>(), DiarizationProviders.CrispAsrCapabilities));
+            DiarizationProviders.PolyVoiceName, "polyvoice (Rust CPU)",
+            sp.GetRequiredService<PolyVoiceDiarizationStrategy>(), DiarizationProviders.PolyVoiceCapabilities));
         providers.Add(new DiarizationStrategyProvider(
-            DiarizationProviders.PyannoteName, "Pyannote + TitaNet",
-            sp.GetRequiredService<PyannoteTitaNetDiarizationStrategy>(), DiarizationProviders.PyannoteCapabilities));
+            DiarizationProviders.WeSpeakerName, "WeSpeaker (sherpa-onnx)",
+            sp.GetRequiredService<WeSpeakerDiarizationStrategy>(), DiarizationProviders.WeSpeakerCapabilities));
 
         // ---- Vocal separation: demucs-rs (local) ----
         providers.Add(new DemucsVocalSeparationProvider(

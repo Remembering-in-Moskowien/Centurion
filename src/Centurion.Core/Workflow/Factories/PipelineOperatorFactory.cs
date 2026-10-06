@@ -59,11 +59,6 @@ public sealed class PipelineOperatorFactory(
             return null;
 
         var strategy = diarizationFactory.Create(config.DiarizationBackend);
-        if (strategy is CrispAsrDiarizationStrategy crispStrategy
-            && !string.IsNullOrWhiteSpace(config.DiarizationMethod)
-            && !string.Equals(config.DiarizationMethod, "pyannote", StringComparison.OrdinalIgnoreCase))
-            crispStrategy.Method = config.DiarizationMethod;
-
         return ActivatorUtilities.CreateInstance<DiarizationOperator>(serviceProvider, strategy);
     }
 

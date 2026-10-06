@@ -42,18 +42,18 @@ public sealed class SpawnSettings : GlobalCommandSettings
     public int NumSpeakers { get; init; } = 0;
 
     /// <summary>
-    /// Whether to enable speaker diarization (default off; uses crispasr when no backend is given).
+    /// Whether to enable speaker diarization (default off; uses polyvoice when no backend is given).
     /// </summary>
     [CommandOption("-d|--diarize")]
-    [Description("Enable speaker diarization (default backend: crispasr)")]
+    [Description("Enable speaker diarization (default backend: polyvoice)")]
     public bool Diarize { get; init; } = false;
 
     /// <summary>
-    /// Diarization backend: crispasr (built-in) or pyannote (Pyannote + TitaNet).
+    /// Diarization backend: polyvoice (Rust CPU) or wespeaker (sherpa-onnx).
     /// Specifying a backend enables diarization automatically.
     /// </summary>
     [CommandOption("--diarization-backend <BACKEND>")]
-    [Description("Diarization backend: crispasr, pyannote (implies --diarize)")]
+    [Description("Diarization backend: polyvoice, wespeaker (implies --diarize)")]
     public string? DiarizationBackend { get; init; }
 
     /// <summary>

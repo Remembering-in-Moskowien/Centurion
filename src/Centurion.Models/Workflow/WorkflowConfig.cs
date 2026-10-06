@@ -122,15 +122,16 @@ public class WorkflowConfig
 
     // ---------- Diarization ----------
     /// <summary>
-    /// Diarization backend: "none" (off, default) | "crispasr" (built-in method) | "pyannote" (Pyannote segmentation plus TitaNet embeddings).
+    /// Diarization backend: "none" (off, default) | "polyvoice" (Rust CPU diarization CLI) |
+    /// "wespeaker" (sherpa-onnx offline diarization with WeSpeaker embeddings).
     /// </summary>
     public string DiarizationBackend { get; init; } = "none";
     /// <summary>
-    /// Segmentation method for the crispasr backend: energy / xcorr / vad-turns / foxnose; foxnose is the default and most accurate and needs no stereo.
+    /// Reserved for backend-specific segmentation method tuning (not used by polyvoice/wespeaker; kept for config compatibility).
     /// </summary>
     public string DiarizationMethod { get; init; } = "foxnose";
     /// <summary>
-    /// Segmentation model name used by the pyannote backend, downloaded automatically by the CrispASR model registry, such as "pyannote-seg-3.0".
+    /// Reserved for future backend-specific segmentation model selection (auto-downloaded by each strategy; kept for config compatibility).
     /// </summary>
     public string DiarizationModel { get; init; } = "pyannote-seg-3.0";
     /// <summary>Expected number of speakers; 0 means automatic estimation.</summary>

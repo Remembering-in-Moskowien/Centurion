@@ -30,11 +30,6 @@ public interface IModelPathResolver
     Task<string> GetQwen3AsrModelPathAsync(string modelName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the path to a diarization model file.
-    /// </summary>
-    Task<string> GetDiarizationModelPathAsync(string modelName, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Gets the directory path for a forced-alignment model.
     /// </summary>
     Task<string> GetQwen3ForcedAlignerPathAsync(string modelName, CancellationToken cancellationToken = default);

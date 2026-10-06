@@ -13,7 +13,7 @@ public sealed record SpeakerSegment(double StartSeconds, double EndSeconds, stri
 
 /// <summary>
 /// Diarization strategy that returns speaker segments for input audio.
-/// The implementation selects the backend, such as CrispASR or Pyannote with TitaNet.
+/// The implementation selects the backend, such as polyvoice or WeSpeaker via sherpa-onnx.
 /// </summary>
 public interface IDiarizationStrategy
 {

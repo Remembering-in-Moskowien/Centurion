@@ -111,7 +111,7 @@ public sealed class PipelineGraphCommand(
     private static WorkflowConfig FullConfig() => new()
     {
         VocalSeparation = true,
-        DiarizationBackend = "crispasr",
+        DiarizationBackend = "polyvoice",
         EnableAlignment = true,
         EnableTextCleaning = true
     };

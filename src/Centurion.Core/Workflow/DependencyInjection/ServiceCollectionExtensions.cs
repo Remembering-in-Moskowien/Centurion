@@ -110,8 +110,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<CloudAsrStrategy>();
 
         // ---------- 4b. Diarization strategies ----------
-        services.AddTransient<CrispAsrDiarizationStrategy>();
-        services.AddTransient<PyannoteTitaNetDiarizationStrategy>();
+        services.AddTransient<PolyVoiceDiarizationStrategy>();
+        services.AddTransient<WeSpeakerDiarizationStrategy>();
 
         // ---------- 5. Sentence-split strategies ----------
         services.AddTransient<AggressiveRuleSplitStrategy>();

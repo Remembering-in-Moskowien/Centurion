@@ -12,16 +12,16 @@ public class DiarizationStrategyFactory(IServiceProvider serviceProvider) : IDia
     /// <summary>
     /// Creates the speaker-diarization strategy for the given backend name.
     /// </summary>
-    /// <param name="backend">The diarization backend name; supports "crispasr" or "pyannote".</param>
+    /// <param name="backend">The diarization backend name; supports "polyvoice" or "wespeaker".</param>
     /// <returns>The diarization strategy instance for the given backend.</returns>
     /// <exception cref="NotSupportedException">Thrown when the backend name is not supported.</exception>
     public IDiarizationStrategy Create(string backend)
     {
         return backend.ToLowerInvariant() switch
         {
-            "crispasr" => serviceProvider.GetRequiredService<CrispAsrDiarizationStrategy>(),
-            "pyannote" => serviceProvider.GetRequiredService<PyannoteTitaNetDiarizationStrategy>(),
-            _ => throw new NotSupportedException($"Diarization backend '{backend}' is not supported. Use 'crispasr' or 'pyannote'.")
+            "polyvoice" => serviceProvider.GetRequiredService<PolyVoiceDiarizationStrategy>(),
+            "wespeaker" => serviceProvider.GetRequiredService<WeSpeakerDiarizationStrategy>(),
+            _ => throw new NotSupportedException($"Diarization backend '{backend}' is not supported. Use 'polyvoice' or 'wespeaker'.")
         };
     }
 }
