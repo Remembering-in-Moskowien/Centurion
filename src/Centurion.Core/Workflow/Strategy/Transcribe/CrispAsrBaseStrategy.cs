@@ -30,6 +30,9 @@ public abstract class CrispAsrBaseStrategy : ITranscriptionStrategy
     /// <summary>Display name of the strategy.</summary>
     public abstract string StrategyName { get; }
 
+    /// <summary>Base transcription strategies output plain word timestamps; subclasses that attach a forced aligner declare <see cref="StrategyCapabilities.AlignedTimestamps"/>.</summary>
+    public virtual StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>Resolves the required services from the dependency injection container and initializes the shared base dependencies.</summary>
     /// <param name="serviceProvider">Container used to resolve the tool factory, process manager, model resolver, and logger.</param>
     protected CrispAsrBaseStrategy(IServiceProvider serviceProvider)

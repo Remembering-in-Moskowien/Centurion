@@ -1,11 +1,14 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Tts;
 using Centurion.Abstractions.Utils;
 using Centurion.Core.Capabilities.Infrastructure;
+using Centurion.Core.Capabilities.Infrastructure.Tts;
 using Centurion.Core.Workflow.Pipeline;
 using Centurion.Core.Workflow.Pipeline.Operators;
 using Centurion.Models.Workflow;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console.Cli;
 using Centurion.Core.Utils.Serialization;
@@ -16,13 +19,14 @@ namespace Centurion.Cli.Commands;
 /// <c>dub</c> command: media dubbing — takes a Centurion intermediate file
 /// (sentences/translations/speakers) and outputs a dubbed wav plus an intermediate file.
 /// Phase 1 MVP pipeline: speaker profiling → TTS synthesis (Qwen3-TTS via llama-tts)
-/// → time alignment → mixing → quality report. Tools and models auto-download on demand
+/// → time alignment → mixing → quality report. The TTS engine is chosen at assembly time
+/// (llama / indextts / qora) and injected into the synthesis operator; the operator itself
+/// holds no runtime engine switch. Tools and models auto-download on demand
 /// (llama.cpp / Qwen3-TTS GGUF).
 /// </summary>
 public sealed class DubCommand(
     ITempDirectoryManager tempManager,
     SpeakerProfilingOperator speakerProfilingOp,
-    TtsSynthesisOperator ttsSynthesisOp,
     TimeAlignmentOperator timeAlignmentOp,
     AudioMixOperator audioMixOp,
     QualityReportOperator qualityReportOp,
@@ -83,6 +87,10 @@ public sealed class DubCommand(
             workflowContext.State.DubOutputWavPath = wavPath;
 
             // Keep the user-provided speaker reference directory outside the temporary directory.
+            // Strategy resolution at assembly time: pick the TTS engine from the settings and inject it
+            // into the synthesis operator (the operator no longer switches engines at runtime).
+            var ttsSynthesisOp = CreateTtsSynthesisOperator(serviceProvider, settings.TtsEngine);
+            logger.LogInformation("TTS engine resolved at assembly time: {Engine}", settings.TtsEngine ?? "llama");
             // Dub DAG: profiling, synthesis, alignment, mixing, and quality reporting; pipeline-graph uses the same assembly.
             var dag = BuildDubDag(speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp);
 
@@ -128,6 +136,25 @@ public sealed class DubCommand(
             CliErrorPrinter.Print(logger, ex, "Dubbing pipeline execution failed.");
             return ExitCodes.Failure;
         }
+    }
+
+    /// <summary>
+    /// Resolves the TTS engine once at pipeline-assembly time ("indextts" -> IndexTTS-Rust, "qora" -> Qora,
+    /// anything else -> llama-tts) and creates the synthesis operator with that engine injected.
+    /// Strategy and operator are fused here: the operator holds no runtime engine switch anymore.
+    /// </summary>
+    /// <param name="serviceProvider">Container resolving the concrete engine implementations.</param>
+    /// <param name="engineName">Engine name from settings; null/empty means the llama default.</param>
+    internal static TtsSynthesisOperator CreateTtsSynthesisOperator(IServiceProvider serviceProvider, string? engineName)
+    {
+        var name = engineName?.Trim().ToLowerInvariant() ?? "llama";
+        ITtsEngine engine = name switch
+        {
+            "indextts" => serviceProvider.GetRequiredService<IndexTtsEngine>(),
+            "qora" => serviceProvider.GetRequiredService<QoraTtsEngine>(),
+            _ => serviceProvider.GetRequiredService<LlamaTtsEngine>()
+        };
+        return ActivatorUtilities.CreateInstance<TtsSynthesisOperator>(serviceProvider, engine);
     }
 
     /// <summary>

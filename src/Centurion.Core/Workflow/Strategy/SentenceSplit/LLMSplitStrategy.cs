@@ -15,6 +15,9 @@ namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 /// </summary>
 public class LLMSplitStrategy : BaseSplitStrategy
 {
+    /// <summary>Display name of the LLM split strategy.</summary>
+    public override string StrategyName => "llm";
+
     private readonly IChatClient _chatClient;
     private readonly ILogger<LLMSplitStrategy>? _logger;
     private const double MatchThreshold = 0.5;

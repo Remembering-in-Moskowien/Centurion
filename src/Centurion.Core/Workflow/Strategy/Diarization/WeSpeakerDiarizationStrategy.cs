@@ -56,6 +56,9 @@ public sealed class WeSpeakerDiarizationStrategy : IDiarizationStrategy
     public string StrategyName => "wespeaker";
 
     /// <inheritdoc />
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SpeakerSegment>> DiarizeAsync(
         string audioPath,
         int numSpeakers,

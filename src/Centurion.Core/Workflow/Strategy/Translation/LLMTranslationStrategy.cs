@@ -33,6 +33,9 @@ public class LLMTranslationStrategy : ITranslationStrategy
     /// <summary>Display name of the strategy.</summary>
     public string StrategyName => "LLM";
 
+    /// <summary>LLM translation declares no pipeline-level capabilities.</summary>
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>
     /// Performs translation: first tries 1:1 target-script alignment (when counts match), otherwise calls the LLM in batches.
     /// </summary>

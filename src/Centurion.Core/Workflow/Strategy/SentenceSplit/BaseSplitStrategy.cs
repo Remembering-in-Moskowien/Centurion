@@ -8,6 +8,12 @@ namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 /// </summary>
 public abstract class BaseSplitStrategy : ISentenceSplitStrategy
 {
+    /// <summary>Display name of the strategy (overridden by subclasses, e.g. "sat", "llm").</summary>
+    public virtual string StrategyName => "rule";
+
+    /// <summary>Sentence-splitting strategies do not declare pipeline-level capabilities by default.</summary>
+    public virtual StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>
     /// Splits the input word stream into sentences.
     /// </summary>

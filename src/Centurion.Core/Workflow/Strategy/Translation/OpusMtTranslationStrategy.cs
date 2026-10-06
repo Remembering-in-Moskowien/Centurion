@@ -42,6 +42,9 @@ public sealed class OpusMtTranslationStrategy : ITranslationStrategy
     /// <summary>Display name of the strategy.</summary>
     public string StrategyName => "OPUS-MT";
 
+    /// <summary>Local OPUS-MT translation declares no pipeline-level capabilities.</summary>
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>
     /// Translates the sentences: first tries 1:1 target-script alignment, otherwise runs the
     /// local OPUS-MT model line by line (parallel up to <see cref="TranslationOptions.MaxConcurrency"/>).

@@ -32,6 +32,9 @@ public sealed class CloudAsrStrategy(HttpClient httpClient, ILogger<CloudAsrStra
     /// <summary>Strategy display name.</summary>
     public string StrategyName => $"Cloud ASR ({Provider})";
 
+    /// <summary>Cloud ASR returns provider word timestamps; no forced-alignment capability is declared.</summary>
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>
     /// Uploads audio to a cloud ASR and parses it into a list of word-level timestamps.
     /// </summary>

@@ -26,6 +26,9 @@ namespace Centurion.Core.Workflow.Strategy.SentenceSplit;
 /// </summary>
 public sealed class SaTSplitStrategy : BaseSplitStrategy
 {
+    /// <summary>Display name of the SaT split strategy.</summary>
+    public override string StrategyName => "sat";
+
     // Model maximum 514 positions (512 including the two special tokens).
     private const int MaxWindowTokens = 512;
     private const int WindowStrideTokens = 256;

@@ -7,7 +7,7 @@ namespace Centurion.Abstractions.Strategy;
 /// Strategy interface for forced alignment.
 /// Implementations align word-level timestamps within sentences using various backends.
 /// </summary>
-public interface IAlignmentStrategy
+public interface IAlignmentStrategy : IPipelineStrategy
 {
     /// <summary>
     /// Aligns the given sentences against the audio file, updating word timestamps in-place.

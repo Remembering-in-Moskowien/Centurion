@@ -18,6 +18,13 @@ public sealed class LocalAsrProvider(
 {
     private readonly ITranscriptionStrategy _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
 
+    /// <summary>
+    /// The transcription strategy backing this provider. Exposed so the pipeline assembler can
+    /// read the strategy's declared capabilities (e.g. forced-aligned timestamps) and tailor the
+    /// DAG without consulting the strategy object separately.
+    /// </summary>
+    public ITranscriptionStrategy Strategy => _strategy;
+
     /// <inheritdoc />
     public string Name { get; } = name;
 

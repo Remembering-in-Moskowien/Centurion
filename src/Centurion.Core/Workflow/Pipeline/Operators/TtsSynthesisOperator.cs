@@ -1,7 +1,5 @@
 ﻿using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Tts;
-using Centurion.Core.Capabilities.Infrastructure.Tts;
-using Microsoft.Extensions.DependencyInjection;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
@@ -10,16 +8,19 @@ namespace Centurion.Core.Workflow.Pipeline.Operators;
 
 /// <summary>
 /// TTS synthesis operator (dub Phase 3): synthesizes a wav clip for each sentence by calling the TTS engine.
+/// The engine is resolved once at pipeline-assembly time (by <c>DubCommand</c>) and injected through the
+/// constructor; this operator no longer switches on <see cref="WorkflowConfig.TtsEngine"/> at runtime.
 /// Supports parallel synthesis (bucketed by speaker; order preserved within a bucket, parallel across buckets, bounded by the <c>DubConfig.TtsParallelism</c> global limit)
 /// and long-sentence chunking (when the target duration exceeds a threshold, splits the text into sub-segments proportionally, places them contiguously, and splices them in the mixing stage).
 /// A failed single-sentence synthesis logs a Warning and marks it Skipped, without blocking the whole pipeline.
 /// Results are written to State.DubSegments (List&lt;DubSegment&gt;, in original sentence order).
 /// </summary>
 public sealed class TtsSynthesisOperator(
-    IServiceProvider serviceProvider,
+    ITtsEngine engine,
     ILogger<TtsSynthesisOperator> logger)
     : PipelineOperatorBase<TtsSynthesisOperator>(logger)
 {
+    private readonly ITtsEngine _engine = engine ?? throw new ArgumentNullException(nameof(engine));
     /// <summary>Maximum characters per sentence: longer text is truncated (to avoid TTS failures on overly long sentences).</summary>
     private const int MaxCharsPerSentence = 200;
 
@@ -41,7 +42,7 @@ public sealed class TtsSynthesisOperator(
             return;
         }
 
-        var engine = ResolveEngine(context);
+        var engine = _engine;
         var references = context.State.DubSpeakerReferences;
 
         var parallelism = Math.Max(1, context.Config.TtsParallelism);
@@ -146,20 +147,8 @@ public sealed class TtsSynthesisOperator(
     }
 
     /// <summary>
-    /// Resolves the TTS engine according to <see cref="WorkflowConfig.TtsEngine"/> ("indextts" -> IndexTTS-Rust, others -> llama-tts).
+    /// Maps a sentence back to its original order index by matching the target start time (used to restore original order after parallel synthesis).
     /// </summary>
-    /// <param name="context">Workflow context.</param>
-    private ITtsEngine ResolveEngine(SubtitleWorkflowContext context)
-    {
-        var name = context.Config.TtsEngine?.Trim().ToLowerInvariant() ?? "llama";
-        return name switch
-        {
-            "indextts" => serviceProvider.GetRequiredService<IndexTtsEngine>(),
-            "qora" => serviceProvider.GetRequiredService<QoraTtsEngine>(),
-            _ => serviceProvider.GetRequiredService<LlamaTtsEngine>()
-        };
-    }
-
     private static int GetSentenceOrder(double targetStartMs, List<Sentence> sentences)
     {
         for (var i = 0; i < sentences.Count; i++)

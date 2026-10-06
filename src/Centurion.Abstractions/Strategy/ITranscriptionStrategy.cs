@@ -7,7 +7,7 @@ namespace Centurion.Abstractions.Strategy;
 /// <summary>
 /// Transcription strategy interface supporting local, API-based, CLI, and other engines.
 /// </summary>
-public interface ITranscriptionStrategy
+public interface ITranscriptionStrategy : IPipelineStrategy
 {
     /// <summary>
     /// Transcribes audio and returns word-level timestamps.
@@ -26,9 +26,4 @@ public interface ITranscriptionStrategy
         string? initialPrompt = null,
         CancellationToken cancellationToken = default,
         InferenceDevice device = InferenceDevice.Auto);
-
-    /// <summary>
-    /// Strategy name used in logs.
-    /// </summary>
-    string StrategyName { get; }
 }

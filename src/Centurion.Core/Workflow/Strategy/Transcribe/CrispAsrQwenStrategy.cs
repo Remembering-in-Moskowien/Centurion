@@ -1,3 +1,4 @@
+using Centurion.Abstractions.Strategy;
 using Microsoft.Extensions.Logging;
 
 namespace Centurion.Core.Workflow.Strategy.Transcribe;
@@ -9,6 +10,13 @@ public class CrispAsrQwenStrategy : CrispAsrBaseStrategy
 {
     /// <summary>Display name of the strategy.</summary>
     public override string StrategyName => "CrispASR (Qwen3)";
+
+    /// <summary>
+    /// Qwen3 runs with the Qwen3 forced aligner attached during transcription, so the output
+    /// already carries forced-aligned word timestamps: the pipeline skips the standalone
+    /// Force Alignment stage for this strategy.
+    /// </summary>
+    public override StrategyCapabilities Capabilities => StrategyCapabilities.AlignedTimestamps;
 
     private const string DefaultAlignerModel = "qwen3-forced-aligner-0.6b";
 

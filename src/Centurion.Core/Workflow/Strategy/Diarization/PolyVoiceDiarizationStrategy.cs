@@ -45,7 +45,8 @@ public sealed class PolyVoiceDiarizationStrategy : IDiarizationStrategy
     }
     /// <inheritdoc />
     public string StrategyName => "polyvoice";
-
+    /// <inheritdoc />
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
     /// <inheritdoc />
     public async Task<IReadOnlyList<SpeakerSegment>> DiarizeAsync(
         string audioPath,

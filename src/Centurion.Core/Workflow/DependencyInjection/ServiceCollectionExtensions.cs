@@ -80,7 +80,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<QoraTtsEngine>();
         services.AddTransient<BilingualSubtitleParserOperator>();
         services.AddTransient<SpeakerProfilingOperator>();
-        services.AddTransient<TtsSynthesisOperator>();
         services.AddTransient<TimeAlignmentOperator>();
         services.AddTransient<AudioMixOperator>();
         services.AddSingleton<MediaSubtitleExtractor>();

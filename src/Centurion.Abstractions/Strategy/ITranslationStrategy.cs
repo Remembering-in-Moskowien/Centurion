@@ -6,11 +6,8 @@ namespace Centurion.Abstractions.Strategy;
 /// Translation strategy contract: translates sentence text into the target language and populates <see cref="Sentence.TranslatedText"/>
 /// without changing sentence timings or word-level details.
 /// </summary>
-public interface ITranslationStrategy
+public interface ITranslationStrategy : IPipelineStrategy
 {
-    /// <summary>Display name of the strategy.</summary>
-    string StrategyName { get; }
-
     /// <summary>
     /// Translates source text sentence by sentence or in batches and writes results to <see cref="Sentence.TranslatedText"/>.
     /// </summary>

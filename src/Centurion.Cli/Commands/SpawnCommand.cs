@@ -1,6 +1,7 @@
 using Centurion.Cli.Commands.Settings;
 using Centurion.Abstractions;
 using Centurion.Abstractions.Pipeline;
+using Centurion.Abstractions.Strategy;
 using Centurion.Core.Capabilities.Infrastructure;
 using Centurion.Core.Capabilities.Infrastructure.Asr;
 using Centurion.Core.Workflow.Factories;
@@ -114,7 +115,7 @@ public sealed class SpawnCommand(
             // ─── Assemble the ASR DAG: nodes are operators, edges are dependencies; conditions skip stages and diarization can degrade on failure. ───
             var dag = BuildAsrDag(
                 subtitleTrackCheckerOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
-                operatorFactory, textCleaningOp, qualityReportOp, config);
+                operatorFactory, textCleaningOp, qualityReportOp, config, logger);
 
             // Create pipeline temp directory after all configured strategies resolve.
             await using var tempDir = await tempManager.CreateTempDirectoryAsync("pipeline_");
@@ -164,6 +165,9 @@ public sealed class SpawnCommand(
     /// Assembles the ASR DAG (single source of truth shared with the pipeline graph command):
     /// conditional nodes are skipped per config (vocal separation/diarization/alignment/cleaning);
     /// diarization and alignment degrade on failure (skip after retries), never stalling the whole task.
+    /// The assembly also reads the transcription chain's declared strategy capabilities: when the
+    /// active strategy already produces forced-aligned timestamps (CrispASR-Qwen3), the standalone
+    /// Force Alignment node is pruned at assembly time.
     /// </summary>
     internal static PipelineDag BuildAsrDag(
         SubtitleTrackCheckerOperator trackChecker,
@@ -173,7 +177,8 @@ public sealed class SpawnCommand(
         PipelineOperatorFactory operatorFactory,
         TextPreprocessingOperator textCleaningOp,
         QualityReportOperator qualityReportOp,
-        Centurion.Models.Workflow.WorkflowConfig config)
+        Centurion.Models.Workflow.WorkflowConfig config,
+        ILogger logger)
     {
         var transcribeOp = operatorFactory.CreateTranscribeOperator(config);
         var diarizationOp = operatorFactory.CreateDiarizationOperator(config);
@@ -219,13 +224,25 @@ public sealed class SpawnCommand(
 
         if (alignmentOp is not null)
         {
-            builder.Add("Force Alignment", alignmentOp,
-                dependsOn: [afterSplit],
-                when: c => c.Config.EnableAlignment,
-                maxRetries: 1,
-                degradeOnFailure: true,
-                description: "Word-level forced alignment (degrade-skip on failure, non-fatal)");
-            afterSplit = "Force Alignment";
+            // Strategy layer fused into assembly: the transcription chain declares its capabilities
+            // (e.g. CrispASR-Qwen3 produces forced-aligned timestamps during transcription). When it
+            // already aligns, the standalone Force Alignment stage is redundant and pruned here.
+            if (transcribeOp.Capabilities.HasFlag(StrategyCapabilities.AlignedTimestamps))
+            {
+                logger.LogInformation(
+                    "Force Alignment pruned at assembly time: transcription strategy capabilities {Caps} already produce forced-aligned timestamps.",
+                    transcribeOp.Capabilities);
+            }
+            else
+            {
+                builder.Add("Force Alignment", alignmentOp,
+                    dependsOn: [afterSplit],
+                    when: c => c.Config.EnableAlignment,
+                    maxRetries: 1,
+                    degradeOnFailure: true,
+                    description: "Word-level forced alignment (degrade-skip on failure, non-fatal)");
+                afterSplit = "Force Alignment";
+            }
         }
 
         builder.Add("Quality Report", qualityReportOp,

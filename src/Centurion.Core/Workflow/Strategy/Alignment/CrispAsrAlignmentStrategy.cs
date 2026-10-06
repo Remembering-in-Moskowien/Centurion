@@ -23,6 +23,12 @@ public sealed class CrispAsrAlignmentStrategy(
     ILogger<CrispAsrAlignmentStrategy> logger,
     string modelName) : IAlignmentStrategy
 {
+    /// <summary>Display name of the alignment strategy.</summary>
+    public string StrategyName => $"CrispASR Alignment ({modelName})";
+
+    /// <summary>The alignment stage itself produces aligned timestamps; no extra capability is declared.</summary>
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>Maximum number of sentences per chunk; a new chunk is forced once this is exceeded.</summary>
     private const int MaxSentencesPerChunk = 50;
 

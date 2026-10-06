@@ -27,6 +27,9 @@ public class WhisperCppStrategy(IServiceProvider serviceProvider) : ITranscripti
     /// <summary>Display name of the strategy.</summary>
     public string StrategyName => "Whisper.cpp";
 
+    /// <summary>Whisper.cpp emits word timestamps from the decoder; they are not forced-aligned to phonemes, so no capability is declared.</summary>
+    public StrategyCapabilities Capabilities => StrategyCapabilities.None;
+
     /// <summary>Creates (lazily) the whisper.cpp tool manager for the inference device (auto-selects the CUDA build when a GPU is available).</summary>
     private ToolManager GetToolManager(InferenceDevice device) =>
         _toolManager ??= _toolManagerFactory.Create("whispercpp", device);

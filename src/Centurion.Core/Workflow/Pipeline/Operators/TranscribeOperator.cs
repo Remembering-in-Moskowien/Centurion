@@ -1,6 +1,8 @@
 using Centurion.Abstractions.Pipeline;
 using Centurion.Abstractions.Providers;
+using Centurion.Abstractions.Strategy;
 using Centurion.Core.Providers;
+using Centurion.Core.Providers.Asr;
 using Centurion.Models;
 using Centurion.Models.Workflow;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,25 @@ public class TranscribeOperator(
 
     /// <inheritdoc />
     public override string Name => "Transcribe";
+
+    /// <summary>
+    /// The transcription strategies backing this chain (one per local provider; cloud providers
+    /// expose their strategy through <see cref="IAsrProvider"/> too). Fused view of the strategy
+    /// layer inside the operator, for the assembler to read capabilities from.
+    /// </summary>
+    public IReadOnlyList<ITranscriptionStrategy> Strategies { get; } = [.. chain
+        .Select(p => p is LocalAsrProvider local ? local.Strategy : (p as ITranscriptionStrategy))
+        .Where(s => s is not null)
+        .Cast<ITranscriptionStrategy>()];
+
+    /// <summary>
+    /// Aggregated declared capabilities of the transcription chain: if any strategy already
+    /// produces forced-aligned word timestamps (e.g. CrispASR-Qwen3), the assembled DAG can skip
+    /// the standalone Force Alignment stage.
+    /// </summary>
+    public StrategyCapabilities Capabilities => Strategies.Aggregate(
+        StrategyCapabilities.None,
+        (acc, s) => acc | s.Capabilities);
 
     /// <summary>
     /// Transcription: runs along the chain, automatically skipping unavailable/failed providers and switching to backups.

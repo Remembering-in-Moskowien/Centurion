@@ -15,13 +15,8 @@ public sealed record SpeakerSegment(double StartSeconds, double EndSeconds, stri
 /// Diarization strategy that returns speaker segments for input audio.
 /// The implementation selects the backend, such as polyvoice or WeSpeaker via sherpa-onnx.
 /// </summary>
-public interface IDiarizationStrategy
+public interface IDiarizationStrategy : IPipelineStrategy
 {
-    /// <summary>
-    /// Strategy name used to identify the active diarization backend in logs.
-    /// </summary>
-    string StrategyName { get; }
-
     /// <summary>
     /// Performs diarization on audio.
     /// </summary>

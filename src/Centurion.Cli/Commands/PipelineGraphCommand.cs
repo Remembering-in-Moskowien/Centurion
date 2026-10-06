@@ -30,7 +30,6 @@ public sealed class PipelineGraphCommand(
     QualityReportOperator qualityReportOp,
     OcrExtractOperator ocrExtractOp,
     SpeakerProfilingOperator speakerProfilingOp,
-    TtsSynthesisOperator ttsSynthesisOp,
     TimeAlignmentOperator timeAlignmentOp,
     AudioMixOperator audioMixOp,
     ScriptLoaderOperator scriptLoaderOp,
@@ -55,7 +54,7 @@ public sealed class PipelineGraphCommand(
                 "asr" => SpawnCommand.BuildAsrDag(
                     trackChecker, ffmpegOp, audioPreprocessOp, vocalSepOp,
                     operatorFactory, textCleaningOp, qualityReportOp,
-                    FullConfig()),
+                    FullConfig(), logger),
                 "ocr" => OcrCommand.BuildOcrDag(
                     ocrExtractOp, operatorFactory, textCleaningOp, qualityReportOp,
                     FullConfig()),
@@ -65,7 +64,9 @@ public sealed class PipelineGraphCommand(
                     FullConfig()),
                 "translate" => BuildTranslateDagForGraph(),
                 "dub" => DubCommand.BuildDubDag(
-                    speakerProfilingOp, ttsSynthesisOp, timeAlignmentOp, audioMixOp, qualityReportOp),
+                    speakerProfilingOp,
+                    DubCommand.CreateTtsSynthesisOperator(serviceProvider, null),
+                    timeAlignmentOp, audioMixOp, qualityReportOp),
                 "correct" => CorrectCommand.BuildCorrectDag(
                     scriptLoaderOp, textCorrectorOp, ffmpegOp, audioPreprocessOp, vocalSepOp,
                     operatorFactory, overlapOp, spellCheckOp, correctionReportOp, qualityReportOp,
