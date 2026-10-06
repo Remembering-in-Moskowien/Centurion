@@ -5,9 +5,9 @@ using Centurion.Models.Workflow;
 namespace Centurion.SchemaGen;
 
 /// <summary>
-/// 开发工具：生成 IR 的 JSON Schema（schemas/centurion-v1.json）与样例中间文件
-/// （samples/sample.centurion.json）。结构变更后重跑本工具即可同步两处契约产物。
-/// 用法：dotnet run --project tools/schema-gen -- [schemaPath] [samplePath]
+/// Development tool: generates the IR JSON Schema (schemas/centurion-v1.json) and the sample intermediate file
+/// (samples/sample.centurion.json). After a structural change, rerun this tool to keep both contract artifacts in sync.
+/// Usage: dotnet run --project tools/schema-gen -- [schemaPath] [samplePath]
 /// </summary>
 public static class Program
 {
@@ -26,7 +26,7 @@ public static class Program
         await File.WriteAllTextAsync(schemaPath, schema);
         Console.WriteLine($"Schema written: {Path.GetFullPath(schemaPath)}");
 
-        // ---- 2. 样例中间文件（与 Schema 同一序列化路径生成，保证一致）----
+        // ---- 2. Sample intermediate file (generated via the same serialization path as the Schema, to guarantee consistency) ----
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(samplePath))!);
         var context = CreateSampleContext();
         var doc = CenturionDocumentBuilder.Create(context, "spawn", samplePath);
@@ -36,7 +36,7 @@ public static class Program
         return 0;
     }
 
-    /// <summary>构造最小但有代表性的工作流上下文（含一句带词级明细的句子与阶段标志）。</summary>
+    /// <summary>Builds a minimal but representative workflow context (containing one sentence with word-level detail and the stage flags).</summary>
     private static SubtitleWorkflowContext CreateSampleContext()
     {
         var config = new WorkflowConfig

@@ -1,7 +1,12 @@
 name: publish
 
 # 每次提交自动发布一个 prerelease：build 号 = git 提交计数（HEAD），
-# 与 BuildInfo/IR generator.version 同源。发布资产不含第三方工具可执行文件
+# 与 BuildInfo/IR generator.version 同源。发布矩阵覆盖主流三平台：
+#   Windows x64  : Centurion-win-x64.zip + centurion-setup-win-x64.exe (Inno Setup)
+#   Linux x64    : Centurion-linux-x64.zip + Centurion-linux-x64.tar.gz + .deb + .rpm
+#   macOS arm64  : Centurion-osx-arm64.zip + centurion-osx-arm64.pkg
+#   macOS x64    : Centurion-osx-x64.zip（Linux 交叉编译，尽力而为；Intel Mac 走 zip 手动安装）
+# 每个资产附带 <asset>.sha256 校验和。发布资产不含第三方工具可执行文件
 # （VSF / RapidOCR / QORA-TTS / IndexTTS / llama.cpp 等按需下载或由用户放置）。
 
 on:
@@ -12,13 +17,84 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish:
-    runs-on: windows-latest
+  prepare-release:
+    name: Prepare release (build-N)
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.build.outputs.tag }}
+      version: ${{ steps.build.outputs.version }}
+      build-number: ${{ steps.build.outputs.number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history: build number = git commit count (rev-list --count HEAD)
+          fetch-depth: 0  # full history: build number = git commit count
+
+      - name: Compute build number and product version
+        id: build
+        shell: bash
+        run: |
+          count=$(git rev-list --count HEAD)
+          version=$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' Directory.Build.props | head -n1)
+          echo "number=$count" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=build-$count" >> "$GITHUB_OUTPUT"
+
+      - name: Create pre-release (build-N)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="${{ steps.build.outputs.tag }}"
+          notes=$(printf '%s\n' \
+            "Automated pre-release ${tag} from commit ${{ github.sha }}." \
+            "" \
+            "Assets:" \
+            "- Windows x64: Centurion-win-x64.zip, centurion-setup-win-x64.exe" \
+            "- Linux x64: Centurion-linux-x64.zip, Centurion-linux-x64.tar.gz, centurion-linux-amd64.deb, centurion-linux-x86_64.rpm" \
+            "- macOS arm64: Centurion-osx-arm64.zip, centurion-osx-arm64.pkg" \
+            "- macOS x64: Centurion-osx-x64.zip (cross-built, best-effort)" \
+            "" \
+            "Third-party tool executables (VideoSubFinder, RapidOCR, QORA-TTS, IndexTTS, llama.cpp) are NOT bundled; they are downloaded on first use or placed by the user under tools/." \
+            "Every asset ships with a <asset>.sha256 checksum.")
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release ${tag} already exists; skipping creation"
+          else
+            gh release create "$tag" --repo "${{ github.repository }}" \
+              --title "Centurion $tag" --notes "$notes" --prerelease
+          fi
+
+  publish:
+    name: Publish (${{ matrix.rid }})
+    needs: prepare-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+            zip: Centurion-win-x64.zip
+            installer: centurion-setup-win-x64.exe
+          - rid: linux-x64
+            os: ubuntu-latest
+            zip: Centurion-linux-x64.zip
+            tgz: Centurion-linux-x64.tar.gz
+            deb: centurion-linux-amd64.deb
+            rpm: centurion-linux-x86_64.rpm
+          - rid: osx-arm64
+            os: macos-latest
+            zip: Centurion-osx-arm64.zip
+            pkg: centurion-osx-arm64.pkg
+          - rid: osx-x64
+            os: ubuntu-latest
+            zip: Centurion-osx-x64.zip
+            cross: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -28,48 +104,100 @@ jobs:
       - name: Restore
         run: dotnet restore Centurion.slnx
 
-      - name: Build (Release)
-        run: dotnet build Centurion.slnx -c Release --no-restore
+      - name: Publish (${{ matrix.rid }}, self-contained)
+        shell: bash
+        run: |
+          args="-c Release -r ${{ matrix.rid }} --self-contained true"
+          args="$args -o publish/${{ matrix.rid }}"
+          args="$args -p:CenturionBuildNumber=${{ needs.prepare-release.outputs.build-number }}"
+          if [ "${{ matrix.cross }}" == "true" ]; then
+            # osx-x64 在 Linux runner 上交叉编译：R2R 交叉编译不可用，关闭之
+            args="$args -p:PublishReadyToRun=false"
+          fi
+          dotnet publish src/Centurion.Cli $args
 
-      - name: Test
-        run: dotnet test Centurion.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+      - name: Exclude third-party tool executables
+        shell: bash
+        run: rm -rf "publish/${{ matrix.rid }}/tools"
 
-      - name: Compute build number (git commit count)
-        id: build
+      - name: Package zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "${{ matrix.zip }}" -Force
+
+      - name: Package zip (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd "publish/${{ matrix.rid }}" && zip -qr "../../${{ matrix.zip }}" .
+
+      - name: Package tar.gz (Linux)
+        if: matrix.tgz != ''
+        shell: bash
+        run: |
+          cd "publish/${{ matrix.rid }}" && tar -czf "../../${{ matrix.tgz }}" .
+
+      - name: Build Windows installer (Inno Setup)
+        if: matrix.installer != ''
         shell: pwsh
         run: |
-          $count = (& git rev-list --count HEAD).Trim()
-          "number=$count" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+          # 便携 Inno Setup 6（官方 GitHub Releases 直链，版本钉定可升级）
+          $inno = "C:\inno"
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" `
+            -OutFile "$env:TEMP\inno-setup.exe" -UseBasicParsing
+          & "$env:TEMP\inno-setup.exe" /PORTABLE=1 /DIR="$inno" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          if (-not (Test-Path "$inno\ISCC.exe")) { throw "ISCC.exe not found after portable extract" }
+          & "$inno\ISCC.exe" "installers/windows/centurion.iss" `
+            /DSourcePublish="$PWD\publish\${{ matrix.rid }}" `
+            /DMyAppVersion="${{ needs.prepare-release.outputs.version }}"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+          Copy-Item "installers/windows/output/centurion-setup-win-x64.exe" "${{ matrix.installer }}" -Force
 
-      - name: Publish (win-x64, self-contained)
-        run: dotnet publish src/Centurion.Cli -c Release -r win-x64 --self-contained true -o publish/win-x64
-
-      - name: Package (exclude third-party tool executables)
-        shell: pwsh
+      - name: Build .deb (Linux)
+        if: matrix.deb != ''
+        shell: bash
         run: |
-          if (Test-Path publish/win-x64/tools) { Remove-Item publish/win-x64/tools -Recurse -Force }
-          Compress-Archive -Path publish/win-x64/* -DestinationPath centurion-win64.zip -Force
-          Get-Item centurion-win64.zip | Select-Object Name, Length
+          ./installers/linux/build-deb.sh "publish/${{ matrix.rid }}" \
+            "${{ needs.prepare-release.outputs.version }}" amd64 "${{ matrix.deb }}"
 
-      - name: Create pre-release (build-N)
+      - name: Build .rpm (Linux)
+        if: matrix.rpm != ''
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm
+          ./installers/linux/build-rpm.sh "publish/${{ matrix.rid }}" \
+            "${{ needs.prepare-release.outputs.version }}" x86_64 "${{ matrix.rpm }}"
+
+      - name: Build .pkg (macOS)
+        if: matrix.pkg != ''
+        shell: bash
+        run: |
+          ./installers/macos/build-pkg.sh "publish/${{ matrix.rid }}" \
+            "${{ needs.prepare-release.outputs.version }}" "${{ matrix.pkg }}" arm64
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          for a in "${{ matrix.zip }}" "${{ matrix.installer }}" "${{ matrix.tgz }}" "${{ matrix.deb }}" "${{ matrix.rpm }}" "${{ matrix.pkg }}"; do
+            [ -f "$a" ] && sha256sum "$a" > "$a.sha256"
+          done
+
+      - name: Upload assets to release
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: pwsh
+        shell: bash
         run: |
-          $tag = "build-${{ steps.build.outputs.number }}"
-          $sha = "${{ github.sha }}"
-          $notes = "Automated pre-release build-${tag} from commit ${sha}."
-          $notes += "`n`nThird-party tool executables (VideoSubFinder, RapidOCR, QORA-TTS, IndexTTS, llama.cpp) are NOT bundled; they are downloaded on first use or placed by the user under tools/."
-          gh release create $tag centurion-win64.zip --repo "${{ github.repository }}" --title "Centurion $tag" --notes $notes --prerelease 2>&1
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "release tag exists (rerun); updating assets instead"
-            gh release upload $tag centurion-win64.zip --repo "${{ github.repository }}" --clobber 2>&1
-          }
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-win64
-          path: '**/TestResults/*.trx'
-          if-no-files-found: ignore
+          assets=()
+          for a in "${{ matrix.zip }}" "${{ matrix.installer }}" "${{ matrix.tgz }}" "${{ matrix.deb }}" "${{ matrix.rpm }}" "${{ matrix.pkg }}"; do
+            [ -f "$a" ] && assets+=("$a" "$a.sha256")
+          done
+          tag="${{ needs.prepare-release.outputs.tag }}"
+          # GitHub release 创建后可能短暂不可见：带重试上传
+          for i in $(seq 1 10); do
+            if gh release upload "$tag" "${assets[@]}" --repo "${{ github.repository }}" --clobber; then
+              break
+            fi
+            echo "upload attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
