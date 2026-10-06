@@ -33,7 +33,7 @@ public sealed class ModelMissingTests
     }
 
     [Fact]
-    public async Task CheckHealth_DirectoryModelMissing_ThrowsWithFileCount()
+    public async Task CheckHealth_DirectoryModelMissing_ThrowsWithInstallHint()
     {
         var manager = new ModelManager(
             "fake-dir",
@@ -48,8 +48,11 @@ public sealed class ModelMissingTests
 
         var ex = await Assert.ThrowsAsync<ModelMissingException>(
             () => manager.CheckHealthAsync(default));
-        Assert.Equal(2, ex.MissingEntries.Count);
+        // Content-addressed layout: the expected path is the hash-named location, and the
+        // install hint lists the member files.
+        Assert.Contains("<content-hash>", ex.ExpectedPath);
         Assert.Contains("Centurion models install fake-dir", ex.Message);
+        Assert.Contains("config.json", ex.Message);
     }
 
     [Fact]

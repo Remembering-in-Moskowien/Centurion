@@ -92,31 +92,22 @@ public sealed class HtDemucsOnnxVocalSeparator
 
     private async Task<string> EnsureModelAsync(string repo, string fileName, CancellationToken cancellationToken)
     {
-        var modelsDir = Path.Combine(AppContext.BaseDirectory, "models", ModelDirectoryName);
-        var modelPath = Path.Combine(modelsDir, fileName);
-        if (File.Exists(modelPath) && new FileInfo(modelPath).Length > 0)
-            return modelPath;
-
-        Directory.CreateDirectory(modelsDir);
-        var url = HtDemucsOnnxEngine.BuildModelUrl(repo, fileName);
-        _logger.LogInformation("Downloading htdemucs ONNX model {FileName} ({Url}) ...", fileName, url);
-        using var downloader = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
-        await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
+        // Content-addressed storage through the shared ModelManager: the model lands as
+        // models/htdemucs/<sha256>.onnx and the category manifest maps "htdemucs" to its hash.
+        var meta = new Centurion.Models.Metadata.ModelMeta(
+            fileName, HtDemucsOnnxEngine.BuildModelUrl(repo, fileName));
+        var dict = new Dictionary<string, Centurion.Models.Metadata.ModelMeta>(StringComparer.OrdinalIgnoreCase)
         {
-            Payload = new AriaDownloadRequest
-            {
-                Url = url,
-                FullSavePath = modelPath,
-                SplitThread = 8,
-                ServerConnection = 8,
-                MaxRetry = 3,
-                ProgressRefreshMs = 200
-            }
-        }, cancellationToken);
+            ["htdemucs"] = meta
+        };
 
-        if (!File.Exists(modelPath) || new FileInfo(modelPath).Length == 0)
-            throw new InvalidDataException($"htdemucs model download failed: {modelPath}");
-        return modelPath;
+        using var manager = new Centurion.Core.Capabilities.Managers.Media.ModelManager(
+            "htdemucs", dict, _serviceProvider, ModelDirectoryName);
+        await manager.EnsureInstalledAsync(cancellationToken);
+        if (string.IsNullOrEmpty(manager.ModelFilePath))
+            throw new InvalidDataException("htdemucs model download failed (no path resolved).");
+        _logger.LogInformation("htdemucs ONNX model ready: {Path} ({Hash})", manager.ModelFilePath, manager.InstalledHash);
+        return manager.ModelFilePath;
     }
 
     // ---------- Audio I/O ----------

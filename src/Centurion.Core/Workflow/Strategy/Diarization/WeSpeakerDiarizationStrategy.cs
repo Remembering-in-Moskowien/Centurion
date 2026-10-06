@@ -109,24 +109,32 @@ public sealed class WeSpeakerDiarizationStrategy : IDiarizationStrategy
         return args;
     }
 
-    /// <summary>Downloads/extracts the pyannote segmentation package and the WeSpeaker ONNX embedder.</summary>
+    /// <summary>
+    /// Downloads/extracts the pyannote segmentation package and the WeSpeaker ONNX embedder, both
+    /// stored content-addressed under <c>models/sherpa-diarization/</c>: the embedder is a single
+    /// file named by its SHA-256, and the pyannote package is extracted into a directory named by
+    /// the aggregate SHA-256 of its extracted files (the CLI receives explicit paths, so hashed
+    /// names are transparent).
+    /// </summary>
     internal async Task<(string SegmentationPath, string EmbedderPath)> EnsureModelsAsync(
         string modelsDir, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(modelsDir);
         using var downloader = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
 
-        // Segmentation: tar.bz2 package -> extract, locate model.onnx (the package nests it in a subdirectory).
-        var packagePath = Path.Combine(modelsDir, "pyannote-segmentation-3-0.tar.bz2");
-        var segDir = Path.Combine(modelsDir, "pyannote-segmentation-3-0");
-        string? FindSegmentation() => Directory.Exists(segDir)
-            ? Directory.EnumerateFiles(segDir, SegmentationOnnxFileName, SearchOption.AllDirectories).FirstOrDefault()
+        // Segmentation: tar.bz2 package -> extract into a temp dir -> aggregate hash -> content dir.
+        string? FindSegmentation() => Directory.Exists(modelsDir)
+            ? Directory.EnumerateFiles(modelsDir, SegmentationOnnxFileName, SearchOption.AllDirectories)
+                .FirstOrDefault(p => !p.Contains($"{Path.DirectorySeparatorChar}.download-{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             : null;
         var segmentationPath = FindSegmentation();
         if (segmentationPath is null)
         {
-            if (!File.Exists(packagePath) || new FileInfo(packagePath).Length == 0)
+            var tmpDir = Path.Combine(modelsDir, $".download-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tmpDir);
+            try
             {
+                var packagePath = Path.Combine(tmpDir, "package.tar.bz2");
                 _logger.LogInformation("Downloading pyannote segmentation model ...");
                 await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
                 {
@@ -138,51 +146,71 @@ public sealed class WeSpeakerDiarizationStrategy : IDiarizationStrategy
                         ProgressRefreshMs = 100
                     }
                 }, cancellationToken);
-            }
 
-            Directory.CreateDirectory(segDir);
-            using (var stream = File.OpenRead(packagePath))
-            using (var bz2 = SharpCompress.Compressors.BZip2.BZip2Stream.Create(
-                stream, SharpCompress.Compressors.CompressionMode.Decompress, false))
-            using (var reader = SharpCompress.Readers.ReaderFactory.OpenReader(bz2))
-            {
-                var root = Path.GetFullPath(segDir);
-                while (reader.MoveToNextEntry())
+                using (var stream = File.OpenRead(packagePath))
+                using (var bz2 = SharpCompress.Compressors.BZip2.BZip2Stream.Create(
+                    stream, SharpCompress.Compressors.CompressionMode.Decompress, false))
+                using (var reader = SharpCompress.Readers.ReaderFactory.OpenReader(bz2))
                 {
-                    if (reader.Entry.IsDirectory || reader.Entry.Key == null)
-                        continue;
-                    var fullPath = Path.GetFullPath(Path.Combine(root, reader.Entry.Key));
-                    if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                        throw new InvalidDataException($"Unsafe archive entry path rejected: {reader.Entry.Key}");
-                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                    using var entryStream = reader.OpenEntryStream();
-                    using var fileStream = File.Create(fullPath);
-                    await entryStream.CopyToAsync(fileStream, cancellationToken);
+                    var root = Path.GetFullPath(tmpDir);
+                    while (reader.MoveToNextEntry())
+                    {
+                        if (reader.Entry.IsDirectory || reader.Entry.Key == null)
+                            continue;
+                        var fullPath = Path.GetFullPath(Path.Combine(root, reader.Entry.Key));
+                        if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                            throw new InvalidDataException($"Unsafe archive entry path rejected: {reader.Entry.Key}");
+                        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                        using var entryStream = reader.OpenEntryStream();
+                        using var fileStream = File.Create(fullPath);
+                        await entryStream.CopyToAsync(fileStream, cancellationToken);
+                    }
                 }
+                File.Delete(packagePath);
+
+                var members = Directory.EnumerateFiles(tmpDir, "*", SearchOption.AllDirectories)
+                    .Select(f => (RelativePath: Path.GetRelativePath(tmpDir, f), FilePath: f))
+                    .ToList();
+                if (members.Count == 0)
+                    throw new DiarizationException("pyannote segmentation package extracted no files.");
+                var hash = Centurion.Core.Infrastructure.ContentHasher.ComputeAggregateSha256(members);
+
+                var finalDir = Path.Combine(modelsDir, hash);
+                if (Directory.Exists(finalDir))
+                    TryDeleteDirectory(tmpDir);
+                else
+                    Directory.Move(tmpDir, finalDir);
+                _logger.LogInformation("pyannote segmentation model installed ({Hash}).", hash);
+
+                segmentationPath = Directory.EnumerateFiles(finalDir, SegmentationOnnxFileName, SearchOption.AllDirectories).FirstOrDefault()
+                    ?? throw new DiarizationException("pyannote segmentation model.onnx not found after extraction.");
             }
-            File.Delete(packagePath);
-            segmentationPath = FindSegmentation()
-                ?? throw new DiarizationException("pyannote segmentation model.onnx not found after extraction.");
+            finally
+            {
+                TryDeleteDirectory(tmpDir);
+            }
         }
 
-        // Embedder: single ONNX file.
-        var embedderPath = Path.Combine(modelsDir, "wespeaker_zh_cnceleb_resnet34_LM.onnx");
-        if (!File.Exists(embedderPath) || new FileInfo(embedderPath).Length == 0)
+        // Embedder: single ONNX file, stored under its content SHA-256.
+        var embedderMeta = new Centurion.Models.Metadata.ModelMeta(
+            "wespeaker_zh_cnceleb_resnet34_LM.onnx", EmbedderUrl);
+        var embedderDict = new Dictionary<string, Centurion.Models.Metadata.ModelMeta>(StringComparer.OrdinalIgnoreCase)
         {
-            _logger.LogInformation("Downloading WeSpeaker embedder model ...");
-            await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
-            {
-                Payload = new AriaDownloadRequest
-                {
-                    Url = EmbedderUrl,
-                    FullSavePath = embedderPath,
-                    MaxRetry = 3,
-                    ProgressRefreshMs = 100
-                }
-            }, cancellationToken);
+            ["wespeaker-embedder"] = embedderMeta
+        };
+        using (var embedderManager = new Centurion.Core.Capabilities.Managers.Media.ModelManager(
+            "wespeaker-embedder", embedderDict, _serviceProvider, "sherpa-diarization"))
+        {
+            await embedderManager.EnsureInstalledAsync(cancellationToken);
+            if (string.IsNullOrEmpty(embedderManager.ModelFilePath))
+                throw new DiarizationException("WeSpeaker embedder download failed (no path resolved).");
+            return (segmentationPath, embedderManager.ModelFilePath);
         }
+    }
 
-        return (segmentationPath ?? throw new DiarizationException("pyannote segmentation model.onnx not found."), embedderPath);
+    private static void TryDeleteDirectory(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); } catch { /* best effort */ }
     }
 
     /// <summary>Parses the stdout turn lines <c>start -- end speaker_NN</c> into speaker segments.</summary>

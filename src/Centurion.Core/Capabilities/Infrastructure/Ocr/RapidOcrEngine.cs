@@ -57,8 +57,7 @@ public sealed class RapidOcrEngine(
         return result.StrRes ?? string.Empty;
     }
 
-    private async Task<RapidOcr?> GetOcrAsync(bool initOnMissing, CancellationToken cancellationToken)
-    {
+    private async Task<RapidOcr?> GetOcrAsync(bool initOnMissing, CancellationToken cancellationToken)    {
         if (_ocr is not null)
             return _ocr;
 
@@ -74,7 +73,7 @@ public sealed class RapidOcrEngine(
                 var models = initOnMissing
                     ? await modelManager.EnsureModelsAsync(cancellationToken)
                     : modelManager.ModelPaths();
-                var v5ClsPath = Path.Combine(AppContext.BaseDirectory, "models", "v5",
+                var v5ClsPath = ResolveV5Path("cls") ?? Path.Combine(AppContext.BaseDirectory, "models", "v5",
                     "ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx");
                 if (models is not null)
                 {
@@ -100,12 +99,12 @@ public sealed class RapidOcrEngine(
                 var latin = new RapidOcr();
                 var latinSet = RapidOcrModelSet.PPOCRv5Latin with
                 {
-                    DetModelPath = Path.Combine(AppContext.BaseDirectory, "models", "v5",
+                    DetModelPath = ResolveV5Path("det") ?? Path.Combine(AppContext.BaseDirectory, "models", "v5",
                         "ch_PP-OCRv5_mobile_det.onnx"),
                     ClsModelPath = v5ClsPath,
-                    RecModelPath = Path.Combine(AppContext.BaseDirectory, "models", "v5",
+                    RecModelPath = ResolveV5Path("rec") ?? Path.Combine(AppContext.BaseDirectory, "models", "v5",
                         "latin_PP-OCRv5_rec_mobile_infer.onnx"),
-                    KeysPath = Path.Combine(AppContext.BaseDirectory, "models", "v5",
+                    KeysPath = ResolveV5Path("dict") ?? Path.Combine(AppContext.BaseDirectory, "models", "v5",
                         "ppocrv5_latin_dict.txt")
                 };
                 latin.InitModels(latinSet);
@@ -124,5 +123,36 @@ public sealed class RapidOcrEngine(
         {
             _initGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Resolves a models/v5 member (cls/det/rec/dict) through the category manifest written by the
+    /// content-hash migration; falls back to the legacy fixed filename when no manifest entry exists.
+    /// </summary>
+    private static string? ResolveV5Path(string role)
+    {
+        var v5Dir = Path.Combine(AppContext.BaseDirectory, "models", "v5");
+        var manifestPath = Path.Combine(v5Dir, ".manifest.json");
+        try
+        {
+            if (File.Exists(manifestPath))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(manifestPath));
+                if (doc.RootElement.TryGetProperty(role, out var entry)
+                    && entry.TryGetProperty("Hash", out var hash)
+                    && hash.GetString() is { Length: > 0 } h)
+                {
+                    var ext = role == "dict" ? ".txt" : ".onnx";
+                    var path = Path.Combine(v5Dir, h + ext);
+                    if (File.Exists(path))
+                        return path;
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Fall through to the legacy names below.
+        }
+        return null;
     }
 }

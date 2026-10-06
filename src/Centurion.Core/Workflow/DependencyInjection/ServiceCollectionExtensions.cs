@@ -72,7 +72,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<VideoSubFinderManager>();
         services.AddTransient<QualityReportOperator>();
         services.AddSingleton<LlamaTtsManager>();
-        services.AddSingleton<Centurion.Abstractions.Tts.ITtsEngine, LlamaTtsEngine>();
+        services.AddSingleton<LlamaTtsEngine>();
+        services.AddSingleton<Centurion.Abstractions.Tts.ITtsEngine>(sp => sp.GetRequiredService<LlamaTtsEngine>());
         services.AddSingleton<IndexTtsManager>();
         services.AddSingleton<IndexTtsEngine>();
         services.AddSingleton<QoraTtsManager>();

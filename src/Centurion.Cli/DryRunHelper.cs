@@ -37,7 +37,7 @@ public static class DryRunHelper
         {
             foreach (var (name, meta) in domain.Models.OrderBy(m => m.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var ready = ModelCatalog.ExistsLocally(ModelCatalog.CreateManager(sp, domain, name));
+                var ready = await ModelCatalog.ExistsLocallyAsync(ModelCatalog.CreateManager(sp, domain, name));
                 models.Add(new { domain = domain.Name, model = name, ready });
             }
         }

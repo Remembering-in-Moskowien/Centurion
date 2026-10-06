@@ -61,9 +61,8 @@ public sealed class PolyVoiceDiarizationStrategy : IDiarizationStrategy
         var toolManager = _toolManagerFactory.Create("polyvoice", device);
         await toolManager.EnsureToolAsync(cancellationToken);
 
-        // 2. Models (auto-download through the mirror chain)
-        var modelsDir = Path.Combine(AppContext.BaseDirectory, "models", "polyvoice");
-        await EnsureModelsAsync(modelsDir, cancellationToken);
+        // 2. Models (auto-download through the mirror chain, content-addressed)
+        var modelsDir = await EnsureModelsAsync(cancellationToken);
 
         // 3. 16 kHz mono input (polyvoice does no resampling)
         var wav16k = await DiarizationAudioPreprocessor.Ensure16KHzMonoAsync(
@@ -119,32 +118,26 @@ public sealed class PolyVoiceDiarizationStrategy : IDiarizationStrategy
         return args;
     }
 
-    /// <summary>Downloads the two INT8 models into the cache directory when missing (mirror chain handles GitHub).</summary>
-    internal async Task EnsureModelsAsync(string modelsDir, CancellationToken cancellationToken)
+    /// <summary>
+    /// Ensures the two INT8 models are installed (mirror chain handles GitHub) and returns the
+    /// content-addressed model cache directory (<c>models/polyvoice/&lt;aggregate-sha256&gt;/</c>).
+    /// The polyvoice CLI loads its models by fixed name from the cache directory, so member files
+    /// keep their original names inside the hash-named directory.
+    /// </summary>
+    internal async Task<string> EnsureModelsAsync(CancellationToken cancellationToken)
     {
-        var missing = ModelFileNames
-            .Select(name => (Name: name, Path: Path.Combine(modelsDir, name)))
-            .Where(f => !File.Exists(f.Path) || new FileInfo(f.Path).Length == 0)
-            .ToList();
-        if (missing.Count == 0)
-            return;
-
-        Directory.CreateDirectory(modelsDir);
-        using var downloader = _serviceProvider.GetRequiredService<Centurion.Core.Operators.Download.Downloader>();
-        foreach (var file in missing)
+        var meta = new Centurion.Models.Metadata.ModelMeta(
+            ModelsBaseUrl, ModelFileNames.ToList());
+        var dict = new Dictionary<string, Centurion.Models.Metadata.ModelMeta>(StringComparer.OrdinalIgnoreCase)
         {
-            _logger.LogInformation("Downloading polyvoice model {Name} ...", file.Name);
-            await downloader.ProcessAsync(new OperatorsRequest<AriaDownloadRequest>
-            {
-                Payload = new AriaDownloadRequest
-                {
-                    Url = $"{ModelsBaseUrl}/{file.Name}",
-                    FullSavePath = file.Path,
-                    MaxRetry = 3,
-                    ProgressRefreshMs = 100
-                }
-            }, cancellationToken);
-        }
+            ["models"] = meta
+        };
+        using var manager = new Centurion.Core.Capabilities.Managers.Media.ModelManager(
+            "models", dict, _serviceProvider, "polyvoice");
+        await manager.EnsureInstalledAsync(cancellationToken);
+        if (string.IsNullOrEmpty(manager.ModelFolder))
+            throw new DiarizationException("PolyVoice model download failed (no directory resolved).");
+        return manager.ModelFolder;
     }
 
     /// <summary>Parses the polyvoice machine JSON (<c>segments[]</c> with time.start/end + speaker) into speaker segments.</summary>

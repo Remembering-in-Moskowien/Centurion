@@ -87,7 +87,7 @@ public sealed class DoctorCommand(
             {
                 total++;
                 var mgr = ModelCatalog.CreateManager(serviceProvider, domain, name);
-                if (ModelCatalog.ExistsLocally(mgr))
+                if (await ModelCatalog.ExistsLocallyAsync(mgr))
                     ready++;
             }
         }

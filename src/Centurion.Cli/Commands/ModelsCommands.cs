@@ -66,14 +66,15 @@ internal static class ModelCatalog
         IServiceProvider sp, ModelDomain domain, string modelName) =>
         ActivatorUtilities.CreateInstance<ModelManager>(sp, modelName, domain.Models, domain.CategoryFolder);
 
-    /// <summary>Checks whether the local file/directory exists and is non-empty.</summary>
-    internal static bool ExistsLocally(ModelManager manager)
+    /// <summary>Checks whether the local file/directory exists and is non-empty (resolves the content-hash manifest).</summary>
+    internal static async Task<bool> ExistsLocallyAsync(ModelManager manager)
     {
-        if (!manager.ManagementEnabled || string.IsNullOrEmpty(manager.ModelFilePath))
+        if (!manager.ManagementEnabled || !await manager.TryResolveInstalledAsync())
             return false;
-        if (Directory.Exists(manager.ModelFilePath))
-            return Directory.EnumerateFileSystemEntries(manager.ModelFilePath).Any();
-        return File.Exists(manager.ModelFilePath) && new FileInfo(manager.ModelFilePath).Length > 0;
+        var path = manager.ModelFilePath;
+        if (Directory.Exists(path))
+            return Directory.EnumerateFileSystemEntries(path).Any();
+        return File.Exists(path) && new FileInfo(path).Length > 0;
     }
 }
 
@@ -107,7 +108,7 @@ public sealed class ModelsListCommand(
         {
             foreach (var (name, meta) in domain.Models.OrderBy(m => m.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var ready = ModelCatalog.ExistsLocally(ModelCatalog.CreateManager(serviceProvider, domain, name));
+                var ready = await ModelCatalog.ExistsLocallyAsync(ModelCatalog.CreateManager(serviceProvider, domain, name));
                 if (ready) readyCount++; else missingCount++;
                 var kind = meta.DownloadType switch
                 {
@@ -195,7 +196,7 @@ public sealed class ModelsVerifyCommand(
 
         var (domain, modelName, _) = hits[0];
         var manager = ModelCatalog.CreateManager(serviceProvider, domain, modelName);
-        var ready = ModelCatalog.ExistsLocally(manager);
+        var ready = await ModelCatalog.ExistsLocallyAsync(manager);
 
         var table = new Table()
             .Border(CliLayout.Border)
@@ -236,7 +237,7 @@ public sealed class ModelsRemoveCommand(
 
         var (domain, modelName, _) = hits[0];
         var manager = ModelCatalog.CreateManager(serviceProvider, domain, modelName);
-        if (!ModelCatalog.ExistsLocally(manager))
+        if (!await ModelCatalog.ExistsLocallyAsync(manager))
         {
             ConsoleServices.Output.WriteLine($"  {domain.Name}/{modelName}: not present locally ({manager.ModelFilePath}); nothing to remove.");
             return 0;
