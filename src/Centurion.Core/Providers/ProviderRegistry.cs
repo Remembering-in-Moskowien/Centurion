@@ -114,11 +114,10 @@ public sealed class ProviderRegistry(IServiceProvider serviceProvider) : IProvid
             DiarizationProviders.WeSpeakerName, "WeSpeaker (sherpa-onnx)",
             sp.GetRequiredService<WeSpeakerDiarizationStrategy>(), DiarizationProviders.WeSpeakerCapabilities));
 
-        // ---- Vocal separation: demucs-rs (local) ----
+        // ---- Vocal separation: htdemucs ONNX Runtime (local) ----
         providers.Add(new DemucsVocalSeparationProvider(
-            DemucsVocalSeparationProviders.Name, "demucs-rs",
-            sp.GetRequiredService<Centurion.Core.Workflow.Factories.IToolManagerFactory>(),
-            sp.GetRequiredService<Centurion.Core.Capabilities.Managers.Runtime.ProcessManager>(),
+            DemucsVocalSeparationProviders.Name, "htdemucs (ONNX)",
+            sp.GetRequiredService<Centurion.Core.Workflow.Strategy.VocalSeparation.HtDemucsOnnxVocalSeparator>(),
             DemucsVocalSeparationProviders.Capabilities));
 
         return providers;

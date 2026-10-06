@@ -113,6 +113,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<PolyVoiceDiarizationStrategy>();
         services.AddTransient<WeSpeakerDiarizationStrategy>();
 
+        // ---------- 4c. Vocal separation engine (native htdemucs ONNX Runtime) ----------
+        services.AddTransient<Centurion.Core.Workflow.Strategy.VocalSeparation.HtDemucsOnnxVocalSeparator>();
+
         // ---------- 5. Sentence-split strategies ----------
         services.AddTransient<AggressiveRuleSplitStrategy>();
         services.AddTransient<PassiveRuleSplitStrategy>();

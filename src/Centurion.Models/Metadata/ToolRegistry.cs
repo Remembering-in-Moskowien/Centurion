@@ -100,15 +100,6 @@ public sealed class ToolRegistry
                 ExecutableRelativePath = "crispasr.exe", // "crispasr" on Linux/macOS.
                 Version = "v0.8.30"
             },
-            ["demucsrs"] = new()
-            {
-                ToolName = "demucsrs",
-                DownloadUrl = "https://github.com/nikhilunni/demucs-rs/releases/download/v0.3.4/demucs-x86_64-pc-windows-msvc.zip",
-                ArchiveType = "zip",
-                ExecutableRelativePath = "demucs.exe", // "demucs" on Linux/macOS.
-                Version = "v0.3.4",
-                ModelBaseUrl = "https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/"
-            },
             ["polyvoice"] = new()
             {
                 ToolName = "polyvoice",
