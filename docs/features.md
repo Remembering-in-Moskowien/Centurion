@@ -22,20 +22,18 @@ The default ASS template ships with **two ready-made styles**, tuned for dual-la
 
 Every pipeline path can label **who said what** — each word gets a `Speaker` attribute.
 
-**Two backends**, both implemented natively through the CrispASR CLI (**no Python required** ):
+**Two backends**, both native executables (**no Python required**):
 
-| Backend | `DiarizationBackend` | Method | Notes |
+| Backend | `DiarizationBackend` | Engine | Notes |
 |---|---|---|---|
-| CrispASR built-in | `crispasr` | `foxnose` (default), `energy`, `xcorr`, `vad-turns` | Zero extra deps, auto speaker count |
-| Pyannote + TitaNet | `pyannote` | pyannote segmentation + TitaNet embeddings | Rock-solid on long audio; models auto-downloaded |
+| polyvoice | `polyvoice` | polyvoice (Rust CPU): powerset segmentation + WeSpeaker ResNet34 + AHC | ~8 MB model pair, fast CPU-only, auto speaker count |
+| WeSpeaker | `wespeaker` | sherpa-onnx offline diarization (pyannote segmentation + WeSpeaker ResNet34 ONNX) | Pyannote-class accuracy, models auto-downloaded |
 
 Configure via `WorkflowConfig`:
 
 ```csharp
-DiarizationBackend = "crispasr",   // "none" to disable
-DiarizationMethod  = "foxnose",    // crispasr methods
-DiarizationModel   = "pyannote-seg-3.0",
-NumSpeakers        = 0,            // 0 = auto
+DiarizationBackend = "polyvoice",   // "wespeaker", or "none" to disable
+NumSpeakers        = 0,             // 0 = auto (wespeaker honors --clustering.num-clusters)
 ```
 
 >  Diarization runs **before sentence splitting** and is **non-fatal**: if it fails, subtitles still get generated (just without speaker labels). No drama.
