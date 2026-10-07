@@ -1,0 +1,14 @@
+# Build context hygiene: only Directory.Build.props, Centurion.slnx and src/ are copied.
+.git
+.github
+.vscode
+docs
+publish
+installers
+skills
+samples
+schemas
+*.md
+Centurion-architecture.html
+CHANGELOG.md
+LICENSE

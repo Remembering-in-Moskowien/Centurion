@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Forces the DirectML (GPU) ONNX Runtime native library into every output directory.
+    RapidOcrNet transitively pulls Microsoft.ML.OnnxRuntime (CPU); its native onnxruntime.dll
+    lands at the same NuGet output path and would otherwise silently replace the DirectML build
+    (no DML execution provider, i.e. no GPU). Copying the DirectML native files last guarantees
+    GPU acceleration is available whenever the DirectML package is referenced.
+  -->
+  <Target Name="ForceDirectMLNative" AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' And Exists('$(NuGetPackageRoot)microsoft.ml.onnxruntime.directml\1.24.4\runtimes\win-x64\native\onnxruntime.dll')">
+    <Copy SourceFiles="$(NuGetPackageRoot)microsoft.ml.onnxruntime.directml\1.24.4\runtimes\win-x64\native\onnxruntime.dll"
+          DestinationFolder="$(OutDir)runtimes\win-x64\native"
+          SkipUnchangedFiles="false" />
+    <Copy SourceFiles="$(NuGetPackageRoot)microsoft.ml.onnxruntime.directml\1.24.4\runtimes\win-x64\native\onnxruntime_providers_shared.dll"
+          DestinationFolder="$(OutDir)runtimes\win-x64\native"
+          SkipUnchangedFiles="false" />
+  </Target>
+</Project>
