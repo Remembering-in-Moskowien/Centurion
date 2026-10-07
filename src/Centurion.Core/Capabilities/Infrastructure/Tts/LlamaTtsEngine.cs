@@ -70,7 +70,7 @@ public sealed class LlamaTtsEngine(
 
     private async Task<string> EnsureModelAsync(CancellationToken cancellationToken)
     {
-        using var manager = new ModelManager("1.7b-base-q4", modelRegistry.Qwen3TtsModels, serviceProvider, "tts");
+        using var manager = new ModelManager("1.7b-base-q4", modelRegistry.Qwen3TtsModels, serviceProvider, "qwen3tts");
         await manager.CheckHealthAsync(cancellationToken);
         return manager.ModelFolder;
     }

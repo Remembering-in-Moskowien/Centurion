@@ -117,6 +117,15 @@ public sealed class ToolRegistry
                 ExecutableRelativePath = "sherpa-onnx-offline-speaker-diarization.exe",
                 Version = "v1.13.8",
                 Description = "sherpa-onnx offline speaker diarization (pyannote segmentation + WeSpeaker embeddings)"
+            },
+            ["llama"] = new()
+            {
+                ToolName = "llama",
+                DownloadUrl = "https://github.com/ggml-org/llama.cpp/releases/download/b11260/llama-b11260-bin-win-cpu-x64.zip",
+                ArchiveType = "zip",
+                ExecutableRelativePath = "llama-tts.exe",
+                Version = "b11260",
+                Description = "llama.cpp llama-tts (Qwen3-TTS 12Hz GGUF backbone, voice cloning via --tts-speaker-file)"
             }
         };
 }
