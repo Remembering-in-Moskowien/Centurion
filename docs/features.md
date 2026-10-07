@@ -205,6 +205,14 @@ no prebuilt release (needs a local `cargo build`), the GPT inference path is a p
 fallback vocoder, and the ONNX parts must be converted by hand — it currently cannot deliver real
 voice-cloned audio.
 
+**llama-tts engine** (Qwen3-TTS 12Hz 1.7B): the llama.cpp tool is auto-registered in
+`config/metadata.json` (b11260 win-cpu build containing `llama-tts.exe`) and auto-downloaded to
+`tools/llama/`; the Qwen3-TTS GGUF backbone (`1.7b-base-q4`, talker + mmproj) auto-downloads to
+`models/qwen3tts/` from hf-mirror. Verified end-to-end: synthesis, rubberband time alignment and
+mixing land within the target window (3 s → 3.000 s). **Known limitation**: the 12Hz *Base*
+checkpoint does not accept `--tts-speaker-file` reference cloning (llama-tts fails audio
+preprocessing), so `dub --tts-engine llama` speaks in a default voice; use `qora` for cloning.
+
 ---
 
 ##  Notes & Limitations
